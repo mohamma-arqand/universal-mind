@@ -1,0 +1,11 @@
+        for secret in self.required_secrets:$
+            if len(secret) > 64 or '-----BEGIN' in secret:$
+                raise SystemFault('required_secrets must contain names only, not actual secrets.')$
+        # Warn if idempotent not explicitly set (uses default False)$
+        if 'idempotent' not in self.provenance.get('explicit_fields', []):$
+            warnings.warn($
+                f'Capability "{self.name}": idempotent defaulted to False. '$
+                'If this capability is truly idempotent (safe to retry), '$
+                'explicitly set idempotent=True in the dossier.',$
+                UserWarning,$
+                stacklevel=3,$

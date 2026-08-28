@@ -1,0 +1,94 @@
+test_append_only_guarantee (universal_mind.tests.test_universal_mind.UniversalMindTests.test_append_only_guarantee) ... ok
+test_business_card_returns_exactly_five_lines (universal_mind.tests.test_universal_mind.UniversalMindTests.test_business_card_returns_exactly_five_lines) ... ok
+test_caller_fault_does_not_trip_throttle (universal_mind.tests.test_universal_mind.UniversalMindTests.test_caller_fault_does_not_trip_throttle)
+Test that repeated ContractViolation/CallerFault does NOT trip the throttle. ... ok
+test_capability_contract_validation (universal_mind.tests.test_universal_mind.UniversalMindTests.test_capability_contract_validation)
+Test Capability.validate_intent validates intent against capability contract. ... ok
+test_composite_strategic_gate (universal_mind.tests.test_universal_mind.UniversalMindTests.test_composite_strategic_gate)
+Test CompositeStrategicGate evaluates gates in precedence order. ... ok
+test_duplicate_registration_raises_system_fault (universal_mind.tests.test_universal_mind.UniversalMindTests.test_duplicate_registration_raises_system_fault) ... ok
+test_end_to_end_echo_capability_produces_complete_audit_trail (universal_mind.tests.test_universal_mind.UniversalMindTests.test_end_to_end_echo_capability_produces_complete_audit_trail) ... ok
+test_error_handler_retry_logic (universal_mind.tests.test_universal_mind.UniversalMindTests.test_error_handler_retry_logic)
+Test ErrorHandler.should_retry logic. ... ok
+test_execution_throttle (universal_mind.tests.test_universal_mind.UniversalMindTests.test_execution_throttle)
+Test ExecutionThrottle limits concurrent executions. ... ok
+test_execution_throttle_excludes_caller_faults (universal_mind.tests.test_universal_mind.UniversalMindTests.test_execution_throttle_excludes_caller_faults)
+Test ExecutionThrottle excludes caller faults from error rate. ... ok
+test_executive_all_fallbacks_fail_raises_original (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_all_fallbacks_fail_raises_original)
+Test that when ALL fallbacks fail, original TaskFailure is re-raised (B0.1). ... ok
+test_executive_contract_validation_in_pipeline (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_contract_validation_in_pipeline)
+Test contract validation happens before gates in pipeline. ... ok
+test_executive_fallback_capability (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_fallback_capability)
+Test ExecutiveMind falls back to fallback_capability when retries exhausted. ... ok
+test_executive_gate_precedence (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_gate_precedence)
+Test ExecutiveMind gate_precedence parameter affects evaluation order. ... ok
+test_executive_multi_fallback_chain (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_multi_fallback_chain)
+Test chain of 3 fallbacks where first two fail, third succeeds; verify call order. ... ok
+test_executive_no_retry_on_system_fault (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_no_retry_on_system_fault)
+Test ExecutiveMind doesn't retry on SystemFault. ... ok
+test_executive_pre_execution_pipeline (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_pre_execution_pipeline)
+Test ExecutiveMind pre-execution pipeline order. ... ok
+test_executive_re_raises_system_fault_and_records (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_re_raises_system_fault_and_records) ... ok
+test_executive_records_risk_assessment (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_records_risk_assessment)
+Test ExecutiveMind records risk assessment. ... ok
+test_executive_retry_only_on_idempotent_capability (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_retry_only_on_idempotent_capability)
+Test ExecutiveMind only retries on idempotent capabilities. ... ok
+test_executive_task_failure_is_recorded_and_reported (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_task_failure_is_recorded_and_reported) ... ok
+test_executive_with_error_handler (universal_mind.tests.test_universal_mind.UniversalMindTests.test_executive_with_error_handler)
+Test ExecutiveMind uses error handler for retries. ... ok
+test_feedback_aggregation_works (universal_mind.tests.test_universal_mind.UniversalMindTests.test_feedback_aggregation_works) ... ok
+test_human_feedback_gate_blocks_on_rejection (universal_mind.tests.test_universal_mind.UniversalMindTests.test_human_feedback_gate_blocks_on_rejection)
+Test HumanFeedbackGate blocks execution on rejection. ... ok
+test_human_feedback_gate_blocks_on_repeated_needs_work (universal_mind.tests.test_universal_mind.UniversalMindTests.test_human_feedback_gate_blocks_on_repeated_needs_work)
+Test HumanFeedbackGate blocks on repeated needs_work without approval. ... ok
+test_human_feedback_gate_custom_policy (universal_mind.tests.test_universal_mind.UniversalMindTests.test_human_feedback_gate_custom_policy)
+Test HumanFeedbackGate with custom policy. ... ok
+test_intent_contract_enforcement_assert_complete (universal_mind.tests.test_universal_mind.UniversalMindTests.test_intent_contract_enforcement_assert_complete)
+Test Intent.assert_complete validates all required contract fields. ... ok
+test_intent_incomplete_raised_on_empty_goal_or_success_criteria (universal_mind.tests.test_universal_mind.UniversalMindTests.test_intent_incomplete_raised_on_empty_goal_or_success_criteria) ... ok
+test_intent_validates_params (universal_mind.tests.test_universal_mind.UniversalMindTests.test_intent_validates_params)
+Test Intent.validates_params ensures required execution params. ... ok
+test_local_jsonl_store_auto_compaction_max_tombstones (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_auto_compaction_max_tombstones)
+Test that automatic compaction triggers when absolute tombstone count exceeds max_tombstones. ... ok
+test_local_jsonl_store_auto_compaction_threshold (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_auto_compaction_threshold)
+Test that automatic compaction triggers when tombstone ratio exceeds threshold. ... ok
+test_local_jsonl_store_compact_idempotent (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_compact_idempotent)
+Test that compact() on an already-clean store is a no-op (returns 0). ... ok
+test_local_jsonl_store_compaction_preserves_order (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_compaction_preserves_order)
+Test that compaction preserves append order of live records. ... ok
+test_local_jsonl_store_compaction_survives_crash (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_compaction_survives_crash)
+Test that crash-safe compaction preserves live data (atomic replace). ... ok
+test_local_jsonl_store_delete_tombstone (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_delete_tombstone)
+Test LocalJSONLStore.delete() uses tombstones and decay works with it. ... ok
+test_local_jsonl_store_runnable (universal_mind.tests.test_universal_mind.UniversalMindTests.test_local_jsonl_store_runnable) ... ok
+test_memory_decay_collect_expired (universal_mind.tests.test_universal_mind.UniversalMindTests.test_memory_decay_collect_expired)
+Test Mnemosyne.collect_expired returns expired record IDs. ... ok
+test_memory_decay_decay_removes_expired (universal_mind.tests.test_universal_mind.UniversalMindTests.test_memory_decay_decay_removes_expired)
+Test Mnemosyne.decay actually removes expired records. ... ok
+test_owner_id_present_on_every_persisted_record (universal_mind.tests.test_universal_mind.UniversalMindTests.test_owner_id_present_on_every_persisted_record) ... ok
+test_registry_warns_on_implicit_idempotent_default (universal_mind.tests.test_universal_mind.UniversalMindTests.test_registry_warns_on_implicit_idempotent_default)
+Test that registering a capability without explicit idempotent field emits a warning. ... ok
+test_retry_on_failure_decorator (universal_mind.tests.test_universal_mind.UniversalMindTests.test_retry_on_failure_decorator)
+Test retry_on_failure decorator retries on TaskFailure. ... ok
+test_retry_on_failure_no_retry_on_caller_fault (universal_mind.tests.test_universal_mind.UniversalMindTests.test_retry_on_failure_no_retry_on_caller_fault)
+Test retry_on_failure doesn't retry on CallerFault (ContractViolation). ... ok
+test_retry_on_failure_no_retry_on_system_fault (universal_mind.tests.test_universal_mind.UniversalMindTests.test_retry_on_failure_no_retry_on_system_fault)
+Test retry_on_failure doesn't retry on SystemFault. ... ok
+test_risk_assessor_assesses_risk (universal_mind.tests.test_universal_mind.UniversalMindTests.test_risk_assessor_assesses_risk)
+Test RiskAssessor assigns risk levels. ... ok
+test_risk_policy_allows_and_blocks (universal_mind.tests.test_universal_mind.UniversalMindTests.test_risk_policy_allows_and_blocks)
+Test RiskPolicy with two policies giving opposite outcomes on high risk. ... ok
+test_secret_leak_validator_raises_system_fault (universal_mind.tests.test_universal_mind.UniversalMindTests.test_secret_leak_validator_raises_system_fault) ... ok
+test_strategic_decision_recorded (universal_mind.tests.test_universal_mind.UniversalMindTests.test_strategic_decision_recorded)
+Test strategic decisions are recorded in memory. ... ok
+test_strategic_gate_blocks_execution (universal_mind.tests.test_universal_mind.UniversalMindTests.test_strategic_gate_blocks_execution)
+Test StrategicGate can block execution. ... ok
+test_strategic_gate_redirects_to_capability (universal_mind.tests.test_universal_mind.UniversalMindTests.test_strategic_gate_redirects_to_capability)
+Test StrategicGate can redirect to a different capability. ... ok
+test_ttl_classification_with_frozen_clock (universal_mind.tests.test_universal_mind.UniversalMindTests.test_ttl_classification_with_frozen_clock) ... ok
+
+----------------------------------------------------------------------
+Ran 50 tests in 1.489s
+
+OK
+RC=0

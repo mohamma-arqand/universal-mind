@@ -1,0 +1,13 @@
+53 '    def business_card(self) -> str:'
+54 '        """Return a five-line summary for day-to-day use."""'
+55 '        lines = ['
+56 "            f'{self.name} v{self.version}',"
+57 "            f'Purpose: {self.purpose}',"
+58 "            f'Cost: {self.cost_model} | Latency: {self.latency_profile}',"
+59 "            f'Reliability: {self.reliability} | Determinism: {self.determinism.value}',"
+60 "            f'Reversible: {self.reversible} | Side effects: {self.side_effects}',"
+61 '        ]'
+62 "        return '\\n'.join(lines)"
+63 ''
+64 ''
+65 'class PantheonRegistry:'

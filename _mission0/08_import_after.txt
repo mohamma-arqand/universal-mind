@@ -1,0 +1,2 @@
+IMPORT OK
+RC=0

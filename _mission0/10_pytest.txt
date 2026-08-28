@@ -1,0 +1,2 @@
+/home/elitebook1/.cache/uv/archive-v0/Mt9kCR-_cVcxbEhB/bin/python: No module named pytest
+RC=1
