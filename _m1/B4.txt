@@ -1,0 +1,5 @@
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_strategic_gate_blocks_execution
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_strategic_gate_redirects_to_capability
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_ttl_classification_with_frozen_clock
+
+50 tests collected in 0.03s

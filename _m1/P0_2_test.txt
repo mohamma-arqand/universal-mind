@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/elitebook1/baddanKhoda/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/elitebook1/baddanKhoda
+collecting ... collected 1 item
+
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_retry_only_on_idempotent_capability PASSED
+
+============================== 1 passed in 0.07s ===============================

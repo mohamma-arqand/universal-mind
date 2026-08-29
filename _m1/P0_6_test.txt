@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/elitebook1/baddanKhoda/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/elitebook1/baddanKhoda
+collecting ... collected 50 items / 47 deselected / 3 selected
+
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_caller_fault_does_not_trip_throttle PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_execution_throttle PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_execution_throttle_excludes_caller_faults PASSED
+
+======================= 3 passed, 47 deselected in 0.04s =======================

@@ -1,0 +1,2 @@
+/home/elitebook1/baddanKhoda/.venv/bin/python
+Python 3.12.3

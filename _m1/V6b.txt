@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/elitebook1/baddanKhoda/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/elitebook1/baddanKhoda
+collecting ... collected 11 items
+
+universal_mind/tests/test_precedence.py::test_power_zero_absolute_veto PASSED [  9%]
+universal_mind/tests/test_precedence.py::test_power_zero_veto_allows_other_gates_to_run_when_false PASSED [ 18%]
+universal_mind/tests/test_precedence.py::test_defer_beats_allow PASSED   [ 27%]
+universal_mind/tests/test_precedence.py::test_one_deny_is_enough PASSED  [ 36%]
+universal_mind/tests/test_precedence.py::test_deny_at_strategic_stops_pipeline PASSED [ 45%]
+universal_mind/tests/test_precedence.py::test_deny_at_human_feedback PASSED [ 54%]
+universal_mind/tests/test_precedence.py::test_gate_order_is_immutable PASSED [ 63%]
+universal_mind/tests/test_precedence.py::test_conditional_veto PASSED    [ 72%]
+universal_mind/tests/test_precedence.py::test_chain_records_all_gate_results PASSED [ 81%]
+universal_mind/tests/test_precedence.py::test_integrated_judgment_allowed_property PASSED [ 90%]
+universal_mind/tests/test_precedence.py::test_create_default_pipeline PASSED [100%]
+
+============================== 11 passed in 0.06s ==============================
+RC=0

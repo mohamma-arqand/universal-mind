@@ -1,0 +1,203 @@
+=== RiskPolicy ===
+./universal_mind/core/executive.py:67:class RiskPolicy:
+./universal_mind/core/executive.py:80:class RiskPolicyProtocol(Protocol):
+./universal_mind/core/executive.py:92:class DefaultRiskPolicy:
+./universal_mind/core/executive.py:99:    def __init__(self, policy: RiskPolicy | None = None):
+./universal_mind/core/executive.py:100:        self.policy = policy or RiskPolicy()
+./universal_mind/core/executive.py:226:    Policy is configurable via any object implementing :class:`RiskPolicyProtocol`.
+./universal_mind/core/executive.py:227:    The default is :class:`DefaultRiskPolicy`, which preserves the original
+./universal_mind/core/executive.py:240:        policy: Optional[RiskPolicyProtocol] = None,
+./universal_mind/core/executive.py:244:        self.policy = policy or DefaultRiskPolicy()
+./universal_mind/core/executive.py:301:        risk_policy: RiskPolicyProtocol | None = None,
+./universal_mind/core/executive.py:312:        self.risk_policy = risk_policy or DefaultRiskPolicy()
+./universal_mind/tests/test_universal_mind.py:824:        """Test RiskPolicy with two policies giving opposite outcomes on high risk."""
+./universal_mind/tests/test_universal_mind.py:825:        from universal_mind.core.executive import DefaultRiskPolicy, RiskPolicy
+./universal_mind/tests/test_universal_mind.py:828:        blocking_policy = DefaultRiskPolicy(RiskPolicy(high_risk_blocks=True))
+./universal_mind/tests/test_universal_mind.py:831:        allowing_policy = DefaultRiskPolicy(RiskPolicy(high_risk_blocks=False))
+./universal_mind/tests/test_universal_mind.py:1015:            DefaultRiskPolicy, RiskPolicy, RiskAssessor
+./universal_mind/tests/test_universal_mind.py:1039:            risk_policy=DefaultRiskPolicy(RiskPolicy(high_risk_blocks=False)),
+./universal_mind/tests/test_universal_mind.py:1057:            risk_policy=DefaultRiskPolicy(RiskPolicy(high_risk_blocks=False)),
+=== MetricsSink ===
+NONE
+=== ErrorHandler ===
+./universal_mind/core/executive.py:8:from .errors import SystemFault, TaskFailure, CallerFault, ErrorHandler
+./universal_mind/core/executive.py:298:        error_handler: ErrorHandler | None = None,
+./universal_mind/core/executive.py:310:        self.error_handler = error_handler or ErrorHandler()
+./universal_mind/core/executive.py:503:          via ``ErrorHandler.retry_policy``).
+./universal_mind/core/__init__.py:5:    SystemFault, TaskFailure, ErrorHandler, ErrorRecoveryStrategy, retry_on_failure
+./universal_mind/core/__init__.py:12:    'SystemFault', 'TaskFailure', 'ErrorHandler', 'ErrorRecoveryStrategy',
+./universal_mind/core/errors.py:60:class ErrorHandler:
+./universal_mind/core/errors.py:126:def retry_on_failure(handler: ErrorHandler, attempts: Optional[int] = None) -> Callable[[F], F]:
+./universal_mind/core/errors.py:130:        handler: ErrorHandler configuration
+./universal_mind/tests/test_universal_mind.py:10:from universal_mind.core.errors import SystemFault, TaskFailure, CallerFault, ErrorHandler, retry_on_failure, RetryPolicy
+./universal_mind/tests/test_universal_mind.py:403:        """Test ErrorHandler.should_retry logic."""
+./universal_mind/tests/test_universal_mind.py:404:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3))
+./universal_mind/tests/test_universal_mind.py:416:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=0.01, jitter=False))
+./universal_mind/tests/test_universal_mind.py:433:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3))
+./universal_mind/tests/test_universal_mind.py:448:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3))
+./universal_mind/tests/test_universal_mind.py:500:        # Verify ErrorHandler.should_retry returns False for CallerFault
+./universal_mind/tests/test_universal_mind.py:501:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3))
+./universal_mind/tests/test_universal_mind.py:523:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=0.01, jitter=False))
+./universal_mind/tests/test_universal_mind.py:547:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3))
+./universal_mind/tests/test_universal_mind.py:587:        handler = ErrorHandler(retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=0.01, jitter=False))
+./universal_mind/tests/test_universal_mind.py:630:        handler2 = ErrorHandler(retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=0.01, jitter=False))
+./universal_mind/tests/test_universal_mind.py:931:        handler = ErrorHandler(
+./universal_mind/tests/test_universal_mind.py:1350:        # Use ErrorHandler with fallback_capability as a list for the chain
+./universal_mind/tests/test_universal_mind.py:1351:        handler = ErrorHandler(
+./universal_mind/tests/test_universal_mind.py:1411:        handler = ErrorHandler(
+=== StrategicGate ===
+./universal_mind/core/executive.py:34:class StrategicGate:
+./universal_mind/core/executive.py:134:class CompositeStrategicGate(StrategicGate):
+./universal_mind/core/executive.py:152:    def __init__(self, gates: Optional[list[tuple[int, StrategicGate]]] = None):
+./universal_mind/core/executive.py:162:    def add_gate(self, precedence: int, gate: StrategicGate) -> None:
+./universal_mind/core/executive.py:173:class ThrottleGate(StrategicGate):
+./universal_mind/core/executive.py:217:class RiskGate(StrategicGate):
+./universal_mind/core/executive.py:260:class HumanFeedbackGateWrapper(StrategicGate):
+./universal_mind/core/executive.py:283:    2. CompositeStrategicGate (policy + risk + human feedback)
+./universal_mind/core/executive.py:299:        strategic_gate: StrategicGate | None = None,
+./universal_mind/core/executive.py:318:        self.strategic_gate = strategic_gate or StrategicGate()
+./universal_mind/core/executive.py:320:    def _build_composite_gate(self, selector: Callable[[], tuple[CapabilityDossier, Capability]]) -> CompositeStrategicGate:
+./universal_mind/core/executive.py:335:        gates: list[tuple[int, StrategicGate]] = [
+./universal_mind/core/executive.py:341:        return CompositeStrategicGate(gates)
+./universal_mind/core/__init__.py:7:from .executive import ExecutiveMind, StrategicGate, StrategicDecision, Decision
+./universal_mind/core/__init__.py:14:    'LedgerRecord', 'RecordStatus', 'StrategicGate', 'StrategicDecision', 'Decision',
+./universal_mind/tests/test_universal_mind.py:12:    ExecutiveMind, StrategicGate, StrategicDecision, Decision,
+./universal_mind/tests/test_universal_mind.py:686:        """Test StrategicGate can block execution."""
+./universal_mind/tests/test_universal_mind.py:688:        class BlockingGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:711:        """Test StrategicGate can redirect to a different capability."""
+./universal_mind/tests/test_universal_mind.py:713:        class RedirectingGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:863:        class BlockingGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:951:        """Test CompositeStrategicGate evaluates gates in precedence order."""
+./universal_mind/tests/test_universal_mind.py:953:            CompositeStrategicGate, ThrottleGate, StrategicGate, Decision, StrategicDecision
+./universal_mind/tests/test_universal_mind.py:957:        class BlockingGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:964:        class RedirectingGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:974:        composite = CompositeStrategicGate([
+./universal_mind/tests/test_universal_mind.py:1013:            ExecutiveMind, StrategicGate, Decision, StrategicDecision,
+./universal_mind/tests/test_universal_mind.py:1019:        class PolicyGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:1026:        class TestRiskGate(StrategicGate):
+./universal_mind/tests/test_universal_mind.py:1228:        class BlockingGate(StrategicGate):
+=== HumanFeedbackGate ===
+./universal_mind/feedback/__init__.py:2:from .channel import FeedbackChannel, FeedbackPolicy, HumanFeedbackGate, Verdict, feedback_gate
+./universal_mind/feedback/__init__.py:4:__all__ = ['FeedbackChannel', 'FeedbackPolicy', 'HumanFeedbackGate', 'Verdict', 'feedback_gate']
+./universal_mind/feedback/channel.py:43:class HumanFeedbackGate:
+./universal_mind/feedback/channel.py:101:def feedback_gate(store: MemoryStore, clock: Clock, policy: FeedbackPolicy | None = None) -> HumanFeedbackGate:
+./universal_mind/feedback/channel.py:102:    """Factory for creating a HumanFeedbackGate."""
+./universal_mind/feedback/channel.py:103:    return HumanFeedbackGate(store=store, clock=clock, policy=policy or FeedbackPolicy())
+./universal_mind/core/executive.py:15:from ..feedback.channel import HumanFeedbackGate
+./universal_mind/core/executive.py:260:class HumanFeedbackGateWrapper(StrategicGate):
+./universal_mind/core/executive.py:263:    def __init__(self, feedback_gate: HumanFeedbackGate, target_record_id: Optional[str] = None):
+./universal_mind/core/executive.py:303:        feedback_gate: HumanFeedbackGate | None = None,
+./universal_mind/core/executive.py:340:            gates.append((feedback_prec, HumanFeedbackGateWrapper(self.feedback_gate)))
+./universal_mind/tests/test_universal_mind.py:18:    FeedbackChannel, FeedbackPolicy, HumanFeedbackGate, Verdict, feedback_gate,
+./universal_mind/tests/test_universal_mind.py:643:        """Test HumanFeedbackGate blocks execution on rejection."""
+./universal_mind/tests/test_universal_mind.py:653:        """Test HumanFeedbackGate blocks on repeated needs_work without approval."""
+./universal_mind/tests/test_universal_mind.py:668:        """Test HumanFeedbackGate with custom policy."""
+./universal_mind/tests/test_universal_mind.py:675:        gate = HumanFeedbackGate(self.store, self.clock, custom_policy)
+=== gate_precedence ===
+./universal_mind/core/executive.py:304:        gate_precedence: dict[str, int] | None = None,
+./universal_mind/core/executive.py:315:        self.gate_precedence = gate_precedence or {}
+./universal_mind/core/executive.py:326:        Precedence can be overridden via ``gate_precedence`` dict with keys:
+./universal_mind/core/executive.py:331:        policy_prec = self.gate_precedence.get('policy', PRECEDENCE_POLICY)
+./universal_mind/core/executive.py:332:        risk_prec = self.gate_precedence.get('risk', PRECEDENCE_RISK)
+./universal_mind/core/executive.py:333:        feedback_prec = self.gate_precedence.get('feedback', PRECEDENCE_FEEDBACK)
+./universal_mind/tests/test_universal_mind.py:1010:    def test_executive_gate_precedence(self) -> None:
+./universal_mind/tests/test_universal_mind.py:1011:        """Test ExecutiveMind gate_precedence parameter affects evaluation order."""
+./universal_mind/tests/test_universal_mind.py:1040:            gate_precedence={'policy': 80, 'risk': 60}
+./universal_mind/tests/test_universal_mind.py:1058:            gate_precedence={'policy': 80, 'risk': 90}
+./universal_mind/tests/test_universal_mind.py:1068:        # Test 3: Test that gate_precedence dict is stored and used
+./universal_mind/tests/test_universal_mind.py:1069:        self.assertEqual(executive_default.gate_precedence, {'policy': 80, 'risk': 60})
+./universal_mind/tests/test_universal_mind.py:1070:        self.assertEqual(executive_custom.gate_precedence, {'policy': 80, 'risk': 90})
+=== ExecutionThrottle ===
+./universal_mind/core/executive.py:45:class ExecutionThrottle:
+./universal_mind/core/executive.py:176:    def __init__(self, throttle: ExecutionThrottle, memory: Mnemosyne, owner_id: str):
+./universal_mind/core/executive.py:187:        faults, tracked separately so :meth:`ExecutionThrottle.should_allow` can
+./universal_mind/core/executive.py:302:        throttle: ExecutionThrottle | None = None,
+./universal_mind/core/executive.py:313:        self.throttle = throttle or ExecutionThrottle()
+./universal_mind/tests/test_universal_mind.py:13:    ExecutionThrottle, RiskAssessor,
+./universal_mind/tests/test_universal_mind.py:462:        """Test ExecutionThrottle excludes caller faults from error rate."""
+./universal_mind/tests/test_universal_mind.py:464:        throttle = ExecutionThrottle(max_concurrent=100, error_rate_threshold=0.1)
+./universal_mind/tests/test_universal_mind.py:488:        throttle = ExecutionThrottle(max_concurrent=100, error_rate_threshold=0.1)
+./universal_mind/tests/test_universal_mind.py:791:        """Test ExecutionThrottle limits concurrent executions."""
+./universal_mind/tests/test_universal_mind.py:792:        throttle = ExecutionThrottle(max_concurrent=2, error_rate_threshold=0.5)
+=== retry_on_failure ===
+./universal_mind/core/__init__.py:5:    SystemFault, TaskFailure, ErrorHandler, ErrorRecoveryStrategy, retry_on_failure
+./universal_mind/core/__init__.py:13:    'retry_on_failure', 'ExecutiveMind', 'ExecutionRecord',
+./universal_mind/core/errors.py:126:def retry_on_failure(handler: ErrorHandler, attempts: Optional[int] = None) -> Callable[[F], F]:
+./universal_mind/tests/test_universal_mind.py:10:from universal_mind.core.errors import SystemFault, TaskFailure, CallerFault, ErrorHandler, retry_on_failure, RetryPolicy
+./universal_mind/tests/test_universal_mind.py:414:    def test_retry_on_failure_decorator(self) -> None:
+./universal_mind/tests/test_universal_mind.py:415:        """Test retry_on_failure decorator retries on TaskFailure."""
+./universal_mind/tests/test_universal_mind.py:419:        @retry_on_failure(handler)
+./universal_mind/tests/test_universal_mind.py:431:    def test_retry_on_failure_no_retry_on_system_fault(self) -> None:
+./universal_mind/tests/test_universal_mind.py:432:        """Test retry_on_failure doesn't retry on SystemFault."""
+./universal_mind/tests/test_universal_mind.py:436:        @retry_on_failure(handler)
+./universal_mind/tests/test_universal_mind.py:446:    def test_retry_on_failure_no_retry_on_caller_fault(self) -> None:
+./universal_mind/tests/test_universal_mind.py:447:        """Test retry_on_failure doesn't retry on CallerFault (ContractViolation)."""
+./universal_mind/tests/test_universal_mind.py:451:        @retry_on_failure(handler)
+=== compact ===
+./universal_mind/tests/test_universal_mind.py:1072:    # ===== S1: Automatic compaction tests =====
+./universal_mind/tests/test_universal_mind.py:1074:    def test_local_jsonl_store_auto_compaction_threshold(self) -> None:
+./universal_mind/tests/test_universal_mind.py:1075:        """Test that automatic compaction triggers when tombstone ratio exceeds threshold."""
+./universal_mind/tests/test_universal_mind.py:1077:            # Use a policy that triggers compaction at low threshold
+./universal_mind/tests/test_universal_mind.py:1078:            policy = CompactionPolicy(max_tombstone_ratio=0.1, min_records_before_compact=10)
+./universal_mind/tests/test_universal_mind.py:1079:            store = LocalJSONLStore(directory=Path(temp_dir), compaction_policy=policy)
+./universal_mind/tests/test_universal_mind.py:1107:    def test_local_jsonl_store_compaction_survives_crash(self) -> None:
+./universal_mind/tests/test_universal_mind.py:1108:        """Test that crash-safe compaction preserves live data (atomic replace)."""
+./universal_mind/tests/test_universal_mind.py:1121:            # Manually trigger compaction
+./universal_mind/tests/test_universal_mind.py:1122:            # compact() returns total lines dropped (live records tombstoned + tombstone markers)
+./universal_mind/tests/test_universal_mind.py:1123:            removed = store.compact()
+./universal_mind/tests/test_universal_mind.py:1132:    def test_local_jsonl_store_auto_compaction_max_tombstones(self) -> None:
+./universal_mind/tests/test_universal_mind.py:1133:        """Test that automatic compaction triggers when absolute tombstone count exceeds max_tombstones."""
+./universal_mind/tests/test_universal_mind.py:1135:            # Use a policy that triggers compaction at absolute count
+./universal_mind/tests/test_universal_mind.py:1136:            policy = CompactionPolicy(max_tombstones=3, min_records_before_compact=5)
+./universal_mind/tests/test_universal_mind.py:1137:            store = LocalJSONLStore(directory=Path(temp_dir), compaction_policy=policy)
+./universal_mind/tests/test_universal_mind.py:1145:            # Delete 3 records - should trigger compaction (max_tombstones=3)
+./universal_mind/tests/test_universal_mind.py:1165:    def test_local_jsonl_store_compact_idempotent(self) -> None:
+./universal_mind/tests/test_universal_mind.py:1166:        """Test that compact() on an already-clean store is a no-op (returns 0)."""
+./universal_mind/tests/test_universal_mind.py:1174:            # First compaction
+./universal_mind/tests/test_universal_mind.py:1175:            removed1 = store.compact()
+./universal_mind/tests/test_universal_mind.py:1178:            # Second compaction (should be no-op)
+./universal_mind/tests/test_universal_mind.py:1179:            removed2 = store.compact()
+./universal_mind/tests/test_universal_mind.py:1182:            # Third compaction
+./universal_mind/tests/test_universal_mind.py:1183:            removed3 = store.compact()
+./universal_mind/tests/test_universal_mind.py:1190:    def test_local_jsonl_store_compaction_preserves_order(self) -> None:
+./universal_mind/tests/test_universal_mind.py:1191:        """Test that compaction preserves append order of live records."""
+./universal_mind/tests/test_universal_mind.py:1207:            store.compact()
+./universal_mind/memory/store.py:18:    """Policy for automatic compaction of tombstone records.
+./universal_mind/memory/store.py:20:    max_tombstone_ratio: Trigger compaction when tombstones / live_records > this ratio.
+./universal_mind/memory/store.py:21:    min_records_before_compact: Minimum total records before compaction is considered.
+./universal_mind/memory/store.py:22:    max_tombstones: Trigger compaction when absolute tombstone count >= this value.
+./universal_mind/memory/store.py:26:    min_records_before_compact: int = 100
+./universal_mind/memory/store.py:59:    def compact(self) -> int:
+./universal_mind/memory/store.py:105:    Automatic compaction: after each delete(), if the ratio of tombstones to live
+./universal_mind/memory/store.py:106:    records exceeds the policy threshold, compaction is triggered synchronously.
+./universal_mind/memory/store.py:113:        compaction_policy: CompactionPolicy | None = None,
+./universal_mind/memory/store.py:119:        self.compaction_policy = compaction_policy or CompactionPolicy()
+./universal_mind/memory/store.py:145:    def _maybe_compact(self) -> int:
+./universal_mind/memory/store.py:146:        """Check policy and trigger compaction if threshold exceeded.
+./universal_mind/memory/store.py:148:        Returns the number of records removed, or 0 if no compaction occurred.
+./universal_mind/memory/store.py:152:        if total < self.compaction_policy.min_records_before_compact:
+./universal_mind/memory/store.py:157:        ratio_triggered = ratio > self.compaction_policy.max_tombstone_ratio
+./universal_mind/memory/store.py:159:            self.compaction_policy.max_tombstones > 0
+./universal_mind/memory/store.py:160:            and self._tombstone_count >= self.compaction_policy.max_tombstones
+./universal_mind/memory/store.py:163:            return self.compact()
+./universal_mind/memory/store.py:207:        Triggers automatic compaction if the tombstone ratio exceeds the policy.
+./universal_mind/memory/store.py:236:        # Trigger automatic compaction if policy threshold exceeded
+./universal_mind/memory/store.py:237:        self._maybe_compact()
+./universal_mind/memory/store.py:241:    def compact(self) -> int:
+./.venv/lib/python3.12/site-packages/pygments/lexers/_php_builtins.py:100:           'compact',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_mysql_builtins.py:637:    'compact',
+./.venv/lib/python3.12/site-packages/pygments/lexers/rnc.py:20:    For RelaxNG-compact syntax.
+./.venv/lib/python3.12/site-packages/pygments/lexers/rnc.py:25:    aliases = ['rng-compact', 'rnc']
+./.venv/lib/python3.12/site-packages/pygments/lexers/_mapping.py:431:    'RNCCompactLexer': ('pygments.lexers.rnc', 'Relax-NG Compact', ('rng-compact', 'rnc'), ('*.rnc',), ()),
+./.venv/lib/python3.12/site-packages/pygments/lexers/configs.py:723:                            'coalescelist', 'compact', 'concat', 'contains',
+./.venv/lib/python3.12/site-packages/pygments/lexers/css.py:73:    'column-reverse', 'compact', 'condensed', 'contain', 'container',
+./.venv/lib/python3.12/site-packages/pygments/lexers/macaulay2.py:1255:    "compactMatrixForm",
+./.venv/lib/python3.12/site-packages/packaging/specifiers.py:466:        # Return state as a 2-item tuple for compactness:
+./.venv/lib/python3.12/site-packages/packaging/specifiers.py:871:        # Return state as a 2-item tuple for compactness:
+./.venv/lib/python3.12/site-packages/packaging/_parser.py:32:        # Return just the value string for compactness and stability.
+./.venv/lib/python3.12/site-packages/packaging/requirements.py:119:        # Return the requirement string for compactness and stability, paired
+./.venv/lib/python3.12/site-packages/packaging/version.py:778:        # Return state as a 6-item tuple for compactness:
+./.venv/lib/python3.12/site-packages/packaging/markers.py:458:        # Return the marker expression string for compactness and stability.
+./.venv/lib/python3.12/site-packages/_pytest/terminal.py:1658:    # The formatting is designed to be compact and readable, with at most 7 characters
+=== PowerZero ===
+NONE

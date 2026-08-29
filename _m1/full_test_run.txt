@@ -1,0 +1,58 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/elitebook1/baddanKhoda/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/elitebook1/baddanKhoda
+collecting ... collected 50 items
+
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_append_only_guarantee PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_business_card_returns_exactly_five_lines PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_caller_fault_does_not_trip_throttle PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_capability_contract_validation PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_composite_strategic_gate PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_duplicate_registration_raises_system_fault PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_end_to_end_echo_capability_produces_complete_audit_trail PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_error_handler_retry_logic PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_execution_throttle PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_execution_throttle_excludes_caller_faults PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_all_fallbacks_fail_raises_original PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_contract_validation_in_pipeline PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_fallback_capability PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_gate_precedence PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_multi_fallback_chain PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_no_retry_on_system_fault PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_pre_execution_pipeline PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_re_raises_system_fault_and_records PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_records_risk_assessment PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_retry_only_on_idempotent_capability PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_task_failure_is_recorded_and_reported PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_executive_with_error_handler PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_feedback_aggregation_works PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_human_feedback_gate_blocks_on_rejection PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_human_feedback_gate_blocks_on_repeated_needs_work PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_human_feedback_gate_custom_policy PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_intent_contract_enforcement_assert_complete PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_intent_incomplete_raised_on_empty_goal_or_success_criteria PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_intent_validates_params PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_auto_compaction_max_tombstones PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_auto_compaction_threshold PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_compact_idempotent PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_compaction_preserves_order PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_compaction_survives_crash PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_delete_tombstone PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_local_jsonl_store_runnable PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_memory_decay_collect_expired PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_memory_decay_decay_removes_expired PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_owner_id_present_on_every_persisted_record PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_registry_warns_on_implicit_idempotent_default PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_retry_on_failure_decorator PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_retry_on_failure_no_retry_on_caller_fault PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_retry_on_failure_no_retry_on_system_fault PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_risk_assessor_assesses_risk PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_risk_policy_allows_and_blocks PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_secret_leak_validator_raises_system_fault PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_strategic_decision_recorded PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_strategic_gate_blocks_execution PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_strategic_gate_redirects_to_capability PASSED
+universal_mind/tests/test_universal_mind.py::UniversalMindTests::test_ttl_classification_with_frozen_clock PASSED
+
+============================== 50 passed in 5.49s ==============================
