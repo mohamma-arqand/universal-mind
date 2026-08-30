@@ -12,10 +12,7 @@ Layer ranking (lower number = higher layer = cannot import from lower):
 """
 
 import ast
-import sys
 from pathlib import Path
-from typing import Dict, List, Tuple, Set
-
 
 # Layer mapping: module prefix -> layer number
 LAYER_MAP = {
@@ -53,12 +50,12 @@ def is_foundation(module_name: str) -> bool:
     return module_name in FOUNDATION_MODULES
 
 
-def extract_imports(filepath: Path) -> List[Tuple[int, str, str]]:
+def extract_imports(filepath: Path) -> list[tuple[int, str, str]]:
     """Extract all imports from a Python file. Returns (lineno, import_type, module_name)."""
     try:
         content = filepath.read_text()
         tree = ast.parse(content, filename=str(filepath))
-    except Exception as e:
+    except OSError as e:
         print(f"ERROR parsing {filepath}: {e}")
         return []
 
@@ -67,13 +64,12 @@ def extract_imports(filepath: Path) -> List[Tuple[int, str, str]]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 imports.append((node.lineno, 'import', alias.name))
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                imports.append((node.lineno, 'from', node.module))
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.append((node.lineno, 'from', node.module))
     return imports
 
 
-def find_layer_violations() -> List[Dict]:
+def find_layer_violations() -> list[dict]:
     """Find all layering violations in the codebase."""
     violations = []
     project_root = Path(__file__).parent.parent.parent

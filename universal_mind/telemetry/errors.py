@@ -1,11 +1,13 @@
 """Error taxonomy and handling for telemetry layer."""
 from __future__ import annotations
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Any, Optional, Callable, TypeVar
-from functools import wraps
-import time
+
 import random
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
+from functools import wraps
+from typing import Any, TypeVar
 
 
 class Disposition(str, Enum):
@@ -105,11 +107,11 @@ class RetryPolicy:
 class ErrorHandler:
     """Configuration for error handling and fallback behavior."""
     
-    retry_policy: Optional[RetryPolicy] = None
+    retry_policy: RetryPolicy | None = None
     #: Capability name, or ordered list of names, tried in order when the primary
     #: capability's retries are exhausted. An empty/None value disables fallback.
-    fallback_capability: Optional[str | list[str]] = None
-    fallback_params: Optional[dict[str, Any]] = None
+    fallback_capability: str | list[str] | None = None
+    fallback_params: dict[str, Any] | None = None
     #: Callable used to pause between retries; injectable so tests can provide a
     #: fake/instant no-op delay instead of a real ``time.sleep``.
     sleep: Callable[[float], None] = time.sleep
@@ -129,13 +131,10 @@ class ErrorHandler:
         if attempt >= self.effective_retry_policy.max_retries:
             return False
         # Never retry on NON_RETRYABLE or FATAL errors
-        if isinstance(exception, UniversalMindError):
-            if exception.disposition != Disposition.RETRYABLE:
-                return False
-        # Only retry TaskFailure/PermanentError and TransientError by default
-        if not isinstance(exception, (TransientError, PermanentError)):
+        if isinstance(exception, UniversalMindError) and exception.disposition != Disposition.RETRYABLE:
             return False
-        return True
+        # Only retry TransientError and PermanentError by default
+        return isinstance(exception, (TransientError, PermanentError))
 
     def get_fallback_chain(self) -> list[tuple[str, dict[str, Any]]]:
         """Return the ordered fallback chain as (name, params) pairs.
@@ -152,7 +151,7 @@ class ErrorHandler:
         )
         return [(name, self.fallback_params or {}) for name in names]
 
-    def get_fallback(self) -> Optional[tuple[str, dict[str, Any]]]:
+    def get_fallback(self) -> tuple[str, dict[str, Any]] | None:
         """Return the first fallback capability (name, params) if configured."""
         chain = self.get_fallback_chain()
         return chain[0] if chain else None
@@ -161,7 +160,7 @@ class ErrorHandler:
 class ErrorRecoveryStrategy:
     """Strategy for recovering from execution failures."""
     
-    def on_failure(self, exception: Exception, context: dict[str, Any]) -> Optional[str]:
+    def on_failure(self, exception: Exception, context: dict[str, Any]) -> str | None:
         """Called when an execution fails. Returns fallback capability name or None."""
         return None
     
@@ -173,7 +172,7 @@ class ErrorRecoveryStrategy:
 F = TypeVar('F', bound=Callable[..., Any])
 
 
-def retry_on_failure(handler: ErrorHandler, attempts: Optional[int] = None) -> Callable[[F], F]:
+def retry_on_failure(handler: ErrorHandler, attempts: int | None = None) -> Callable[[F], F]:
     """Decorator for retrying a function on failure.
     
     Args:
@@ -187,7 +186,7 @@ def retry_on_failure(handler: ErrorHandler, attempts: Optional[int] = None) -> C
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             max_retries = attempts if attempts is not None else handler.effective_retry_policy.max_retries
-            last_exception: Optional[Exception] = None
+            last_exception: Exception | None = None
             
             for attempt in range(max_retries):
                 try:
@@ -195,7 +194,7 @@ def retry_on_failure(handler: ErrorHandler, attempts: Optional[int] = None) -> C
                 except Exception as e:
                     last_exception = e
                     if not handler.should_retry(attempt, e):
-                        raise e
+                        raise
                     delay = handler.effective_retry_policy.get_delay(attempt)
                     if delay > 0:
                         handler.sleep(delay)

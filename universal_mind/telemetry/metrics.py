@@ -1,12 +1,13 @@
 """Metrics sink abstractions for telemetry."""
 from __future__ import annotations
+
+import json
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import json
-import threading
 
 
 @dataclass
@@ -76,9 +77,8 @@ class JSONLMetricsSink(MetricsSink):
         self._lock = threading.Lock()
     
     def emit(self, event: MetricEvent) -> None:
-        with self._lock:
-            with self.file_path.open('a', encoding='utf-8') as handle:
-                handle.write(json.dumps(event.to_dict(), ensure_ascii=False, sort_keys=True) + '\n')
+        with self._lock, self.file_path.open('a', encoding='utf-8') as handle:
+            handle.write(json.dumps(event.to_dict(), ensure_ascii=False, sort_keys=True) + '\n')
     
     def flush(self) -> None:
         pass  # Line-by-line, no buffering

@@ -1,16 +1,16 @@
 """Memory store abstractions and concrete append-only backends."""
 from __future__ import annotations
+
+import json
+import os
+import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-import json
-import os
-import uuid
-from typing import Any, Iterable
-
-from ..core.models import LedgerRecord
+from typing import Any
 
 
 @dataclass(frozen=True)

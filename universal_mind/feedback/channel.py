@@ -1,9 +1,10 @@
 """Feedback ingestion and aggregation over the same ledger."""
 from __future__ import annotations
+
+from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from collections import Counter
-from typing import Any, Optional
+from typing import Any
 
 from ..core.clock import Clock
 from ..memory.mnemosyne import Mnemosyne
@@ -34,9 +35,10 @@ class FeedbackPolicy:
         """
         if aggregation[Verdict.REJECTED.value] >= self.rejection_threshold:
             return True
-        if aggregation[Verdict.NEEDS_WORK.value] >= self.needs_work_threshold and aggregation[Verdict.APPROVED.value] < self.approval_threshold:
-            return True
-        return False
+        return (
+            aggregation[Verdict.NEEDS_WORK.value] >= self.needs_work_threshold
+            and aggregation[Verdict.APPROVED.value] < self.approval_threshold
+        )
 
 
 @dataclass(frozen=True)

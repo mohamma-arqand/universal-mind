@@ -1,5 +1,6 @@
 """Intent contract turning raw text into a structured commitment."""
 from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -46,7 +47,7 @@ class Intent:
         deadline: datetime | None = None,
         determinism: Determinism = Determinism.STRICT,
         owner_id: str,
-    ) -> 'Intent':
+    ) -> Intent:
         """Validate required fields and build an Intent."""
         if not goal or not goal.strip() or not success_criteria:
             raise IntentIncomplete('Intent requires a goal and at least one success criterion.')

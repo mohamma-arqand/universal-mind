@@ -1,179 +1,174 @@
-"""
-PowerZero precedence gate - absolute veto authority.
+"""PrecedencePipeline: deterministic gate evaluation with full trace.
 
-Order (immutable): PowerZero -> Risk -> Strategic -> HumanFeedback
-
-PowerZero.veto(intent) -> bool
-If True: no other gates run, nothing can override.
-
-Fail-closed: one DENY is enough. DEFER beats ALLOW.
-Output: IntegratedJudgment(decision, chain: list[(gate, verdict, reason)])
+GATE_PRECEDENCE is a frozen module constant. It is not configurable by env var,
+config key, or constructor kwarg. This is fixed policy.
 """
 
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import List, Optional, Protocol, Callable
-from universal_mind.core.intent import Intent
-from universal_mind.pantheon.registry import CapabilityDossier
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Final
+
+from .base import Gate, GateResult, Verdict, combine_verdicts
+
+# Type for gate identifiers
+GateId = str
+
+# Fixed gate precedence order — not configurable.
+# Higher in the list = higher precedence = runs first.
+# PowerZero veto is terminal: once vetoed, no downstream gate may re-admit.
+GATE_PRECEDENCE: Final[tuple[GateId, ...]] = (
+    "PowerZero",      # 1000 - absolute veto authority
+    "Layering",       # 900  - layer boundary enforcement
+    "Policy",         # 800  - strategic policy decisions
+    "Risk",           # 600  - risk assessment
+    "HumanFeedback",  # 400  - historical rejection
+)
 
 
-class Verdict(Enum):
-    ALLOW = "ALLOW"
-    DENY = "DENY"
-    DEFER = "DEFER"
+def resolve_order() -> tuple[GateId, ...]:
+    """Return the frozen gate precedence order.
 
-
-class GateName(Enum):
-    POWER_ZERO = "PowerZero"
-    RISK = "Risk"
-    STRATEGIC = "Strategic"
-    HUMAN_FEEDBACK = "HumanFeedback"
+    This is the single source of truth for gate evaluation order.
+    No parameters, no overrides, no configuration.
+    """
+    return GATE_PRECEDENCE
 
 
 @dataclass(frozen=True)
-class GateResult:
-    gate: GateName
-    verdict: Verdict
-    reason: str
-
-
-@dataclass(frozen=True)
-class IntegratedJudgment:
+class PipelineJudgment:
+    """Complete result of pipeline evaluation."""
     decision: Verdict
-    chain: List[GateResult]
+    trace: list[GateResult]
 
     @property
     def allowed(self) -> bool:
         return self.decision == Verdict.ALLOW
 
+    @property
+    def deferred(self) -> bool:
+        return self.decision == Verdict.DEFER
 
-class PowerZero(Protocol):
-    """PowerZero gate - absolute veto authority."""
-
-    def veto(self, intent: Intent) -> bool:
-        """
-        Returns True if the intent is absolutely vetoed.
-        If True: no other gates execute, nothing can override.
-        """
-        ...
-
-
-class RiskGate(Protocol):
-    """Risk assessment gate."""
-
-    def assess(self, intent: Intent, capability: CapabilityDossier) -> Verdict:
-        ...
-
-
-class StrategicGate(Protocol):
-    """Strategic gate."""
-
-    def decide(self, intent: Intent, capability: CapabilityDossier) -> Verdict:
-        ...
-
-
-class HumanFeedbackGate(Protocol):
-    """Human feedback gate."""
-
-    def decide(self, intent: Intent, capability: CapabilityDossier) -> Verdict:
-        ...
-
-
-# Immutable gate order - cannot be changed from outside
-_GATE_ORDER: tuple[GateName, ...] = (
-    GateName.POWER_ZERO,
-    GateName.RISK,
-    GateName.STRATEGIC,
-    GateName.HUMAN_FEEDBACK,
-)
-
-
-def get_gate_order() -> tuple[GateName, ...]:
-    """Return the immutable gate order."""
-    return _GATE_ORDER
-
-
-def _combine_verdicts(verdicts: List[Verdict]) -> Verdict:
-    """Combine verdicts: one DENY = DENY, DEFER beats ALLOW, else ALLOW."""
-    if Verdict.DENY in verdicts:
-        return Verdict.DENY
-    if Verdict.DEFER in verdicts:
-        return Verdict.DEFER
-    return Verdict.ALLOW
+    @property
+    def denied(self) -> bool:
+        return self.decision == Verdict.DENY
 
 
 class PrecedencePipeline:
     """
-    Immutable precedence pipeline for gate evaluation.
+    Deterministic gate evaluation pipeline with frozen precedence.
 
-    Order: PowerZero -> Risk -> Strategic -> HumanFeedback
-    - PowerZero veto stops everything (absolute)
-    - Fail-closed: one DENY = DENY
-    - DEFER beats ALLOW
+    Ordering: by GATE_PRECEDENCE module constant — order is fixed policy.
+    Gates not in GATE_PRECEDENCE are rejected at construction time.
+
+    Short-circuit: any gate returning DENY stops evaluation immediately.
+    Skipped gates are recorded in trace with skipped=True.
+
+    Veto: The gate with highest precedence that returns DENY acts as
+    an absolute veto — nothing after it runs, nothing can override.
+    PowerZero veto is terminal: once vetoed, no downstream gate may re-admit.
     """
 
-    def __init__(
-        self,
-        power_zero: PowerZero,
-        risk_gate: RiskGate,
-        strategic_gate: StrategicGate,
-        human_feedback_gate: HumanFeedbackGate,
-    ):
-        self._power_zero = power_zero
-        self._risk_gate = risk_gate
-        self._strategic_gate = strategic_gate
-        self._human_feedback_gate = human_feedback_gate
+    def __init__(self, gates: list[Gate]):
+        # Build a precedence map from the frozen module constant
+        precedence_map = {name: i for i, name in enumerate(GATE_PRECEDENCE)}
 
-    def evaluate(self, intent: Intent, capability: CapabilityDossier) -> IntegratedJudgment:
-        """Evaluate all gates in precedence order."""
-        chain: List[GateResult] = []
+        # Validate all gates have names in GATE_PRECEDENCE
+        for gate in gates:
+            if gate.name not in precedence_map:
+                raise ValueError(
+                    f"Gate '{gate.name}' not in GATE_PRECEDENCE. "
+                    f"Valid names: {list(GATE_PRECEDENCE)}"
+                )
 
-        # 1. PowerZero - absolute veto
-        if self._power_zero.veto(intent):
-            chain.append(GateResult(GateName.POWER_ZERO, Verdict.DENY, "PowerZero veto"))
-            return IntegratedJudgment(Verdict.DENY, chain)
+        # Sort by GATE_PRECEDENCE order (lower index = higher precedence)
+        self.gates = sorted(gates, key=lambda g: precedence_map[g.name])
 
-        chain.append(GateResult(GateName.POWER_ZERO, Verdict.ALLOW, "PowerZero passed"))
+        # Verify unique names
+        names = [g.name for g in self.gates]
+        if len(names) != len(set(names)):
+            raise ValueError(f"Duplicate gate names: {names}")
 
-        # 2. Risk gate
-        risk_verdict = self._risk_gate.assess(intent, capability)
-        chain.append(GateResult(GateName.RISK, risk_verdict, f"Risk: {risk_verdict.value}"))
-        if risk_verdict == Verdict.DENY:
-            return IntegratedJudgment(Verdict.DENY, chain)
+    def evaluate(self, context: dict[str, Any]) -> PipelineJudgment:
+        """Evaluate all gates in precedence order.
 
-        # 3. Strategic gate
-        strategic_verdict = self._strategic_gate.decide(intent, capability)
-        chain.append(GateResult(GateName.STRATEGIC, strategic_verdict, f"Strategic: {strategic_verdict.value}"))
-        if strategic_verdict == Verdict.DENY:
-            return IntegratedJudgment(Verdict.DENY, chain)
+        Returns PipelineJudgment with:
+        - decision: final combined verdict
+        - trace: list of GateResult for every gate (including skipped)
+        """
+        trace: list[GateResult] = []
+        verdicts: list[Verdict] = []
+        vetoed = False
 
-        # 4. HumanFeedback gate
-        hf_verdict = self._human_feedback_gate.decide(intent, capability)
-        chain.append(GateResult(GateName.HUMAN_FEEDBACK, hf_verdict, f"HumanFeedback: {hf_verdict.value}"))
+        for i, gate in enumerate(self.gates):
+            # Check if we should short-circuit (after a DENY was already added to verdicts)
+            if vetoed:
+                # This gate is skipped due to earlier DENY
+                trace.append(GateResult(
+                    gate_name=gate.name,
+                    precedence=i,  # Position in GATE_PRECEDENCE
+                    verdict=Verdict.DENY,
+                    reason="Skipped: earlier gate returned DENY",
+                    skipped=True,
+                    skip_reason="hard veto by earlier gate",
+                ))
+                continue
 
-        # Combine: one DENY = DENY, DEFER beats ALLOW
-        final = _combine_verdicts([r.verdict for r in chain])
-        return IntegratedJudgment(final, chain)
+            # Evaluate the gate
+            verdict = gate.evaluate(context)
+            trace.append(GateResult(
+                gate_name=gate.name,
+                precedence=i,
+                verdict=verdict,
+                reason=f"Evaluated: {verdict.value}",
+                skipped=False,
+            ))
+            verdicts.append(verdict)
+
+            # Hard short-circuit on DENY - but still record skipped for remaining gates
+            if verdict == Verdict.DENY:
+                vetoed = True
+
+        # Combine verdicts (only from gates that actually ran)
+        decision = combine_verdicts(verdicts)
+
+        return PipelineJudgment(decision=decision, trace=trace)
 
 
-# Default PowerZero implementation - vetoes nothing (open by default)
-class DefaultPowerZero:
-    """Default PowerZero that vetoes nothing."""
-
-    def veto(self, intent: Intent) -> bool:
-        return False
-
-
-# Convenience function to create default pipeline
 def create_default_pipeline(
-    risk_gate: RiskGate,
-    strategic_gate: StrategicGate,
-    human_feedback_gate: HumanFeedbackGate,
+    power_zero: Gate,
+    risk_gate: Gate | None,
+    strategic_gate: Gate,
+    human_feedback_gate: Gate | None = None,
+    layering_gate: Gate | None = None,
 ) -> PrecedencePipeline:
-    """Create a pipeline with default PowerZero (vetoes nothing)."""
-    return PrecedencePipeline(
-        power_zero=DefaultPowerZero(),
-        risk_gate=risk_gate,
-        strategic_gate=strategic_gate,
-        human_feedback_gate=human_feedback_gate,
-    )
+    """Create a pipeline with standard gates using frozen GATE_PRECEDENCE.
+
+    Gate order is determined by GATE_PRECEDENCE module constant:
+    - PowerZero: 1000 (absolute veto authority)
+    - Layering: 900 (layer boundary enforcement)
+    - Policy: 800 (strategic policy decisions)
+    - Risk: 600 (risk assessment)
+    - HumanFeedback: 400 (historical rejection)
+
+    Gates must have correct names matching GATE_PRECEDENCE entries.
+    """
+    from .layering import create_layering_gate
+
+    gates = [power_zero]
+
+    # Layering is always included - create default if not provided
+    if layering_gate is not None:
+        gates.append(layering_gate)
+    else:
+        gates.append(create_layering_gate())
+
+    gates.append(strategic_gate)
+
+    if risk_gate is not None:
+        gates.append(risk_gate)
+
+    if human_feedback_gate is not None:
+        gates.append(human_feedback_gate)
+
+    return PrecedencePipeline(gates)

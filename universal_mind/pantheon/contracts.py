@@ -1,11 +1,12 @@
 """Capability adapter boundary used by the Executive Mind."""
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from ..core.intent import Intent, Determinism
 from ..core.errors import CallerFault
+from ..core.intent import Determinism, Intent
 
 
 class ContractViolation(CallerFault):
@@ -13,7 +14,6 @@ class ContractViolation(CallerFault):
     
     This is a caller fault - non-retryable and excluded from error-rate throttling.
     """
-    pass
 
 
 @dataclass(frozen=True)
@@ -36,7 +36,6 @@ class Capability(ABC):
         Override in subclasses to add custom validation logic.
         Raises ContractViolation if validation fails.
         """
-        pass
 
     @abstractmethod
     def execute(self, intent: Intent, params: dict[str, Any]) -> CapabilityResult:

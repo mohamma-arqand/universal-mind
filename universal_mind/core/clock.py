@@ -1,8 +1,9 @@
 """Clock abstraction used for all time-sensitive behavior."""
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class Clock(ABC):
@@ -33,6 +34,6 @@ class FrozenClock(Clock):
     def now(self) -> datetime:
         return self.current
 
-    def advance(self, seconds: int) -> 'FrozenClock':
+    def advance(self, seconds: int) -> FrozenClock:
         """Return a new frozen clock advanced by seconds."""
         return FrozenClock(self.current + timedelta(seconds=seconds))

@@ -1,8 +1,9 @@
 """Mnemosyne memory layer for auditing and recall."""
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
-from typing import Any, Iterable
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from ..core.clock import Clock
 from ..core.models import RecordStatus
@@ -82,23 +83,25 @@ class Mnemosyne:
 
     def collect_expired(self) -> list[str]:
         """Remove expired records from the store and return their IDs.
-        
+
         This method implements memory decay by permanently removing records
         that have exceeded their time-to-live threshold.
         """
         expired_ids = []
         for record in list(self.store.read_all()):
-            if self._classify(record) == RecordStatus.EXPIRED:
-                if self.store.delete(record['id']):
-                    expired_ids.append(record['id'])
+            if (
+                self._classify(record) == RecordStatus.EXPIRED
+                and self.store.delete(record['id'])
+            ):
+                expired_ids.append(record['id'])
         return expired_ids
 
     def decay(self, max_age: timedelta | None = None) -> int:
         """Decay memory by removing expired records.
-        
+
         Args:
             max_age: Maximum age for records to keep. If None, uses TTL from records.
-            
+
         Returns:
             Number of records removed.
         """
@@ -108,11 +111,15 @@ class Mnemosyne:
                 created_at = datetime.fromisoformat(record['created_at'])
                 if created_at.tzinfo is None:
                     created_at = created_at.replace(tzinfo=timezone.utc)
-                if self.clock.now() - created_at > max_age:
-                    if self.store.delete(record['id']):
-                        count += 1
+                if (
+                    self.clock.now() - created_at > max_age
+                    and self.store.delete(record['id'])
+                ):
+                    count += 1
             else:
-                if self._classify(record) == RecordStatus.EXPIRED:
-                    if self.store.delete(record['id']):
-                        count += 1
+                if (
+                    self._classify(record) == RecordStatus.EXPIRED
+                    and self.store.delete(record['id'])
+                ):
+                    count += 1
         return count

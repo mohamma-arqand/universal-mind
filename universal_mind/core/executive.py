@@ -1,22 +1,37 @@
 """Executive Mind orchestrates intents through registered capabilities."""
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Any, Optional, Callable, Protocol
-from enum import Enum
 
-from .clock import Clock
-from .errors import SystemFault, TaskFailure, CallerFault, ErrorHandler
-from .identity import Identity, DEFAULT_OWNER
-from .intent import Intent, Determinism
-from .models import ExecutionRecord
-from ..memory.mnemosyne import Mnemosyne
-from ..pantheon.registry import PantheonRegistry, CapabilityDossier
-from ..pantheon.contracts import Capability
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Protocol, cast
+
+logger = logging.getLogger(__name__)
+
 from ..feedback.channel import HumanFeedbackGate
+from ..gates import (
+    DefaultPowerZero,
+    Gate,
+    LayeringGate,
+    PipelineJudgment,
+    PowerZero,
+    PrecedencePipeline,
+    Verdict,
+)
+from ..memory.mnemosyne import Mnemosyne
+from ..observability.recorder import NullRecorder, Recorder
+from ..pantheon.contracts import Capability
+from ..pantheon.registry import CapabilityDossier, PantheonRegistry
+from .clock import Clock
+from .errors import CallerFault, ErrorHandler, SystemFault, TaskFailure
+from .identity import DEFAULT_OWNER, Identity
+from .intent import Determinism, Intent
+from .models import ExecutionRecord
 
 
 class Decision(Enum):
-    """Strategic decision outcomes."""
+    """Strategic decision outcomes (legacy compatibility)."""
     PROCEED = 'proceed'
     BLOCK = 'block'
     REDIRECT = 'redirect'
@@ -24,15 +39,18 @@ class Decision(Enum):
 
 @dataclass
 class StrategicDecision:
-    """Result of a strategic decision gate evaluation."""
+    """Result of a strategic decision gate evaluation (legacy compatibility)."""
 
     decision: Decision
-    redirect_capability: Optional[str] = None
-    reason: Optional[str] = None
+    redirect_capability: str | None = None
+    reason: str | None = None
 
 
 class StrategicGate:
-    """Base class for strategic decision gates."""
+    """Base class for strategic decision gates (legacy compatibility).
+
+    New code should implement the Gate protocol from universal_mind.gates.base.
+    """
 
     def evaluate(self, intent: Intent, context: dict[str, Any]) -> StrategicDecision:
         """Evaluate whether to proceed, block, or redirect an intent.
@@ -103,16 +121,14 @@ class DefaultRiskPolicy:
         if risk_level == 'high':
             if self.policy.high_risk_blocks:
                 # Exception: reversible + strict determinism
-                if (self.policy.allow_high_risk_if_reversible_and_strict
-                        and dossier is not None
-                        and dossier.reversible
-                        and intent.determinism == Determinism.STRICT):
-                    return True
-                return False
+                return (
+                    self.policy.allow_high_risk_if_reversible_and_strict
+                    and dossier is not None
+                    and dossier.reversible
+                    and intent.determinism == Determinism.STRICT
+                )
             return True
-        elif risk_level == 'medium' and self.policy.medium_risk_blocks:
-            return False
-        elif risk_level == 'low' and self.policy.low_risk_blocks:
+        elif risk_level == 'medium' and self.policy.medium_risk_blocks or risk_level == 'low' and self.policy.low_risk_blocks:
             return False
         return True
 
@@ -131,43 +147,289 @@ class RiskAssessor:
         return 'low'
 
 
+# =============================================================================
+# NEW UNIFIED GATE ADAPTERS
+# =============================================================================
+
+class _RiskGateAdapter(Gate):
+    """Adapts RiskAssessor + RiskPolicy to the unified Gate protocol."""
+
+    def __init__(
+        self,
+        assessor: RiskAssessor,
+        selector: Callable[[], tuple[CapabilityDossier, Capability]],
+        policy: RiskPolicyProtocol,
+        name: str = "Risk",
+        precedence: int = 600,
+    ):
+        self._assessor = assessor
+        self._selector = selector
+        self._policy = policy
+        self._name = name
+        self._precedence = precedence
+
+    @property
+    def precedence(self) -> int:
+        return self._precedence
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def evaluate(self, context: dict[str, Any]) -> Verdict:
+        intent = context.get('intent')
+        if intent is None:
+            raise ValueError("RiskGate requires 'intent' in context")
+
+        dossier, capability = self._selector()
+        risk_level = self._assessor.assess(intent, capability, dossier)
+        context['risk_level'] = risk_level
+        context['dossier'] = dossier
+
+        if self._policy.allows(risk_level, dossier, intent):
+            return Verdict.ALLOW
+        return Verdict.DENY
+
+
+class _HumanFeedbackGateAdapter(Gate):
+    """Adapts HumanFeedbackGate to the unified Gate protocol."""
+
+    def __init__(
+        self,
+        feedback_gate: HumanFeedbackGate,
+        target_record_id: str | None = None,
+        name: str = "HumanFeedback",
+        precedence: int = 400,
+    ):
+        self._feedback_gate = feedback_gate
+        self._target_record_id = target_record_id
+        self._name = name
+        self._precedence = precedence
+
+    @property
+    def precedence(self) -> int:
+        return self._precedence
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def evaluate(self, context: dict[str, Any]) -> Verdict:
+        target_id = self._target_record_id or context.get('target_record_id')
+        if target_id and self._feedback_gate.is_blocked(target_id):
+            return Verdict.DENY
+        return Verdict.ALLOW
+
+
+class _PolicyGateAdapter(Gate):
+    """Adapts a legacy StrategicGate to the unified Gate protocol."""
+
+    def __init__(
+        self,
+        strategic_gate: StrategicGate,
+        name: str = "Policy",
+        precedence: int = 800,
+    ):
+        self._strategic_gate = strategic_gate
+        self._name = name
+        self._precedence = precedence
+
+    @property
+    def precedence(self) -> int:
+        return self._precedence
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def evaluate(self, context: dict[str, Any]) -> Verdict:
+        intent = context.get('intent')
+        if intent is None:
+            raise ValueError("PolicyGate requires 'intent' in context")
+
+        decision = self._strategic_gate.evaluate(intent, context)
+        if decision.decision == Decision.PROCEED:
+            return Verdict.ALLOW
+        elif decision.decision == Decision.BLOCK:
+            # Store the reason for the trace
+            context['_last_block_reason'] = decision.reason
+            return Verdict.DENY
+        elif decision.decision == Decision.REDIRECT:
+            # REDIRECT treated as DEFER - pipeline continues but signals redirect
+            context['redirect_capability'] = decision.redirect_capability
+            context['_last_redirect_reason'] = decision.reason
+            return Verdict.DEFER
+        return Verdict.DENY
+
+
+# =============================================================================
+# THIN ADAPTER: CompositeStrategicGate delegates to PrecedencePipeline
+# =============================================================================
+
 class CompositeStrategicGate(StrategicGate):
-    """Composable strategic gate chaining sub-gates with configurable precedence.
+    """Thin adapter: delegates to unified PrecedencePipeline.
 
-    Sub-gates are evaluated in descending precedence order. The first sub-gate to
-    return a non-PROCEED decision (BLOCK or REDIRECT) short-circuits and wins.
+    This maintains backward compatibility with existing code that expects
+    a StrategicGate, while using the single authoritative pipeline.
 
-    This gives callers an explicit, documented precedence policy. The default
-    precedence levels used by :meth:`ExecutiveMind` are:
+    The pipeline order (highest precedence first):
+    - PowerZero: 1000 (absolute veto)
+    - LayeringGate: 900 (layer boundary enforcement)
+    - Policy: 800 (caller-supplied business logic)
+    - Risk: 600 (risk assessment)
+    - HumanFeedback: 400 (historical rejection)
 
-    *  80 — policy gate (caller-supplied business logic)
-    *  60 — risk gate (high-risk operation blocking)
-    *  50 — human-feedback gate (historical rejection blocking)
+    Throttle is NOT part of this pipeline; applied separately after.
 
-    Throttle is deliberately NOT part of this composite: per the pre-execution
-    pipeline contract, execution throttle is applied as a separate step AFTER the
-    strategic gate (see :meth:`ExecutiveMind.handle`).
+    Backward compatibility: Can also be initialized with a list of
+    (precedence, StrategicGate) tuples as in the original implementation.
     """
 
-    def __init__(self, gates: Optional[list[tuple[int, StrategicGate]]] = None):
-        self.gates = sorted(gates or [], key=lambda x: -x[0])
+    def __init__(
+        self,
+        # Backward compatibility: allow old-style list of tuples as first positional arg
+        gates: list[tuple[int, StrategicGate]] | None = None,
+        # New-style: named parameters (no gate_precedence — fixed by GATE_PRECEDENCE)
+        power_zero: PowerZero | None = None,
+        layering_gate: LayeringGate | None = None,
+        policy_gate: StrategicGate | None = None,
+        risk_assessor: RiskAssessor | None = None,
+        risk_selector: Callable[[], tuple[CapabilityDossier, Capability]] | None = None,
+        risk_policy: RiskPolicyProtocol | None = None,
+        feedback_gate: HumanFeedbackGate | None = None,
+        target_record_id: str | None = None,
+    ):
+        # Detect old-style initialization: first arg is a list of tuples
+        if gates is not None and isinstance(gates, list):
+            # Old-style: list of (precedence, StrategicGate) tuples
+            self._init_legacy(gates)
+        else:
+            # New-style: named parameters (gate_precedence removed - fixed policy)
+            self._power_zero = power_zero or DefaultPowerZero()
+            self._layering_gate = layering_gate
+            self._policy_gate = policy_gate or StrategicGate()
+            self._risk_assessor = risk_assessor or RiskAssessor()
+            self._risk_selector = risk_selector
+            self._risk_policy = risk_policy or DefaultRiskPolicy()
+            self._feedback_gate = feedback_gate
+            self._target_record_id = target_record_id
+
+            # Build the unified pipeline
+            self._pipeline = self._build_pipeline()
+            self._last_judgment: PipelineJudgment | None = None
+
+    def _init_legacy(self, gates: list[tuple[int, StrategicGate]]) -> None:
+        """Initialize from legacy list of (precedence, StrategicGate) tuples.
+
+        Combines all legacy gates into a single "Policy" gate that runs them
+        in order of their original precedence (highest first).
+        """
+        from ..gates.precedence import create_default_pipeline
+
+        # Sort legacy gates by precedence (highest first)
+        sorted_gates = sorted(gates, key=lambda x: -x[0])
+
+        # Create a composite StrategicGate that runs all legacy gates in order
+        class CompositeLegacyGate(StrategicGate):
+            def __init__(self, gates: list[tuple[int, StrategicGate]]):
+                self._gates = gates
+
+            def evaluate(self, intent: Intent, context: dict[str, Any]) -> StrategicDecision:
+                for precedence, gate in self._gates:
+                    decision = gate.evaluate(intent, context)
+                    if decision.decision != Decision.PROCEED:
+                        return decision
+                return StrategicDecision(decision=Decision.PROCEED)
+
+        composite_gate = CompositeLegacyGate(sorted_gates)
+
+        # Build pipeline with just PowerZero, Layering (disabled), Policy (composite), no Risk, no HumanFeedback
+        self._pipeline = create_default_pipeline(
+            power_zero=DefaultPowerZero(),
+            risk_gate=None,
+            strategic_gate=_PolicyGateAdapter(composite_gate, name="Policy"),
+            human_feedback_gate=None,
+            layering_gate=None,  # No layering in legacy mode
+        )
+
+        # Set dummy values for new-style attributes (not used in legacy mode)
+        self._power_zero = DefaultPowerZero()
+        self._layering_gate = None
+        self._policy_gate = StrategicGate()
+        self._risk_assessor = RiskAssessor()
+        self._risk_selector = None
+        self._risk_policy = DefaultRiskPolicy()
+        self._feedback_gate = None
+        self._target_record_id = None
+        self._gate_precedence = {}
+
+    def _build_pipeline(self) -> PrecedencePipeline:
+        """Build the unified PrecedencePipeline using frozen GATE_PRECEDENCE."""
+        from ..gates.precedence import create_default_pipeline
+
+        # Use create_default_pipeline which respects GATE_PRECEDENCE
+        return create_default_pipeline(
+            power_zero=self._power_zero,
+            risk_gate=_RiskGateAdapter(
+                self._risk_assessor,
+                self._risk_selector,
+                self._risk_policy,
+                name="Risk",
+            ) if self._risk_selector is not None else None,
+            strategic_gate=_PolicyGateAdapter(
+                self._policy_gate,
+                name="Policy",
+            ),
+            human_feedback_gate=_HumanFeedbackGateAdapter(
+                self._feedback_gate,
+                target_record_id=self._target_record_id,
+                name="HumanFeedback",
+            ) if self._feedback_gate is not None else None,
+            layering_gate=self._layering_gate,
+        )
 
     def evaluate(self, intent: Intent, context: dict[str, Any]) -> StrategicDecision:
-        for _precedence, gate in self.gates:
-            decision = gate.evaluate(intent, context)
-            if decision.decision != Decision.PROCEED:
-                return decision
-        return StrategicDecision(decision=Decision.PROCEED)
+        """Evaluate via unified pipeline, convert to legacy StrategicDecision."""
+        # Ensure intent is in context
+        context = dict(context)
+        context['intent'] = intent
 
-    def add_gate(self, precedence: int, gate: StrategicGate) -> None:
-        self.gates.append((precedence, gate))
-        self.gates.sort(key=lambda x: -x[0])
+        judgment: PipelineJudgment = self._pipeline.evaluate(context)
+        # Expose the raw trace so ExecutiveMind can record per-gate decisions
+        # without re-running the pipeline (pure side-channel).
+        self._last_judgment = judgment
+
+        # Convert unified verdict to legacy StrategicDecision
+        if judgment.decision == Verdict.ALLOW:
+            return StrategicDecision(decision=Decision.PROCEED)
+        elif judgment.decision == Verdict.DENY:
+            # Find the gate that caused the DENY - use stored reason from context if available
+            reason = "Blocked by gate pipeline"
+            for result in judgment.trace:
+                if result.verdict == Verdict.DENY and not result.skipped:
+                    # Check if the adapter stored a specific reason in context
+                    if context.get('_last_block_reason'):
+                        reason = f"Blocked by {result.gate_name}: {context['_last_block_reason']}"
+                    else:
+                        reason = f"Blocked by {result.gate_name}: {result.reason}"
+                    break
+            return StrategicDecision(decision=Decision.BLOCK, reason=reason)
+        elif judgment.decision == Verdict.DEFER:
+            redirect_cap = context.get('redirect_capability')
+            redirect_reason = context.get('_last_redirect_reason', "Deferred by gate pipeline")
+            return StrategicDecision(
+                decision=Decision.REDIRECT,
+                redirect_capability=redirect_cap,
+                reason=redirect_reason,
+            )
+        return StrategicDecision(decision=Decision.BLOCK, reason="Unknown verdict")
 
 
-# Precedence constants. Higher = evaluated first and can shadow lower-priority gates.
-PRECEDENCE_POLICY = 80
-PRECEDENCE_RISK = 60
-PRECEDENCE_FEEDBACK = 50
+# Legacy constants (kept for backward compatibility)
+# New code should use gate.precedence directly
+PRECEDENCE_POLICY = 800
+PRECEDENCE_RISK = 600
+PRECEDENCE_FEEDBACK = 400
 
 
 class ThrottleGate(StrategicGate):
@@ -237,7 +499,7 @@ class RiskGate(StrategicGate):
         self,
         assessor: RiskAssessor,
         selector: Callable[[], tuple[CapabilityDossier, Capability]],
-        policy: Optional[RiskPolicyProtocol] = None,
+        policy: RiskPolicyProtocol | None = None,
     ):
         self.assessor = assessor
         self.selector = selector
@@ -260,7 +522,7 @@ class RiskGate(StrategicGate):
 class HumanFeedbackGateWrapper(StrategicGate):
     """Gate that blocks intents targeting a record previously rejected by a human."""
 
-    def __init__(self, feedback_gate: HumanFeedbackGate, target_record_id: Optional[str] = None):
+    def __init__(self, feedback_gate: HumanFeedbackGate, target_record_id: str | None = None):
         self.feedback_gate = feedback_gate
         self.target_record_id = target_record_id
 
@@ -301,7 +563,10 @@ class ExecutiveMind:
         risk_policy: RiskPolicyProtocol | None = None,
         throttle: ExecutionThrottle | None = None,
         feedback_gate: HumanFeedbackGate | None = None,
-        gate_precedence: dict[str, int] | None = None,
+        power_zero: PowerZero | None = None,
+        layering_gate: LayeringGate | None = None,
+        *,
+        recorder: Recorder | None = None,
     ) -> None:
         self.registry = registry
         self.memory = memory
@@ -312,33 +577,55 @@ class ExecutiveMind:
         self.risk_policy = risk_policy or DefaultRiskPolicy()
         self.throttle = throttle or ExecutionThrottle()
         self.feedback_gate = feedback_gate
-        self.gate_precedence = gate_precedence or {}
+        self.power_zero = power_zero or DefaultPowerZero()
+        self.layering_gate = layering_gate
         # The caller-supplied gate, if any, becomes the policy sub-gate of the
         # composite. If none is supplied, an always-PROCEED gate is used.
         self.strategic_gate = strategic_gate or StrategicGate()
+        # Observability: recorder is a side-channel. A default is never shared
+        # as a mutable class attribute; each instance builds a fresh NullRecorder.
+        self._recorder = recorder or NullRecorder()
+        # Count of recorder failures. Must never affect control flow; it exists
+        # so a broken observer can be detected instead of silently ignored.
+        self._recorder_failures = 0
 
     def _build_composite_gate(self, selector: Callable[[], tuple[CapabilityDossier, Capability]]) -> CompositeStrategicGate:
-        """Assemble the composite gate (policy + risk + feedback) with precedence.
+        """Assemble the composite gate using unified PrecedencePipeline.
 
         ``selector`` is a zero-arg callable resolving ``(dossier, capability)``;
-        it is handed to :class:`RiskGate` for lazy risk assessment.
+        it is handed to the risk gate adapter for lazy risk assessment.
 
-        Precedence can be overridden via ``gate_precedence`` dict with keys:
-        - 'policy' (default: 80)
-        - 'risk' (default: 60)
-        - 'feedback' (default: 50)
+        Gate precedence is fixed by GATE_PRECEDENCE module constant from gates.precedence:
+        - PowerZero: absolute veto authority
+        - Layering: layer boundary enforcement
+        - Policy: caller-supplied business logic
+        - Risk: risk assessment
+        - HumanFeedback: historical rejection
+
+        Throttle is NOT part of this pipeline; applied separately after.
         """
-        policy_prec = self.gate_precedence.get('policy', PRECEDENCE_POLICY)
-        risk_prec = self.gate_precedence.get('risk', PRECEDENCE_RISK)
-        feedback_prec = self.gate_precedence.get('feedback', PRECEDENCE_FEEDBACK)
+        from ..gates.precedence import resolve_order
 
-        gates: list[tuple[int, StrategicGate]] = [
-            (policy_prec, self.strategic_gate),
-            (risk_prec, RiskGate(self.risk_assessor, selector, self.risk_policy)),
-        ]
-        if self.feedback_gate is not None:
-            gates.append((feedback_prec, HumanFeedbackGateWrapper(self.feedback_gate)))
-        return CompositeStrategicGate(gates)
+        # Verify the frozen precedence order
+        expected_order = resolve_order()
+        assert expected_order == (
+            "PowerZero",
+            "Layering",
+            "Policy",
+            "Risk",
+            "HumanFeedback"
+        ), f"Unexpected precedence order: {expected_order}"
+
+        return CompositeStrategicGate(
+            power_zero=self.power_zero,
+            layering_gate=self.layering_gate,
+            policy_gate=self.strategic_gate,
+            risk_assessor=self.risk_assessor,
+            risk_selector=selector,
+            risk_policy=self.risk_policy,
+            feedback_gate=self.feedback_gate,
+            target_record_id=None,  # Will be set from gate_context in handle()
+        )
 
     def handle(self, intent: Intent) -> ExecutionRecord:
         """Execute an intent through a selected capability and audit every step."""
@@ -375,11 +662,18 @@ class ExecutiveMind:
             }
             strategic_decision = composite_gate.evaluate(intent, gate_context)
 
+            # Observability (side-channel): record each evaluated gate's decision.
+            # Only gates that actually ran are recorded — gates short-circuited by
+            # an earlier DENY produce no event. A Recorder failure must never
+            # swallow a gate decision or change the veto path, so it is caught.
+            self._record_gate_decisions(composite_gate)
+
             if strategic_decision.decision == Decision.BLOCK:
                 return self._record_block(
                     intent.owner_id, intent_record_id,
                     strategic_decision.reason or 'Blocked by strategic gate',
                     status='blocked',
+                    terminal_gate=self._denying_gate(composite_gate),
                 )
 
             # Step 2 (resume): resolve the selected capability for execution.
@@ -404,6 +698,7 @@ class ExecutiveMind:
                     intent.owner_id, intent_record_id,
                     f'Throttled: {errors} errors, {executions} executions, {caller_faults} caller faults',
                     status='blocked',
+                    terminal_gate='Throttle',
                 )
 
             self.memory.record(
@@ -436,12 +731,18 @@ class ExecutiveMind:
                 },
                 provenance={'producer': 'ExecutiveMind', 'stage': 'result'},
             )
+            cycle_status = 'ok' if result.ok else 'not_ok'
+            self._safe_record(
+                'executive.cycle',
+                outcome=cycle_status,
+                terminal_gate=None,
+            )
             return ExecutionRecord(
                 intent_record_id=intent_record_id,
                 capability_record_id=selected_record_id,
                 result_record_id=result_record_id,
                 fault_record_id=None,
-                status='ok' if result.ok else 'not_ok',
+                status=cycle_status,
                 notes=result.notes,
             )
         except CallerFault as exc:
@@ -451,7 +752,8 @@ class ExecutiveMind:
                 payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': 'caller_fault'},
                 provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
             )
-            raise exc
+            self._safe_record('executive.cycle', outcome='caller_fault', terminal_gate=None)
+            raise
         except TaskFailure as exc:
             self.memory.record(
                 owner_id=intent.owner_id,
@@ -459,7 +761,8 @@ class ExecutiveMind:
                 payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': 'task_failure'},
                 provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
             )
-            raise exc
+            self._safe_record('executive.cycle', outcome='task_failure', terminal_gate=None)
+            raise
         except SystemFault as exc:
             self.memory.record(
                 owner_id=intent.owner_id,
@@ -467,14 +770,21 @@ class ExecutiveMind:
                 payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': 'system_fault'},
                 provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
             )
-            raise exc
+            self._safe_record('executive.cycle', outcome='system_fault', terminal_gate=None)
+            raise
 
-    def _record_block(self, owner_id: str, intent_record_id: str, reason: str, status: str) -> ExecutionRecord:
+    def _record_block(self, owner_id: str, intent_record_id: str, reason: str, status: str,
+                      terminal_gate: str | None = None) -> ExecutionRecord:
         decision_record_id = self.memory.record(
             owner_id=owner_id,
             kind='strategic_decision',
             payload={'decision': 'block', 'reason': reason},
             provenance={'producer': 'ExecutiveMind', 'stage': 'strategic_gate'},
+        )
+        self._safe_record(
+            'executive.cycle',
+            outcome=status,
+            terminal_gate=terminal_gate,
         )
         return ExecutionRecord(
             intent_record_id=intent_record_id,
@@ -485,7 +795,61 @@ class ExecutiveMind:
             notes=(reason,),
         )
 
-    def _find_capability_by_name(self, name: str) -> Optional[CapabilityDossier]:
+    @property
+    def recorder_failures(self) -> int:
+        """Number of Recorder failures encountered (read-only observability)."""
+        return self._recorder_failures
+
+    def _safe_record(self, event: str, **fields: object) -> None:
+        """Record to the observability Recorder without affecting control flow.
+
+        The Recorder is an observability side-channel: if it raises, the error is
+        swallowed so a broken recorder cannot change cycle semantics (fail-open).
+        The failure is *not* silent: it is counted on :attr:`recorder_failures`
+        and surfaced via a module-level ``logging.warning`` with the traceback.
+        Neither the counter nor the log alters the veto path or handler output.
+        """
+        try:
+            self._recorder.record(event, **fields)
+        except Exception:
+            self._recorder_failures += 1
+            logger.warning('Recorder raised while recording %r; event dropped (fail-open).', event, exc_info=True)
+
+    def _record_gate_decisions(self, composite_gate: CompositeStrategicGate) -> None:
+        """Record per-gate verdicts exposed by the unified pipeline trace.
+
+        Only gates that actually ran are recorded. When an earlier gate returns
+        DENY the pipeline short-circuits and later gates are marked ``skipped``;
+        those produce no ``gate.decision`` event (no gate decision was made).
+
+        Fields:
+          gate (name), delay_ms (precedence as a delay proxy), skipped, allowed.
+        """
+        judgment = cast("PipelineJudgment | None", getattr(composite_gate, '_last_judgment', None))
+        if judgment is None:
+            return
+        for result in judgment.trace:
+            if result.skipped:
+                continue
+            self._safe_record(
+                'gate.decision',
+                gate=result.gate_name,
+                delay_ms=result.precedence,
+                skipped=result.skipped,
+                allowed=(result.verdict == Verdict.ALLOW),
+            )
+
+    def _denying_gate(self, composite_gate: CompositeStrategicGate) -> str | None:
+        """Return the name of the first gate that denied execution, if any."""
+        judgment = cast("PipelineJudgment | None", getattr(composite_gate, '_last_judgment', None))
+        if judgment is None:
+            return None
+        for result in judgment.trace:
+            if result.verdict == Verdict.DENY and not result.skipped:
+                return result.gate_name
+        return None
+
+    def _find_capability_by_name(self, name: str) -> CapabilityDossier | None:
         for dossier in self.registry.search():
             if dossier.name == name:
                 return dossier
@@ -516,19 +880,16 @@ class ExecutiveMind:
           original capability selection already passed these checks.
         """
         is_idempotent = dossier.idempotent
-        primary_exception: Optional[Exception] = None  # The original error from the primary capability
-        last_exception: Optional[Exception] = None
+        primary_exception: Exception | None = None  # The original error from the primary capability
 
         for attempt in range(self.error_handler.effective_retry_policy.max_retries + 1):
             try:
                 return capability.execute(intent, params)
             except (SystemFault, CallerFault) as exc:
-                last_exception = exc
                 if primary_exception is None:
                     primary_exception = exc
                 break  # never retry these
             except TaskFailure as exc:
-                last_exception = exc
                 if primary_exception is None:
                     primary_exception = exc
                 if not is_idempotent:
@@ -544,7 +905,7 @@ class ExecutiveMind:
             primary_exception = TaskFailure("Execution failed with no exception captured")
 
         # Fallback chain: try each configured fallback capability once, in order.
-        fallback_error: Optional[Exception] = None
+        fallback_error: Exception | None = None
         for fallback_name, fallback_params in self.error_handler.get_fallback_chain():
             fallback_dossier = self._find_capability_by_name(fallback_name)
             if fallback_dossier is None:
@@ -561,7 +922,7 @@ class ExecutiveMind:
             except CallerFault:
                 # CallerFault (including ContractViolation) propagates immediately
                 raise
-            except Exception as exc:
+            except BaseException as exc:  # noqa: BLE001
                 # Unexpected errors - treat as SystemFault and continue chain
                 fallback_error = SystemFault(f"Unexpected error in fallback {fallback_name}: {exc}")
                 fallback_error.__cause__ = exc
@@ -589,7 +950,7 @@ class ExecutiveMind:
             if dossier.name == intent.goal:
                 return dossier
         for dossier in dossiers:
-            blob = ' '.join([dossier.name, dossier.signature, dossier.purpose]).lower()
+            blob = f"{dossier.name} {dossier.signature} {dossier.purpose}".lower()
             if goal and goal in blob:
                 return dossier
         return dossiers[0]

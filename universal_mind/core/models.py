@@ -1,5 +1,6 @@
 """Shared dataclasses for ledger and execution results."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any

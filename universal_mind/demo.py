@@ -1,17 +1,17 @@
 """Runnable end-to-end demonstration for the Universal Mind seed core."""
 from __future__ import annotations
-from datetime import datetime, timezone
+
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from universal_mind.core.clock import SystemClock
+from universal_mind.core.executive import ExecutiveMind
 from universal_mind.core.identity import DEFAULT_OWNER
 from universal_mind.core.intent import Determinism, Intent
 from universal_mind.memory.mnemosyne import Mnemosyne
 from universal_mind.memory.store import LocalJSONLStore
 from universal_mind.pantheon.contracts import EchoCapability
 from universal_mind.pantheon.registry import CapabilityDossier, PantheonRegistry
-from universal_mind.core.executive import ExecutiveMind
 
 
 def main() -> None:

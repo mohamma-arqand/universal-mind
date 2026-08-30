@@ -1,27 +1,28 @@
 """Telemetry layer: metrics, errors, throttle."""
 from __future__ import annotations
-from .metrics import MetricsSink, InMemoryMetricsSink, JSONLMetricsSink
+
 from .errors import (
-    TransientError,
-    PermanentError,
-    PolicyViolation,
     ContractBreach,
-    UniversalMindError,
     Disposition,
     ErrorHandler,
+    PermanentError,
+    PolicyViolation,
+    TransientError,
+    UniversalMindError,
 )
+from .metrics import InMemoryMetricsSink, JSONLMetricsSink, MetricsSink
 from .throttle import ExecutionThrottle
 
 __all__ = [
-    'MetricsSink',
-    'InMemoryMetricsSink',
-    'JSONLMetricsSink',
-    'TransientError',
-    'PermanentError',
-    'PolicyViolation',
     'ContractBreach',
-    'UniversalMindError',
     'Disposition',
     'ErrorHandler',
     'ExecutionThrottle',
+    'InMemoryMetricsSink',
+    'JSONLMetricsSink',
+    'MetricsSink',
+    'PermanentError',
+    'PolicyViolation',
+    'TransientError',
+    'UniversalMindError',
 ]

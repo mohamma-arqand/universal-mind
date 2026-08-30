@@ -1,13 +1,32 @@
 """Capability registry and dossier persistence."""
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from typing import Any
+
 import warnings
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from ..core.errors import SystemFault
 from ..core.intent import Determinism
+from ..layers import Layer
 from ..memory.store import MemoryStore
 from .contracts import Capability
+
+
+@dataclass(frozen=True)
+class OrganDescriptor:
+    """Describes an organ (capability + metadata) in the pantheon.
+
+    Frozen at creation - no mutation after registration.
+    """
+
+    name: str
+    signature: str
+    cost: float  # Estimated cost in arbitrary units
+    latency_ms: float  # Expected latency in milliseconds
+    credibility: float  # 0.0 to 1.0, trustworthiness score
+    domains: tuple[str, ...]  # Domains this organ operates in
+    layer: Layer  # Architectural layer
+    dossier: CapabilityDossier  # Full dossier reference
 
 
 @dataclass(frozen=True)
@@ -69,6 +88,7 @@ class PantheonRegistry:
         self.store = store
         self._capabilities: dict[tuple[str, str], Capability] = {}
         self._dossiers: dict[tuple[str, str], CapabilityDossier] = {}
+        self._organs: dict[str, OrganDescriptor] = {}  # Keyed by name
         for record in self.store.read_all():
             if record.get('kind') == 'capability_registration':
                 payload = record['payload']
@@ -99,6 +119,15 @@ class PantheonRegistry:
         self._dossiers[key] = dossier
         return record_id
 
+    def register_organ(self, organ: OrganDescriptor, capability: Capability) -> str:
+        """Register an organ (capability with full descriptor) and persist."""
+        if organ.name in self._organs:
+            raise SystemFault(f'Organ already registered: {organ.name}')
+        # Also register the underlying capability
+        self.register(organ.dossier, capability)
+        self._organs[organ.name] = organ
+        return organ.name
+
     def get(self, name: str, version: str) -> Capability:
         """Return a previously registered capability."""
         try:
@@ -112,6 +141,13 @@ class PantheonRegistry:
             return self._dossiers[(name, version)]
         except KeyError as exc:
             raise SystemFault(f'Capability dossier not found: {name} {version}.') from exc
+
+    def get_organ(self, name: str) -> OrganDescriptor:
+        """Return an organ by name."""
+        try:
+            return self._organs[name]
+        except KeyError as exc:
+            raise SystemFault(f'Organ not found: {name}.') from exc
 
     def search(
         self,
@@ -131,3 +167,32 @@ class PantheonRegistry:
                 continue
             matches.append(dossier)
         return matches
+
+    def search_organs(
+        self,
+        *,
+        domain: str | None = None,
+        layer: Layer | None = None,
+        min_credibility: float | None = None,
+        max_cost: float | None = None,
+        max_latency_ms: float | None = None,
+    ) -> list[OrganDescriptor]:
+        """Search organs by architectural attributes."""
+        matches = []
+        for organ in self._organs.values():
+            if domain is not None and domain not in organ.domains:
+                continue
+            if layer is not None and organ.layer != layer:
+                continue
+            if min_credibility is not None and organ.credibility < min_credibility:
+                continue
+            if max_cost is not None and organ.cost > max_cost:
+                continue
+            if max_latency_ms is not None and organ.latency_ms > max_latency_ms:
+                continue
+            matches.append(organ)
+        return matches
+
+    def list_organs(self) -> list[OrganDescriptor]:
+        """List all registered organs."""
+        return list(self._organs.values())

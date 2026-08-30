@@ -1,5 +1,6 @@
 """Execution throttle for concurrency and error-rate limiting."""
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Protocol
 
