@@ -14,9 +14,18 @@ deterministic and independent of how many pre-existing errors the repo has.
 
 from __future__ import annotations
 
+import importlib.util
 import unittest
+from pathlib import Path
 
-from scripts.check_mypy_ratchet import canonical_debt, is_prefix  # type: ignore[import-not-found]
+_RATCHET = Path(__file__).resolve().parents[1] / "scripts" / "check_mypy_ratchet.py"
+_spec = importlib.util.spec_from_file_location("check_mypy_ratchet", _RATCHET)
+assert _spec and _spec.loader is not None
+_ratchet = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_ratchet)
+
+canonical_debt = _ratchet.canonical_debt
+is_prefix = _ratchet.is_prefix
 
 
 class CanonicalDebtTests(unittest.TestCase):

@@ -1,0 +1,53 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Coverage
+.coverage
+.coverage.*
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage/
+universal_mind/artifacts/
+*.xml
+
+# Archives & Temporary
+*.tar.gz
+*.log
+
+# OpenHands agent local artifacts
+.openhands/
+
+# REPORT_TO_ARCHITECT.md is canonical ONLY at the repository root. The
+# universal_mind/ copy was a divergent untracked duplicate (Mission 3.4-R §C);
+# guard against it being re-introduced so there is a single source of truth.
+/universal_mind/REPORT_TO_ARCHITECT.md
