@@ -66,6 +66,10 @@ The Executive and registry accept any `MemoryStore` implementation.
 
 Every README milestone is now implemented and verified: Core / Pantheon /
 Memory / Feedback, plus ARETĒ (arbitration), the GATEWAY layer (`io/`),
-deployment (a Docker-free `pip install .` package + CLI), and Prometheus
-self-evolution. The build is closed end-to-end with `make test` + `make probe`
-(self-verifying receipt).
+deployment (a Docker-free `pip install .` package + CLI), Prometheus
+self-evolution (reversible apply to the running executive), and the
+integration face that closes the loop. The build is closed end-to-end with
+`make test` + `make probe` (self-verifying receipt).
+
+See [ARCHITECTURE.md](../ARCHITECTURE.md) for the layering model, the intent
+pipeline, ledger schema, and the recovery guide.
