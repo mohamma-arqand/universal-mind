@@ -67,13 +67,13 @@ def decompose_intent(intent: Intent, max_depth: int = 3) -> DecompositionResult:
     # Create sub-intents
     sub_intents = []
     for i, sg in enumerate(sub_goals):
-        sub_id = f"{intent.id}_sub{i}"
+        sub_id = f"{intent.owner_id}_sub{i}"
         sub_intents.append(SubIntent(
             id=sub_id,
             goal=sg,
             success_criteria=[f"Complete: {sg}"],
             constraints=[],
-            depends_on=tuple(f"{intent.id}_sub{j}" for j in range(i)),
+            depends_on=tuple(f"{intent.owner_id}_sub{j}" for j in range(i)),
             estimated_cost=10.0 + i * 5.0,
             priority=i,
         ))

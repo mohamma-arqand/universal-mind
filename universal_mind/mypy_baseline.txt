@@ -4,18 +4,6 @@
 # generated from `mypy --no-pretty universal_mind` at baseline time.
 
 
-total=17
 
-universal_mind/demiurge/decompose.py  attr-defined: 2
-universal_mind/demiurge/strategies.py  arg-type: 1
-universal_mind/demiurge/strategies.py  return-value: 1
-universal_mind/demiurge/strategies.py  type-arg: 1
-universal_mind/demiurge/synthesis.py  arg-type: 1
-universal_mind/demiurge/synthesis.py  valid-type: 1
-universal_mind/powers/devour.py  no-untyped-def: 1
-universal_mind/powers/devour.py  override: 1
-universal_mind/powers/intent.py  arg-type: 2
-universal_mind/powers/intent.py  attr-defined: 2
-universal_mind/powers/judgment.py  arg-type: 1
-universal_mind/synergy.py  misc: 1
-universal_mind/synergy.py  valid-type: 2
+total=0
+

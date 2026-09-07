@@ -4,6 +4,7 @@ Merges results from parallel strategy executions into a unified result.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -28,7 +29,7 @@ class SynthesisError(Exception):
 def synthesize_results(
     strategy_results: list[StrategyResult],
     method: str = 'first_success',
-    merge_fn: callable | None = None
+    merge_fn: Callable[..., Any] | None = None
 ) -> SynthesisResult:
     """Synthesize results from multiple strategy executions.
 
@@ -83,7 +84,7 @@ def synthesize_results(
         if result_counts:
             # Find majority
             max_count = max(result_counts.values())
-            majority_result = max(result_counts, key=result_counts.get)
+            majority_result = max(result_counts, key=lambda k: result_counts[k])
             confidence = max_count / len(strategy_results)
             return SynthesisResult(
                 success=True,

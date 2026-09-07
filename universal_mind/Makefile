@@ -89,8 +89,17 @@ receipt: test-receipt-input
 	PYTHONPATH=$(CURDIR)/.. $(PYTHON) scripts/generate_receipt.py $(JUNIT_XML)
 	@echo "Receipt written; exit code reflects overall verdict"
 
-verify: receipt
-	@echo "Verification passed"
+# Full release gate: only prints READY when every check is green. Each step
+# fails the make on the first red; there is no '|| true' anywhere here.
+VERIFIED := $(ARTIFACTS_DIR)/verification_status.txt
+
+verify: lint mypy-ratchet receipt probe
+	@echo "All gates green — writing READY stamp"
+	@echo "READY" > $(VERIFIED)
+	@echo ""
+	@echo "==================================================="
+	@echo " VERIFICATION: READY  (lint + ratchet + tests + receipt + probes)"
+	@echo "==================================================="
 # mypy ratchet (one-way): fails if the number of mypy errors RISES above
 # the versioned baseline (mypy_baseline.txt). Existing errors are NOT fixed;
 # this target only prevents new type debt. Count is read fresh each run.

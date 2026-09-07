@@ -129,6 +129,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub.add_parser("demo", help="run the reference end-to-end demo")
     sub.add_parser("interactive", help="REPL driving the composed integration harness")
     sub.add_parser("chat", help="REPL wired to a real OpenAI-compatible provider (env-configured)")
+    replay = sub.add_parser("replay", help="recover + audit an on-disk ledger directory")
+    replay.add_argument("--dir", required=True, help="ledger directory to recover")
+    replay.add_argument("--filename", default="ledger.jsonl", help="ledger filename")
+    replay.add_argument("--compact", action="store_true", help="single-line JSON output")
+    evolve = sub.add_parser("evolve", help="run one Prometheus self-evolution pass on a ledger dir")
+    evolve.add_argument("--dir", required=True, help="ledger directory to evolve over")
+    evolve.add_argument("--filename", default="ledger.jsonl", help="ledger filename")
+    evolve.add_argument("--throttle", type=float, default=0.5, help="starting error-rate threshold")
+    evolve.add_argument("--compact", action="store_true", help="single-line JSON output")
 
     args = parser.parse_args(argv)
 
@@ -140,6 +149,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_interactive(args)
     if args.command == "chat":
         return _cmd_chat(args)
+    if args.command == "replay":
+        return _cmd_replay(args)
+    if args.command == "evolve":
+        return _cmd_evolve(args)
     return 2
 
 
@@ -193,6 +206,59 @@ def _cmd_chat(_args: argparse.Namespace) -> int:
     provider = HttpChatProvider(base, model)
     harness = InMemoryIntegrationHarness(Gateway([provider]))
     return _repl(harness)
+
+
+def _cmd_replay(args: argparse.Namespace) -> int:
+    """Recover + audit an on-disk ledger directory (local, no network)."""
+    from universal_mind.runtime import recover_ledger
+
+    records = recover_ledger(args.dir, filename=args.filename)
+    kinds: dict[str, int] = {}
+    for record in records:
+        kind = str(record.get("kind", "unknown"))
+        kinds[kind] = kinds.get(kind, 0) + 1
+
+    summary = {
+        "dir": str(args.dir),
+        "filename": args.filename,
+        "total_records": len(records),
+        "kinds": kinds,
+    }
+    print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
+    return 0
+
+
+def _cmd_evolve(args: argparse.Namespace) -> int:
+    """Run one Prometheus self-evolution pass over an on-disk ledger."""
+    from universal_mind.core.clock import SystemClock
+    from universal_mind.core.executive import ExecutionThrottle, ExecutiveMind
+    from universal_mind.core.identity import DEFAULT_OWNER
+    from universal_mind.memory.mnemosyne import Mnemosyne
+    from universal_mind.memory.store import LocalJSONLStore
+    from universal_mind.pantheon.registry import PantheonRegistry
+    from universal_mind.prometheus import evolve_and_apply
+
+    store = LocalJSONLStore(directory=args.dir, filename=args.filename)
+    # A no-op harness provider is only used to satisfy construction; the pass
+    # is driven purely by the ledger records already on disk.
+    executive = ExecutiveMind(
+        registry=PantheonRegistry(store),
+        memory=Mnemosyne(store, SystemClock()),
+        clock=SystemClock(),
+        owner=DEFAULT_OWNER,
+        throttle=ExecutionThrottle(error_rate_threshold=args.throttle),
+    )
+    report, outcomes = evolve_and_apply(store, executive)
+    summary = {
+        "dir": str(args.dir),
+        "proposals": [p.kind.value for p in report.proposals],
+        "applied": [o.detail for o in outcomes if not o.detail.startswith("ignored")],
+        "ignored": [o.detail for o in outcomes if o.detail.startswith("ignored")],
+        "throttle_threshold": executive.throttle.error_rate_threshold,
+        "evolution_summary": report.summary,
+    }
+    print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
+    return 0
 
 
 if __name__ == "__main__":

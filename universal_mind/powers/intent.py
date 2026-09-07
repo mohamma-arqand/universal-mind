@@ -56,8 +56,8 @@ class InMemoryIntentTranslation:
 
     async def translate(self, input: IntentTranslationInput) -> IntentTranslationOutput:
         raw = input.raw_text.strip()
-        warnings = []
-        extracted = {}
+        warnings: list[str] = []
+        extracted: dict[str, Any] = {}
 
         # Very simple extraction for reference implementation
         # In reality this would use NLP/LLM

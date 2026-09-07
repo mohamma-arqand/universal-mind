@@ -103,7 +103,7 @@ class InMemoryDevour:
 
         # Create a minimal capability
         class DevouredCapability(Capability):
-            async def execute(self, intent, params):
+            async def execute(self, intent: object, params: dict[str, Any]) -> dict[str, Any]:  # type: ignore[override]
                 return {"status": "devoured_stub", "tool": tool.name}
 
             def validate_intent(self, intent: object) -> None:

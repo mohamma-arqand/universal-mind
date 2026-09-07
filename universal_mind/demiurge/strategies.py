@@ -133,7 +133,7 @@ class SpeculativeStrategy(ExecutionStrategy):
         return await self.strategies[-1].execute(plan, sub_intents)
 
 
-def create_n_parallel_strategies(n: int, base_executor: Callable) -> list[ExecutionStrategy]:
+def create_n_parallel_strategies(n: int, base_executor: Callable[..., Any]) -> list[ExecutionStrategy]:
     """Create N different parallel strategies.
 
     Args:
@@ -143,7 +143,7 @@ def create_n_parallel_strategies(n: int, base_executor: Callable) -> list[Execut
     Returns:
         List of ExecutionStrategy instances with varying parallelism
     """
-    strategies = []
+    strategies: list[ExecutionStrategy] = []
     for i in range(n):
         # Vary parallelism: 1, 2, 3, ..., n
         parallelism = min(i + 1, 4)

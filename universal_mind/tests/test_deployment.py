@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import re
 from contextlib import redirect_stdout
+from pathlib import Path
 
 import pytest
 
@@ -86,3 +87,46 @@ def test_cli_interactive_exits_zero_on_eof() -> None:
     with mock.patch("builtins.input", side_effect=EOFError):
         with redirect_stdout(_quiet()):
             assert main(["interactive"]) == 0
+
+
+def test_cli_replay_recovers_ledger(tmp_path: Path) -> None:
+    """replay recovers + audits an on-disk ledger as JSON."""
+    from universal_mind.durable import PersistentMind
+
+    mind = PersistentMind.open(tmp_path)
+    mind.run("summarize", "audit me")
+    sink = _quiet()
+    with redirect_stdout(sink):
+        rc = main(["replay", "--dir", str(tmp_path)])
+    assert rc == 0
+    import json
+
+    parsed = json.loads(sink.getvalue())
+    assert parsed["total_records"] == mind.ledger_size
+    assert "capability_result" in parsed["kinds"]
+
+
+def test_cli_evolve_runs_pass(tmp_path: Path) -> None:
+    """evolve runs one self-evolution pass over a ledger and prints JSON."""
+    from universal_mind.memory.store import LocalJSONLStore
+
+    # Seed a failing history so at least one proposal is produced.
+    store = LocalJSONLStore(directory=tmp_path)
+    from universal_mind.integration import InMemoryIntegrationHarness
+    from universal_mind.io.errors import ProviderPermanent
+    from universal_mind.io.gateway import Gateway, ScriptedProvider
+
+    harness = InMemoryIntegrationHarness(Gateway([ScriptedProvider([ProviderPermanent("down")])]), store=store)
+    from universal_mind.integration import IntegrationError
+    with pytest.raises(IntegrationError):
+        harness.run("summarize", "fail")
+
+    sink = _quiet()
+    with redirect_stdout(sink):
+        rc = main(["evolve", "--dir", str(tmp_path)])
+    assert rc == 0
+    import json
+
+    parsed = json.loads(sink.getvalue())
+    assert isinstance(parsed["proposals"], list)
+    assert "evolution_summary" not in parsed or isinstance(parsed["evolution_summary"], str)

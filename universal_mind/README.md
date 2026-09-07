@@ -46,6 +46,10 @@ script (see `universal_mind/cli.py`):
 - `universal-mind chat` — REPL wired to a real OpenAI-compatible provider
   (base URL/model/key read from `UM_OPENAI_BASE_URL`, `UM_OPENAI_MODEL`,
   `UM_OPENAI_API_KEY`; fail-safe without a key).
+- `universal-mind replay --dir <dir>` — recover + audit an on-disk ledger
+  (JSON summary of record kinds and counts).
+- `universal-mind evolve --dir <dir>` — run one Prometheus self-evolution pass
+  over an on-disk ledger (proposals, applied, throttle threshold as JSON).
 - `universal-mind --version` — the package version.
 
 The deployment shape is a plain, venv-installable package — no container
@@ -73,7 +77,9 @@ Memory / Feedback, plus ARETĒ (arbitration), the GATEWAY layer (`io/`),
 deployment (a Docker-free `pip install .` package + CLI), Prometheus
 self-evolution (reversible apply to the running executive), and the
 integration face that closes the loop. The build is closed end-to-end with
-`make test` + `make probe` (self-verifying receipt).
+`make test` + `make probe` (self-verifying receipt), with the full release gate
+`make verify` (lint + mypy ratchet + tests + receipt + probes) printing READY
+only when everything is green.
 
 See [ARCHITECTURE.md](../ARCHITECTURE.md) for the layering model, the intent
 pipeline, ledger schema, and the recovery guide.

@@ -8,6 +8,7 @@ Measures the collective intelligence of a group of capabilities based on:
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from math import log2
 from typing import Any
@@ -39,7 +40,7 @@ class SynergyResult:
     synergy_score: float  # diversity.entropy * discernment.accuracy
 
 
-def calculate_diversity(capabilities: list[Any], domain_extractor: callable = lambda c: c.get('domain', 'unknown')) -> DiversityResult:
+def calculate_diversity(capabilities: list[Any], domain_extractor: Callable[[Any], str] = lambda c: c.get('domain', 'unknown')) -> DiversityResult:
     """Calculate Shannon entropy over capability domains.
 
     Args:
@@ -127,7 +128,7 @@ def calculate_synergy(
     capabilities: list[Any],
     predictions: list[str],
     actuals: list[str],
-    domain_extractor: callable = lambda c: c.get('domain', 'unknown'),
+    domain_extractor: Callable[[Any], str] = lambda c: c.get('domain', 'unknown'),
     capability_names: list[str] | None = None
 ) -> SynergyResult:
     """Calculate full synergy metric: diversity * discernment.

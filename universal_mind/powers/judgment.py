@@ -86,7 +86,7 @@ class InMemoryJudgment:
             scores[candidate.strategy_id] = score
 
         # Choose best
-        best_strategy = max(scores, key=scores.get)
+        best_strategy = max(scores, key=lambda k: scores[k])
         best_score = scores[best_strategy]
 
         if best_score >= 0.5:
