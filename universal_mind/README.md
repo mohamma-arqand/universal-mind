@@ -19,6 +19,11 @@ A seed-core, local-first orchestration project built around three layers:
   a conservative policy (risk cap, reversibility requirement, min observations)
   → applies only via an explicit reversible applier. Safe by default: the
   reference engine is proposals-only and never mutates the ledger or files.
+- **Integration** (`integration.py`): the composed face that closes the loop —
+  a `GatewayCapability` runs inside the ExecutiveMind, the produced output is
+  arbitrated by ARETĒ against a baseline, and Prometheus watches the same
+  ledger. `InMemoryIntegrationHarness` makes the whole system runnable and
+  deterministic with an injected provider.
 
 ## Deployment
 

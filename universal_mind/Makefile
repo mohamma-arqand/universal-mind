@@ -62,6 +62,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_io_gateway.py --junit-xml=$(ARTIFACTS_DIR)/probe_io_gateway.xml
 	@echo "Running probe_prometheus_evolution.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_prometheus_evolution.py --junit-xml=$(ARTIFACTS_DIR)/probe_prometheus.xml
+	@echo "Running probe_integration_loop.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_integration_loop.py --junit-xml=$(ARTIFACTS_DIR)/probe_integration.xml
 	@echo "All probes passed"
 
 # Clean artifacts

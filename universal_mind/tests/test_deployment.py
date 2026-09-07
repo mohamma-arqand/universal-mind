@@ -77,3 +77,12 @@ def test_cli_version_flag() -> None:
         with redirect_stdout(_quiet()):
             main(["--version"])
     assert exc_info.value.code == 0
+
+
+def test_cli_interactive_exits_zero_on_eof() -> None:
+    """The interactive REPL exits cleanly on EOF."""
+    from unittest import mock
+
+    with mock.patch("builtins.input", side_effect=EOFError):
+        with redirect_stdout(_quiet()):
+            assert main(["interactive"]) == 0

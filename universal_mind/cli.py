@@ -127,6 +127,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     health = sub.add_parser("health", help="exercise the stack and print JSON status")
     health.add_argument("--compact", action="store_true", help="single-line JSON output")
     sub.add_parser("demo", help="run the reference end-to-end demo")
+    sub.add_parser("interactive", help="REPL driving the composed integration harness")
 
     args = parser.parse_args(argv)
 
@@ -134,7 +135,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_health(args)
     if args.command == "demo":
         return _cmd_demo(args)
+    if args.command == "interactive":
+        return _cmd_interactive(args)
     return 2
+
+
+def _cmd_interactive(_args: argparse.Namespace) -> int:
+    from universal_mind.integration import InMemoryIntegrationHarness
+    from universal_mind.io.gateway import EchoProvider, Gateway
+
+    harness = InMemoryIntegrationHarness(Gateway([EchoProvider(cost=1.0)]))
+    print("Universal Mind interactive session (Ctrl-D to exit)")
+    while True:
+        try:
+            line = input("you> ")
+        except EOFError:
+            print()
+            return 0
+        if not line.strip():
+            continue
+        report = harness.run("interactive", line.strip())
+        print(f"result: {report.result_content}")
+        print(f"  arbitrated winner: {report.arbitration.winner_strategy_id} ({report.arbitration.decision.value})")
+        print(f"  evolution: {', '.join(report.proposals) if report.proposals else 'no proposals'}")
 
 
 if __name__ == "__main__":
