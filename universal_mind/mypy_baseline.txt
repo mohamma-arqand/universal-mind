@@ -3,7 +3,8 @@
 # to never regress it. keys are "<relative-file>  <error-code>", values are counts.
 # generated from `mypy --no-pretty universal_mind` at baseline time.
 
-total=84
+
+total=17
 
 universal_mind/demiurge/decompose.py  attr-defined: 2
 universal_mind/demiurge/strategies.py  arg-type: 1
@@ -18,9 +19,3 @@ universal_mind/powers/intent.py  attr-defined: 2
 universal_mind/powers/judgment.py  arg-type: 1
 universal_mind/synergy.py  misc: 1
 universal_mind/synergy.py  valid-type: 2
-universal_mind/tests/test_precedence.py  abstract: 40
-universal_mind/tests/test_precedence.py  arg-type: 6
-universal_mind/tests/test_precedence.py  assignment: 1
-universal_mind/tests/test_precedence.py  no-untyped-def: 17
-universal_mind/tests/test_precedence.py  operator: 1
-universal_mind/tests/test_precedence.py  type-arg: 2

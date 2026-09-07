@@ -3,6 +3,7 @@ Tests for unified gate pipeline (PrecedencePipeline + PowerZero + adapters).
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 
@@ -25,11 +26,11 @@ from universal_mind.gates import (
 @dataclass
 class MockIntent:
     goal: str = "test goal"
-    params: dict = None
+    params: dict[str, Any] | None = None
     success_criteria: str = "test criteria"
     owner_id: str = "test_owner"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.params is None:
             self.params = {}
 
@@ -46,11 +47,11 @@ class MockCapabilityDossier:
 class TestGate(Gate):
     """Simple test gate that returns a fixed verdict."""
 
-    # Not a test class — a shared stub. Prevents pytest collecting it (and its
+    # Not a test class - a shared stub. Prevents pytest collecting it (and its
     # Test* subclasses) as test classes.
     __test__ = False
 
-    def __init__(self, name: str, verdict: Verdict):
+    def __init__(self, name: str, verdict: Verdict) -> None:
         # Name must be one of the GATE_PRECEDENCE entries
         valid_names = ["PowerZero", "Layering", "Policy", "Risk", "HumanFeedback"]
         if name not in valid_names:
@@ -62,45 +63,51 @@ class TestGate(Gate):
     def name(self) -> str:
         return self._name
 
-    def evaluate(self, context: dict) -> Verdict:
+    @property
+    def precedence(self) -> int:
+        # Stub gate: precedence is not used by PrecedencePipeline (order comes
+        # from GATE_PRECEDENCE by name), but Gate requires it declaratively.
+        return 0
+
+    def evaluate(self, context: dict[str, Any]) -> Verdict:
         return self._verdict
 
 
 class TestPolicyGate(TestGate):
     """Test gate with Policy name."""
-    def __init__(self, verdict: Verdict):
+    def __init__(self, verdict: Verdict) -> None:
         super().__init__("Policy", verdict)
 
 
 class TestRiskGate(TestGate):
     """Test gate with Risk name."""
-    def __init__(self, verdict: Verdict):
+    def __init__(self, verdict: Verdict) -> None:
         super().__init__("Risk", verdict)
 
 
 class TestHumanFeedbackGate(TestGate):
     """Test gate with HumanFeedback name."""
-    def __init__(self, verdict: Verdict):
+    def __init__(self, verdict: Verdict) -> None:
         super().__init__("HumanFeedback", verdict)
 
 
 class TestLayeringGate(TestGate):
     """Test gate with Layering name."""
-    def __init__(self, verdict: Verdict):
+    def __init__(self, verdict: Verdict) -> None:
         super().__init__("Layering", verdict)
 
 
 class TestPowerZeroGate(TestGate):
     """Test gate with PowerZero name."""
-    def __init__(self, verdict: Verdict):
+    def __init__(self, verdict: Verdict) -> None:
         super().__init__("PowerZero", verdict)
 
 
 # ===== Tests =====
 
-def test_pipeline_deterministic_ordering():
+def test_pipeline_deterministic_ordering() -> None:
     """Test that pipeline sorts gates by GATE_PRECEDENCE order."""
-    gates = [
+    gates: list[Gate] = [
         TestPolicyGate(Verdict.ALLOW),    # Policy (800) - index 2
         TestLayeringGate(Verdict.ALLOW),  # Layering (900) - index 1
         TestRiskGate(Verdict.ALLOW),      # Risk (600) - index 3
@@ -111,12 +118,12 @@ def test_pipeline_deterministic_ordering():
     assert [g.name for g in pipeline.gates] == ["Layering", "Policy", "Risk"]
 
 
-def test_pipeline_short_circuit_on_deny():
+def test_pipeline_short_circuit_on_deny() -> None:
     """Test that DENY short-circuits the pipeline."""
-    gates = [
-        TestPolicyGate(Verdict.ALLOW),      # Policy - index 2
-        TestRiskGate(Verdict.DENY),         # Risk - index 3 - This should stop execution
-        TestHumanFeedbackGate(Verdict.ALLOW), # HumanFeedback - index 4 - Should be skipped
+    gates: list[Gate] = [
+        TestPolicyGate(Verdict.ALLOW),       # Policy - index 2
+        TestRiskGate(Verdict.DENY),          # Risk - index 3 - This should stop execution
+        TestHumanFeedbackGate(Verdict.ALLOW),  # HumanFeedback - index 4 - Should be skipped
     ]
     pipeline = PrecedencePipeline(gates)
 
@@ -124,7 +131,6 @@ def test_pipeline_short_circuit_on_deny():
 
     assert judgment.decision == Verdict.DENY
     assert len(judgment.trace) == 3  # All gates in trace (including skipped)
-    # Policy evaluated, Risk evaluated, HumanFeedback skipped
     assert judgment.trace[0].gate_name == "Policy"
     assert judgment.trace[0].verdict == Verdict.ALLOW
     assert judgment.trace[0].skipped is False
@@ -133,12 +139,12 @@ def test_pipeline_short_circuit_on_deny():
     assert judgment.trace[1].skipped is False
     assert judgment.trace[2].gate_name == "HumanFeedback"
     assert judgment.trace[2].skipped is True
-    assert "hard veto" in judgment.trace[2].skip_reason
+    assert judgment.trace[2].skip_reason and "hard veto" in judgment.trace[2].skip_reason
 
 
-def test_pipeline_no_deny_runs_all():
+def test_pipeline_no_deny_runs_all() -> None:
     """Test that without DENY, all gates run and verdicts combine."""
-    gates = [
+    gates: list[Gate] = [
         TestPolicyGate(Verdict.ALLOW),
         TestRiskGate(Verdict.DEFER),
         TestHumanFeedbackGate(Verdict.ALLOW),
@@ -153,9 +159,9 @@ def test_pipeline_no_deny_runs_all():
         assert t.skipped is False
 
 
-def test_pipeline_allow_only():
+def test_pipeline_allow_only() -> None:
     """Test all ALLOW gives ALLOW."""
-    gates = [
+    gates: list[Gate] = [
         TestPolicyGate(Verdict.ALLOW),
         TestRiskGate(Verdict.ALLOW),
     ]
@@ -167,7 +173,7 @@ def test_pipeline_allow_only():
     assert judgment.allowed is True
 
 
-def test_power_zero_absolute_veto():
+def test_power_zero_absolute_veto() -> None:
     """Test that PowerZero veto stops all other gates."""
     pipeline = create_default_pipeline(
         power_zero=AlwaysVetoPowerZero(),
@@ -187,13 +193,12 @@ def test_power_zero_absolute_veto():
     assert judgment.trace[0].gate_name == "PowerZero"
     assert judgment.trace[0].verdict == Verdict.DENY
     assert judgment.trace[0].skipped is False
-    # Remaining gates skipped
     for i in range(1, 5):
         assert judgment.trace[i].skipped is True
         assert judgment.trace[i].verdict == Verdict.DENY
 
 
-def test_power_zero_pass_allows_other_gates():
+def test_power_zero_pass_allows_other_gates() -> None:
     """Test that when PowerZero doesn't veto, other gates execute."""
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
@@ -216,7 +221,7 @@ def test_power_zero_pass_allows_other_gates():
     assert judgment.trace[4].gate_name == "HumanFeedback"
 
 
-def test_defer_beats_allow():
+def test_defer_beats_allow() -> None:
     """Test that DEFER beats ALLOW in final decision."""
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
@@ -234,9 +239,8 @@ def test_defer_beats_allow():
     assert judgment.decision == Verdict.DEFER
 
 
-def test_one_deny_is_enough():
+def test_one_deny_is_enough() -> None:
     """Test that one DENY anywhere = final DENY (fail-closed)."""
-    # DENY at Risk
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
         risk_gate=TestRiskGate(Verdict.DENY),
@@ -250,7 +254,6 @@ def test_one_deny_is_enough():
     judgment = pipeline.evaluate({"intent": intent, "capability": capability})
 
     assert judgment.decision == Verdict.DENY
-    # All 5 gates in trace: PowerZero + Layering + Risk evaluated, others skipped
     assert len(judgment.trace) == 5
     assert judgment.trace[0].gate_name == "PowerZero"
     assert judgment.trace[0].verdict == Verdict.ALLOW
@@ -260,13 +263,12 @@ def test_one_deny_is_enough():
     assert judgment.trace[2].verdict == Verdict.ALLOW
     assert judgment.trace[3].gate_name == "Risk"
     assert judgment.trace[3].verdict == Verdict.DENY
-    # Remaining gates skipped
     for i in range(4, 5):
         assert judgment.trace[i].skipped is True
         assert judgment.trace[i].verdict == Verdict.DENY
 
 
-def test_deny_at_strategic_stops_pipeline():
+def test_deny_at_strategic_stops_pipeline() -> None:
     """Test that DENY at Strategic stops before HumanFeedback."""
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
@@ -281,7 +283,6 @@ def test_deny_at_strategic_stops_pipeline():
     judgment = pipeline.evaluate({"intent": intent, "capability": capability})
 
     assert judgment.decision == Verdict.DENY
-    # All 5 gates in trace: PowerZero + Layering + Risk + Policy evaluated, HumanFeedback skipped
     assert len(judgment.trace) == 5
     assert judgment.trace[0].gate_name == "PowerZero"
     assert judgment.trace[0].verdict == Verdict.ALLOW
@@ -297,7 +298,7 @@ def test_deny_at_strategic_stops_pipeline():
     assert judgment.trace[4].verdict == Verdict.DENY
 
 
-def test_deny_at_human_feedback():
+def test_deny_at_human_feedback() -> None:
     """Test DENY at HumanFeedback (last gate)."""
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
@@ -316,7 +317,7 @@ def test_deny_at_human_feedback():
     assert judgment.trace[4].gate_name == "HumanFeedback"
 
 
-def test_conditional_veto():
+def test_conditional_veto() -> None:
     """Test PowerZero that conditionally vetoes based on intent."""
     pipeline = create_default_pipeline(
         power_zero=ConditionalVetoPowerZero(veto_goals=["dangerous", "forbidden"]),
@@ -331,7 +332,6 @@ def test_conditional_veto():
     intent = MockIntent(goal="dangerous")
     judgment = pipeline.evaluate({"intent": intent, "capability": capability})
     assert judgment.decision == Verdict.DENY
-    # All 5 gates in trace: PowerZero evaluated, others skipped
     assert len(judgment.trace) == 5
     assert judgment.trace[0].gate_name == "PowerZero"  # All PowerZero variants share the same gate type name
     assert judgment.trace[0].verdict == Verdict.DENY
@@ -345,7 +345,7 @@ def test_conditional_veto():
     assert len(judgment.trace) == 5
 
 
-def test_chain_records_all_gate_results():
+def test_chain_records_all_gate_results() -> None:
     """Test that trace records every gate's verdict and reason."""
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
@@ -369,7 +369,7 @@ def test_chain_records_all_gate_results():
         assert len(result.reason) > 0
 
 
-def test_pipeline_judgment_properties():
+def test_pipeline_judgment_properties() -> None:
     """Test PipelineJudgment helper properties."""
     allowed = PipelineJudgment(Verdict.ALLOW, [])
     assert allowed.allowed is True
@@ -387,7 +387,7 @@ def test_pipeline_judgment_properties():
     assert deferred.denied is False
 
 
-def test_combine_verdicts():
+def test_combine_verdicts() -> None:
     """Test the combine_verdicts helper function."""
     assert combine_verdicts([Verdict.ALLOW, Verdict.ALLOW]) == Verdict.ALLOW
     assert combine_verdicts([Verdict.ALLOW, Verdict.DEFER]) == Verdict.DEFER
@@ -396,7 +396,7 @@ def test_combine_verdicts():
     assert combine_verdicts([Verdict.DEFER, Verdict.DEFER]) == Verdict.DEFER
 
 
-def test_create_default_pipeline():
+def test_create_default_pipeline() -> None:
     """Test create_default_pipeline convenience function."""
     pipeline = create_default_pipeline(
         power_zero=DefaultPowerZero(),
@@ -410,12 +410,12 @@ def test_create_default_pipeline():
     assert len(pipeline.gates) == 5  # PowerZero, Layering, Policy, Risk, HumanFeedback
 
     # Default PowerZero should not veto
-    assert pipeline.gates[0].veto(MockIntent()) is False
+    assert pipeline.gates[0].veto(MockIntent()) is False  # type: ignore[arg-type]
 
 
-def test_duplicate_gate_names_raises():
+def test_duplicate_gate_names_raises() -> None:
     """Test that duplicate gate names raise ValueError."""
-    gates = [
+    gates: list[Gate] = [
         TestPolicyGate(Verdict.ALLOW),
         TestPolicyGate(Verdict.ALLOW),
     ]
