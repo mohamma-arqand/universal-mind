@@ -18,7 +18,12 @@ A seed-core, local-first orchestration project built around three layers:
   the ledger → distills metrics → proposes evolution actions → vets them against
   a conservative policy (risk cap, reversibility requirement, min observations)
   → applies only via an explicit reversible applier. Safe by default: the
-  reference engine is proposals-only and never mutates the ledger or files.
+  reference engine is proposals-only. `ThrottleApplier` realizes a vetted
+  `TIGHTEN_THROTTLE` proposal on the live `ExecutionThrottle` (reversible, with
+  a safety floor), so self-evolution can be consequential yet never destructive.
+  `prometheus/apply.py` routes each vetted proposal to the matching reversible
+  applier (`evolve_and_apply`): `ThrottleApplier` tightens the throttle, a
+  `FallbackOrderApplier` installs a fallback chain — all reversible.
 - **Integration** (`integration.py`): the composed face that closes the loop —
   a `GatewayCapability` runs inside the ExecutiveMind, the produced output is
   arbitrated by ARETĒ against a baseline, and Prometheus watches the same
@@ -33,6 +38,10 @@ script (see `universal_mind/cli.py`):
 - `universal-mind health` — exercises the full stack and prints JSON status;
   exit 0 only when healthy.
 - `universal-mind demo` — the reference end-to-end demo.
+- `universal-mind interactive` — REPL over the composed harness (local providers).
+- `universal-mind chat` — REPL wired to a real OpenAI-compatible provider
+  (base URL/model/key read from `UM_OPENAI_BASE_URL`, `UM_OPENAI_MODEL`,
+  `UM_OPENAI_API_KEY`; fail-safe without a key).
 - `universal-mind --version` — the package version.
 
 The deployment shape is a plain, venv-installable package — no container

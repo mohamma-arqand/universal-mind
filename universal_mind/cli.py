@@ -128,6 +128,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     health.add_argument("--compact", action="store_true", help="single-line JSON output")
     sub.add_parser("demo", help="run the reference end-to-end demo")
     sub.add_parser("interactive", help="REPL driving the composed integration harness")
+    sub.add_parser("chat", help="REPL wired to a real OpenAI-compatible provider (env-configured)")
 
     args = parser.parse_args(argv)
 
@@ -137,15 +138,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_demo(args)
     if args.command == "interactive":
         return _cmd_interactive(args)
+    if args.command == "chat":
+        return _cmd_chat(args)
     return 2
 
 
-def _cmd_interactive(_args: argparse.Namespace) -> int:
-    from universal_mind.integration import InMemoryIntegrationHarness
-    from universal_mind.io.gateway import EchoProvider, Gateway
+def _repl(harness: object) -> int:
+    """Run the shared REPL loop over any UniversalMindRuntime harness."""
+    from universal_mind.integration import IntegrationError, UniversalMindRuntime
 
-    harness = InMemoryIntegrationHarness(Gateway([EchoProvider(cost=1.0)]))
-    print("Universal Mind interactive session (Ctrl-D to exit)")
+    runtime = harness if isinstance(harness, UniversalMindRuntime) else None
+    assert runtime is not None, "harness must conform to UniversalMindRuntime"
+    print("Universal Mind REPL (Ctrl-D to exit)")
     while True:
         try:
             line = input("you> ")
@@ -154,10 +158,41 @@ def _cmd_interactive(_args: argparse.Namespace) -> int:
             return 0
         if not line.strip():
             continue
-        report = harness.run("interactive", line.strip())
+        try:
+            report = runtime.run("reply", line.strip())
+        except IntegrationError as exc:
+            print(f"error: {exc}")
+            continue
         print(f"result: {report.result_content}")
         print(f"  arbitrated winner: {report.arbitration.winner_strategy_id} ({report.arbitration.decision.value})")
         print(f"  evolution: {', '.join(report.proposals) if report.proposals else 'no proposals'}")
+
+
+def _cmd_interactive(_args: argparse.Namespace) -> int:
+    from universal_mind.integration import InMemoryIntegrationHarness
+    from universal_mind.io.gateway import EchoProvider, Gateway
+
+    harness = InMemoryIntegrationHarness(Gateway([EchoProvider(cost=1.0)]))
+    return _repl(harness)
+
+
+def _cmd_chat(_args: argparse.Namespace) -> int:
+    """REPL wired to a real OpenAI-compatible provider via the Gateway.
+
+    Reads ``UM_OPENAI_BASE_URL``, ``UM_OPENAI_MODEL``, and (lazily, at the
+    request point) ``UM_OPENAI_API_KEY`` from the environment. With no key the
+    call fails safe with a clear message — nothing is attempted unauthenticated.
+    """
+    import os
+
+    from universal_mind.integration import InMemoryIntegrationHarness
+    from universal_mind.io.gateway import Gateway, HttpChatProvider
+
+    base = os.environ.get("UM_OPENAI_BASE_URL", "https://api.openai.com/v1")
+    model = os.environ.get("UM_OPENAI_MODEL", "gpt-4o-mini")
+    provider = HttpChatProvider(base, model)
+    harness = InMemoryIntegrationHarness(Gateway([provider]))
+    return _repl(harness)
 
 
 if __name__ == "__main__":

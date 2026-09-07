@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+
 import pytest
 
 from universal_mind.core.errors import RetryPolicy
@@ -197,6 +202,59 @@ def test_http_provider_is_a_provider() -> None:
     provider = HttpChatProvider("https://x/v1", "m", resolver=lambda _n: None)
     assert isinstance(provider, Provider)
     assert "m" in provider.name
+
+
+class _StubCompletionHandler(BaseHTTPRequestHandler):
+    """Tiny local OpenAI-compatible endpoint for a deterministic HTTP test."""
+
+    seen_auth: str | None = None
+    seen_path: str | None = None
+
+    def do_POST(self) -> None:
+        _StubCompletionHandler.seen_path = self.path
+        _StubCompletionHandler.seen_auth = self.headers.get("Authorization")
+        body = json.dumps(
+            {"choices": [{"message": {"role": "assistant", "content": "stubbed answer"}}]}
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, _format: str, *_args: Any) -> None:
+        return
+
+
+def test_http_provider_real_round_trip_over_localhost() -> None:
+    """HttpChatProvider makes a real HTTP request and reads the response.
+
+    Uses a local stub server on an ephemeral port, so it proves the real
+    urllib request path (path, auth header, JSON parsing) deterministically
+    without any external network.
+    """
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _StubCompletionHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = server.server_address[1]
+        provider = HttpChatProvider(
+            f"http://127.0.0.1:{port}/v1",
+            "demo-model",
+            resolver=lambda _name: "test-secret",
+            timeout_seconds=5,
+        )
+        gateway = Gateway([provider], retry_policy=RetryPolicy(max_retries=0))
+        outcome = gateway.generate([Message(role="user", content="hello")])
+        assert outcome.ok
+        assert outcome.content == "stubbed answer"
+        assert outcome.provider_name == "http:demo-model"
+        assert _StubCompletionHandler.seen_path is not None
+        assert _StubCompletionHandler.seen_path.endswith("/chat/completions")
+        assert _StubCompletionHandler.seen_auth == "Bearer test-secret"
+    finally:
+        server.shutdown()
+        thread.join()
 
 
 def test_gateway_outcome_shape() -> None:

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
+from universal_mind.core.executive import ExecutionThrottle
 from universal_mind.memory.store import InMemoryStore
 from universal_mind.prometheus import (
     EvolutionPolicy,
@@ -14,6 +17,7 @@ from universal_mind.prometheus import (
     Prometheus,
     ProposalKind,
     Risk,
+    ThrottleApplier,
     compute_metrics,
 )
 from universal_mind.prometheus.proposer import PrometheusProposer
@@ -212,3 +216,52 @@ def test_report_summary_shape() -> None:
     assert report.applied_count == len(report.applied)
     assert report.proposals
     assert "proposal" in report.summary
+
+
+def _tighten_proposal() -> EvolutionProposal:
+    """A TIGHTEN_THROTTLE proposal with enough evidence to pass the policy."""
+    return EvolutionProposal(
+        kind=ProposalKind.TIGHTEN_THROTTLE,
+        target="executive.throttle",
+        reason="high error rate",
+        risk=Risk.LOW,
+        reversible=True,
+        suggested_change="lower error_rate_threshold",
+        evidence={"executions": 5},
+    )
+
+
+def test_throttle_applier_tightens_and_undoes() -> None:
+    """ThrottleApplier lowers the threshold then restores it exactly."""
+    throttle = ExecutionThrottle(error_rate_threshold=0.5)
+    applier = ThrottleApplier(throttle)
+    outcome = applier.apply(_tighten_proposal())
+    assert "applied" in outcome
+    assert throttle.error_rate_threshold == pytest.approx(0.45)
+    applier.undo(_tighten_proposal())
+    assert throttle.error_rate_threshold == pytest.approx(0.5)
+
+
+def test_throttle_applier_ignores_other_kinds() -> None:
+    """Non-throttle proposals leave the knob untouched."""
+    throttle = ExecutionThrottle(error_rate_threshold=0.5)
+    applier = ThrottleApplier(throttle)
+    other = EvolutionProposal(
+        kind=ProposalKind.REVIEW_CAPABILITY, target="x", reason="r",
+        risk=Risk.MEDIUM, reversible=True, suggested_change="s", evidence={"executions": 5},
+    )
+    assert "ignored" in applier.apply(other)
+    assert throttle.error_rate_threshold == pytest.approx(0.5)
+
+
+def test_prometheus_realizes_throttle_proposal_end_to_end() -> None:
+    """A ratified TIGHTEN_THROTTLE actually tunes the live throttle."""
+    store = InMemoryStore()
+    for _ in range(3):
+        _run("a", True, store)
+        _append(store, "fault", {"fault_class": "system_fault"})
+    throttle = ExecutionThrottle(error_rate_threshold=0.5)
+    report = InMemoryPrometheus(store, applier=ThrottleApplier(throttle)).evolve()
+    assert any(p.kind == ProposalKind.TIGHTEN_THROTTLE for p in report.proposals)
+    assert any("applied throttle" in outcome for _, outcome in report.applied)
+    assert throttle.error_rate_threshold < 0.5

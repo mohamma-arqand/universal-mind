@@ -8,6 +8,12 @@ and never mutates the ledger or real files on its own.
 
 from __future__ import annotations
 
+from universal_mind.prometheus.apply import (
+    ApplyOutcome,
+    FallbackOrderApplier,
+    apply_proposal,
+    evolve_and_apply,
+)
 from universal_mind.prometheus.engine import (
     EvolutionReport,
     InMemoryApplier,
@@ -15,6 +21,7 @@ from universal_mind.prometheus.engine import (
     MutationApplier,
     NoopApplier,
     Prometheus,
+    ThrottleApplier,
 )
 from universal_mind.prometheus.metrics import (
     CapabilitySignal,
@@ -30,11 +37,13 @@ from universal_mind.prometheus.proposer import (
 )
 
 __all__ = [
+    "ApplyOutcome",
     "CapabilitySignal",
     "EvolutionMetrics",
     "EvolutionPolicy",
     "EvolutionProposal",
     "EvolutionReport",
+    "FallbackOrderApplier",
     "InMemoryApplier",
     "InMemoryPrometheus",
     "MutationApplier",
@@ -43,5 +52,8 @@ __all__ = [
     "PrometheusProposer",
     "ProposalKind",
     "Risk",
+    "ThrottleApplier",
+    "apply_proposal",
     "compute_metrics",
+    "evolve_and_apply",
 ]

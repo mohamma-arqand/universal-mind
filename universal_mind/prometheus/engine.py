@@ -22,11 +22,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
+from universal_mind.core.executive import ExecutionThrottle
 from universal_mind.memory.store import MemoryStore
 
 from .metrics import EvolutionMetrics, compute_metrics
 from .policy import EvolutionPolicy
-from .proposer import EvolutionProposal, PrometheusProposer
+from .proposer import EvolutionProposal, PrometheusProposer, ProposalKind
 
 # The in-memory tuning surface the InMemoryApplier mutates. Keeping it as a
 # small dict makes apply/undo trivially verifiable and free of side effects.
@@ -58,6 +59,45 @@ class NoopApplier:
 
     def undo(self, proposal: EvolutionProposal) -> str:
         return f"nothing to undo for {proposal.kind.value} on {proposal.target}"
+
+
+class ThrottleApplier:
+    """Reversible applier that *realizes* a TIGHTEN_THROTTLE proposal.
+
+    Tunes a live :class:`ExecutionThrottle.error_rate_threshold` (so the
+    ExecutiveMind actually sees the change), never below a safety floor, and
+    records the prior value so :meth:`undo` restores it exactly. Proposals of
+    any other kind are ignored. This makes self-evolution consequential but
+    still safe and reversible.
+    """
+
+    def __init__(
+        self,
+        throttle: ExecutionThrottle,
+        *,
+        step: float = 0.05,
+        min_threshold: float = 0.01,
+    ) -> None:
+        self._throttle = throttle
+        self._step = max(0.0, step)
+        self._min = max(0.0, min_threshold)
+        self._prior: dict[str, float] = {}
+
+    def apply(self, proposal: EvolutionProposal) -> str:
+        if proposal.kind != ProposalKind.TIGHTEN_THROTTLE:
+            return f"ignored: {proposal.kind.value} is not a throttle proposal"
+        current = self._throttle.error_rate_threshold
+        tightened = max(self._min, current - self._step)
+        self._prior[proposal.kind.value] = current
+        self._throttle.error_rate_threshold = tightened
+        return f"applied throttle error_rate_threshold {current:.3f} -> {tightened:.3f}"
+
+    def undo(self, proposal: EvolutionProposal) -> str:
+        key = proposal.kind.value
+        if key in self._prior:
+            self._throttle.error_rate_threshold = self._prior.pop(key)
+            return f"restored throttle error_rate_threshold to {self._throttle.error_rate_threshold:.3f}"
+        return f"nothing to undo for {key}"
 
 
 class InMemoryApplier:
