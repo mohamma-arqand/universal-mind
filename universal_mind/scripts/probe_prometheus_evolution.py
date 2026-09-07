@@ -26,6 +26,7 @@ from universal_mind.prometheus import (
     InMemoryPrometheus,
     NoopApplier,
     ProposalKind,
+    ThrottleApplier,
 )
 
 
@@ -116,6 +117,21 @@ def attempt_reversible_apply_undo() -> bool:
     return ok
 
 
+def attempt_throttle_realized() -> bool:
+    """A vetted TIGHTEN_THROTTLE proposal tunes the live throttle, reversibly."""
+    from universal_mind.core.executive import ExecutionThrottle
+
+    store = InMemoryStore()
+    for _ in range(3):
+        _run(store, "a", True)
+        _append(store, "fault", {"fault_class": "system_fault"})
+    throttle = ExecutionThrottle(error_rate_threshold=0.5)
+    report = InMemoryPrometheus(store, applier=ThrottleApplier(throttle)).evolve()
+    tightened = throttle.error_rate_threshold < 0.5
+    print(f"  error_rate_threshold {0.5:.2f} -> {throttle.error_rate_threshold:.2f} (tightened={tightened})")
+    return tightened and any("applied throttle" in o for _, o in report.applied)
+
+
 def attempt_deterministic() -> bool:
     """Identical ledger state yields an identical proposal set."""
     def kinds() -> str:
@@ -155,6 +171,7 @@ _CHECKS: list[tuple[str, Callable[[], bool]]] = [
     ("Vetted proposals pass the conservative policy", attempt_policy_filters),
     ("Default applier is proposals-only (no mutation)", attempt_default_is_proposals_only),
     ("Reversible applier writes then undoes", attempt_reversible_apply_undo),
+    ("Vetted throttle proposal tunes the live throttle", attempt_throttle_realized),
     ("Evolution loop is deterministic", attempt_deterministic),
 ]
 
