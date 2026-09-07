@@ -60,6 +60,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_arete_arbitration.py --junit-xml=$(ARTIFACTS_DIR)/probe_arete.xml
 	@echo "Running probe_io_gateway.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_io_gateway.py --junit-xml=$(ARTIFACTS_DIR)/probe_io_gateway.xml
+	@echo "Running probe_prometheus_evolution.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_prometheus_evolution.py --junit-xml=$(ARTIFACTS_DIR)/probe_prometheus.xml
 	@echo "All probes passed"
 
 # Clean artifacts

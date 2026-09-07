@@ -14,6 +14,11 @@ A seed-core, local-first orchestration project built around three layers:
   `HttpChatProvider`, and a `Gateway` that retries with backoff and fails over
   across an ordered provider list. API keys resolve lazily via a
   `SecretResolver` and are never stored or logged.
+- **Prometheus** (`prometheus/`): safe, evidence-backed self-evolution. Observes
+  the ledger → distills metrics → proposes evolution actions → vets them against
+  a conservative policy (risk cap, reversibility requirement, min observations)
+  → applies only via an explicit reversible applier. Safe by default: the
+  reference engine is proposals-only and never mutates the ledger or files.
 
 ## Deployment
 
@@ -41,6 +46,9 @@ python -m unittest discover
 The Executive and registry accept any `MemoryStore` implementation.
 `LocalJSONLStore` persists to append-only JSON Lines on disk, while `InMemoryStore` is useful for tests.
 
-## Not yet implemented
+## Status
 
-- Prometheus self-evolution
+Every README milestone is now implemented and verified: Core / Pantheon /
+Memory / Feedback, plus ARETĒ (arbitration), the GATEWAY layer (`io/`),
+deployment (CLI + Docker), and Prometheus self-evolution. The build is closed
+end-to-end with `make test` + `make probe` (self-verifying receipt).
