@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "universal-mind"
+version = "0.1.0"
+description = "Universal Mind — a seed-core, local-first orchestration system (Core / Pantheon / Memory / Feedback / ARETE / Gateway)."
+readme = "universal_mind/README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Universal Mind" }]
+keywords = ["orchestration", "capabilities", "memory", "seed-core"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+universal-mind = "universal_mind.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["universal_mind*"]
+
+[tool.ruff.lint]
+# Pin the lint surface against target-version auto-enablement. Declaring
+# `requires-python` makes ruff auto-selected pyupgrade/simplify preview rules
+# (UP017 timezone.utc→UTC, SIM117 merge-with) across long-standing committed
+# files. Those are stylistic churn, not defects, so keep them off and keep the
+# repo's established green-lint baseline stable.
+ignore = ["UP017", "SIM117"]

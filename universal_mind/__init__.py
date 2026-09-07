@@ -14,6 +14,7 @@ from .pantheon.contracts import (
     EchoCapability,
 )
 from .pantheon.registry import CapabilityDossier, PantheonRegistry
+from .version import __version__
 
 __all__ = [
     'DEFAULT_OWNER',
@@ -39,4 +40,5 @@ __all__ = [
     'SystemFault',
     'TaskFailure',
     'Verdict',
+    '__version__',
 ]

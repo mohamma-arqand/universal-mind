@@ -15,6 +15,20 @@ A seed-core, local-first orchestration project built around three layers:
   across an ordered provider list. API keys resolve lazily via a
   `SecretResolver` and are never stored or logged.
 
+## Deployment
+
+`pyproject.toml` packages the project and exposes a `universal-mind` console
+script (see `universal_mind/cli.py`):
+
+- `universal-mind health` — exercises the full stack and prints JSON status;
+  exit 0 only when healthy (used as the container `HEALTHCHECK`).
+- `universal-mind demo` — the reference end-to-end demo.
+- `universal-mind --version` — the package version.
+
+A multi-stage, non-root `Dockerfile` ships a containerized runtime
+(`docker build -t universal-mind .`). Provider keys are injected at runtime
+via environment (e.g. `UM_OPENAI_API_KEY`); the image contains none.
+
 ## Run tests
 
 ```bash
@@ -30,4 +44,3 @@ The Executive and registry accept any `MemoryStore` implementation.
 ## Not yet implemented
 
 - Prometheus self-evolution
-- Deployment shape
