@@ -56,6 +56,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_tombstone_bound.py --junit-xml=$(ARTIFACTS_DIR)/probe_tombstone.xml
 	@echo "Running probe_decay_bounds.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_decay_bounds.py --junit-xml=$(ARTIFACTS_DIR)/probe_decay.xml
+	@echo "Running probe_arete_arbitration.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_arete_arbitration.py --junit-xml=$(ARTIFACTS_DIR)/probe_arete.xml
 	@echo "All probes passed"
 
 # Clean artifacts
