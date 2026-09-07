@@ -36,13 +36,17 @@ from universal_mind.core.executive import (
 )
 from universal_mind.core.identity import DEFAULT_OWNER
 from universal_mind.core.intent import Determinism, Intent
-from universal_mind.memory.mnemosyne import Mnemosyne
-from universal_mind.memory.store import InMemoryStore
-from universal_mind.observability.recorder import MemoryRecorder, NullRecorder, RecordedEvent
-from universal_mind.pantheon.contracts import EchoCapability
-from universal_mind.pantheon.registry import CapabilityDossier, PantheonRegistry
 from universal_mind.gates.power_zero import PowerZero
 from universal_mind.gates.precedence import resolve_order
+from universal_mind.memory.mnemosyne import Mnemosyne
+from universal_mind.memory.store import InMemoryStore
+from universal_mind.observability.recorder import (
+    MemoryRecorder,
+    NullRecorder,
+    RecordedEvent,
+)
+from universal_mind.pantheon.contracts import EchoCapability
+from universal_mind.pantheon.registry import CapabilityDossier, PantheonRegistry
 
 
 class StepClock(Clock):
@@ -263,7 +267,7 @@ class ReceiptFailPathAndDeterminism(unittest.TestCase):
         # Injected project root so git detection and default paths resolve.
         env = dict(os.environ)
         env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
-        return subprocess.run(argv, capture_output=True, text=True, env=env)
+        return subprocess.run(argv, capture_output=True, text=True, env=env, check=False)
 
     @staticmethod
     def _write(xml_text: str, path: Path) -> None:

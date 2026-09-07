@@ -46,6 +46,10 @@ class MockCapabilityDossier:
 class TestGate(Gate):
     """Simple test gate that returns a fixed verdict."""
 
+    # Not a test class — a shared stub. Prevents pytest collecting it (and its
+    # Test* subclasses) as test classes.
+    __test__ = False
+
     def __init__(self, name: str, verdict: Verdict):
         # Name must be one of the GATE_PRECEDENCE entries
         valid_names = ["PowerZero", "Layering", "Policy", "Risk", "HumanFeedback"]

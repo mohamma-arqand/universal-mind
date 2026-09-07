@@ -12,8 +12,8 @@ from .recorder import (
     DEFAULT_RECORDER_MAXLEN,
     MemoryRecorder,
     NullRecorder,
-    Recorder,
     RecordedEvent,
+    Recorder,
     make_bounded_recorder,
 )
 
@@ -21,7 +21,7 @@ __all__ = [
     "DEFAULT_RECORDER_MAXLEN",
     "MemoryRecorder",
     "NullRecorder",
-    "Recorder",
     "RecordedEvent",
+    "Recorder",
     "make_bounded_recorder",
 ]

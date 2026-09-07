@@ -93,7 +93,7 @@ def _load_baseline() -> dict[str, int]:
     data_row = re.compile(r"^(?P<key>.+): (?P<n>\d+)$")
     for line in BASELINE.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if not line or line.startswith("#") or line.startswith("total="):
+        if not line or line.startswith(("#", "total=")):
             continue
         m = data_row.match(line)
         if m and "  " in m.group("key"):
