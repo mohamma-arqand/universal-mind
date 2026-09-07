@@ -9,6 +9,11 @@ A seed-core, local-first orchestration project built around three layers:
 - **ARETĒ**: virtue-based, non-compensatory arbitration of competing candidates
   (`arete/`) — a candidate that violates a hard-gate virtue (Justice by default)
   is disqualified regardless of overall score; excellence ties rule DEFER.
+- **Gateway** (`io/`): adapters to external providers — a `Provider` protocol,
+  deterministic reference providers (Echo, Scripted), an OpenAI-compatible
+  `HttpChatProvider`, and a `Gateway` that retries with backoff and fails over
+  across an ordered provider list. API keys resolve lazily via a
+  `SecretResolver` and are never stored or logged.
 
 ## Run tests
 
@@ -24,6 +29,5 @@ The Executive and registry accept any `MemoryStore` implementation.
 
 ## Not yet implemented
 
-- Gateway to real providers (the `io/` layer is only the GATEWAY contract, empty)
 - Prometheus self-evolution
 - Deployment shape
