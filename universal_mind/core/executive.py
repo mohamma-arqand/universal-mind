@@ -361,7 +361,7 @@ class CompositeStrategicGate(StrategicGate):
         self._risk_policy = DefaultRiskPolicy()
         self._feedback_gate = None
         self._target_record_id = None
-        self._gate_precedence = {}
+        self._gate_precedence: dict[str, int] = {}
 
     def _build_pipeline(self) -> PrecedencePipeline:
         """Build the unified PrecedencePipeline using frozen GATE_PRECEDENCE."""

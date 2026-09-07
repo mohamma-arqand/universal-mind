@@ -24,18 +24,17 @@ from universal_mind.memory.store import CompactionPolicy, LocalJSONLStore
 
 class InjectedClock(Clock):
     """Clock that can be advanced for testing."""
-    def __init__(self, start=0):
+    def __init__(self, start: float = 0.0) -> None:
         self._time = start
 
-    def now(self):
-        from datetime import datetime
+    def now(self) -> datetime:
         return datetime.fromtimestamp(self._time, tz=timezone.utc)
 
-    def advance(self, seconds: float):
+    def advance(self, seconds: float) -> None:
         self._time += seconds
 
 
-def run_decay_probe() -> tuple[bool, dict]:
+def run_decay_probe() -> tuple[bool, dict[str, object]]:
     """Run the decay probe with injected clock.
 
     Records with TTL=10:
@@ -66,7 +65,7 @@ def run_decay_probe() -> tuple[bool, dict]:
         mnemosyne = Mnemosyne(store, clock)
 
         # Add records with different TTLs
-        record_ids = []
+        record_ids: list[tuple[str, str, int | None]] = []
 
         # Record 1: TTL=10, expires at t=1020 (ttl*2)
         rec1_id = mnemosyne.record(
@@ -182,7 +181,7 @@ def run_decay_probe() -> tuple[bool, dict]:
             rec4_final_exists            # rec4 FRESH at t=1110
         )
 
-        result = {
+        result: dict[str, object] = {
             "initial_records": initial_count,
             "records_at_t1015": count_t1015,
             "records_at_t1025": count_t1025,
@@ -203,7 +202,7 @@ def run_decay_probe() -> tuple[bool, dict]:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def write_junit_xml(passed, output_file):
+def write_junit_xml(passed: bool, output_file: str) -> None:
     """Write test results to JUnit XML format."""
     testsuite = ET.Element("testsuite", {
         "name": "ProbeDecayBounds",

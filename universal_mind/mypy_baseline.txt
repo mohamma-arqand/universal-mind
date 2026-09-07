@@ -2,51 +2,25 @@
 # type debt becomes permanent. add a new (file, code) row only after you commit
 # to never regress it. keys are "<relative-file>  <error-code>", values are counts.
 # generated from `mypy --no-pretty universal_mind` at baseline time.
-total=153
 
-universal_mind/core/executive.py  no-untyped-call: 4
-universal_mind/core/executive.py  var-annotated: 1
+total=84
+
 universal_mind/demiurge/decompose.py  attr-defined: 2
 universal_mind/demiurge/strategies.py  arg-type: 1
 universal_mind/demiurge/strategies.py  return-value: 1
 universal_mind/demiurge/strategies.py  type-arg: 1
 universal_mind/demiurge/synthesis.py  arg-type: 1
 universal_mind/demiurge/synthesis.py  valid-type: 1
-universal_mind/gates/power_zero.py  no-untyped-call: 1
-universal_mind/gates/power_zero.py  no-untyped-def: 1
-universal_mind/powers/accretion.py  var-annotated: 1
-universal_mind/powers/devour.py  no-untyped-def: 2
+universal_mind/powers/devour.py  no-untyped-def: 1
 universal_mind/powers/devour.py  override: 1
-universal_mind/powers/devour.py  var-annotated: 1
 universal_mind/powers/intent.py  arg-type: 2
 universal_mind/powers/intent.py  attr-defined: 2
 universal_mind/powers/judgment.py  arg-type: 1
-universal_mind/scripts/probe_decay_bounds.py  arg-type: 1
-universal_mind/scripts/probe_decay_bounds.py  no-untyped-call: 2
-universal_mind/scripts/probe_decay_bounds.py  no-untyped-def: 4
-universal_mind/scripts/probe_decay_bounds.py  type-arg: 1
-universal_mind/scripts/probe_powerzero_terminal.py  no-untyped-call: 7
-universal_mind/scripts/probe_powerzero_terminal.py  no-untyped-def: 6
-universal_mind/scripts/probe_powerzero_terminal.py  type-arg: 3
-universal_mind/scripts/probe_precedence_immutability.py  call-arg: 1
-universal_mind/scripts/probe_precedence_immutability.py  misc: 4
-universal_mind/scripts/probe_precedence_immutability.py  no-untyped-call: 4
-universal_mind/scripts/probe_precedence_immutability.py  no-untyped-def: 5
-universal_mind/scripts/probe_tombstone_bound.py  no-any-return: 1
-universal_mind/scripts/probe_tombstone_bound.py  no-untyped-call: 1
-universal_mind/scripts/probe_tombstone_bound.py  no-untyped-def: 3
-universal_mind/scripts/probe_tombstone_bound.py  type-arg: 2
 universal_mind/synergy.py  misc: 1
 universal_mind/synergy.py  valid-type: 2
-universal_mind/tests/test_executive_observability.py  no-untyped-call: 2
-universal_mind/tests/test_executive_observability.py  no-untyped-def: 1
-universal_mind/tests/test_layering.py  no-untyped-call: 1
-universal_mind/tests/test_layering.py  no-untyped-def: 1
-universal_mind/tests/test_layering.py  type-arg: 1
 universal_mind/tests/test_precedence.py  abstract: 40
 universal_mind/tests/test_precedence.py  arg-type: 6
 universal_mind/tests/test_precedence.py  assignment: 1
-universal_mind/tests/test_precedence.py  no-untyped-call: 8
 universal_mind/tests/test_precedence.py  no-untyped-def: 17
 universal_mind/tests/test_precedence.py  operator: 1
 universal_mind/tests/test_precedence.py  type-arg: 2

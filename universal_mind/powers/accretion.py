@@ -94,7 +94,7 @@ class InMemoryAccretiveMemory:
                 continue  # Not reliable enough
 
             # Generalize pattern from situation keys
-            all_keys = set()
+            all_keys: set[str] = set()
             for e in exps:
                 all_keys.update(e.situation.keys())
 

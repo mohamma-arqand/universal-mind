@@ -26,7 +26,7 @@ from universal_mind.gates.precedence import (
 
 class MockGate(Gate):
     """Simple mock gate for testing."""
-    def __init__(self, name: str, verdict: Verdict = Verdict.ALLOW):
+    def __init__(self, name: str, verdict: Verdict = Verdict.ALLOW) -> None:
         self._name = name
         self._verdict = verdict
 
@@ -39,13 +39,13 @@ class MockGate(Gate):
         # Return a dummy precedence (not used in new pipeline)
         return 0
 
-    def evaluate(self, context):
+    def evaluate(self, context: dict[str, object]) -> Verdict:
         return self._verdict
 
 
 class VetoPowerZero(DefaultPowerZero):
     """PowerZero that always vetoes."""
-    def veto(self, intent):
+    def veto(self, intent: object) -> bool:
         return True
 
 
@@ -88,7 +88,7 @@ def attempt_module_attribute_reassignment() -> bool:
     original = precedence_module.GATE_PRECEDENCE
     try:
         # Reassign module attribute - this WORKS in Python
-        precedence_module.GATE_PRECEDENCE = ("PowerZero", "TestGate", "Policy", "Risk", "HumanFeedback")
+        precedence_module.GATE_PRECEDENCE = ("PowerZero", "TestGate", "Policy", "Risk", "HumanFeedback")  # type: ignore[misc]
 
         # resolve_order() will now return the new value
         order = resolve_order()
@@ -105,7 +105,7 @@ def attempt_module_attribute_reassignment() -> bool:
             return False
     finally:
         # Restore
-        precedence_module.GATE_PRECEDENCE = original
+        precedence_module.GATE_PRECEDENCE = original  # type: ignore[misc]
 
 
 def attempt_monkeypatch() -> bool:
@@ -118,7 +118,7 @@ def attempt_monkeypatch() -> bool:
 
     original = precedence_module.GATE_PRECEDENCE
     try:
-        precedence_module.GATE_PRECEDENCE = ("PowerZero", "TestGate2", "Policy", "Risk", "HumanFeedback")
+        precedence_module.GATE_PRECEDENCE = ("PowerZero", "TestGate2", "Policy", "Risk", "HumanFeedback")  # type: ignore[misc]
         order = resolve_order()
 
         if order != original:
@@ -129,7 +129,7 @@ def attempt_monkeypatch() -> bool:
             print("FAIL: resolve_order() does not reflect module attribute")
             return False
     finally:
-        precedence_module.GATE_PRECEDENCE = original
+        precedence_module.GATE_PRECEDENCE = original  # type: ignore[misc]
 
 
 def attempt_kwarg_injection() -> bool:
@@ -145,7 +145,7 @@ def attempt_kwarg_injection() -> bool:
             strategic_gate=MockGate("Policy"),
             human_feedback_gate=None,
             layering_gate=None,
-            custom_precedence=("TestGate", "Policy", "Risk")  # Invalid kwarg
+            custom_precedence=("TestGate", "Policy", "Risk")  # type: ignore[call-arg]  # Invalid kwarg
         )
 
         # If we get here, the kwarg was silently ignored (bad)
@@ -165,7 +165,7 @@ def attempt_gate_name_validation() -> bool:
     """Verify gates not in GATE_PRECEDENCE are rejected at pipeline construction."""
     try:
         class InvalidGate(Gate):
-            def __init__(self):
+            def __init__(self) -> None:
                 self._name = "InvalidGate"
 
             @property
@@ -176,7 +176,7 @@ def attempt_gate_name_validation() -> bool:
             def precedence(self) -> int:
                 return 0
 
-            def evaluate(self, context):
+            def evaluate(self, context: dict[str, object]) -> Verdict:
                 return Verdict.ALLOW
 
         PrecedencePipeline([InvalidGate()])
@@ -218,7 +218,7 @@ def attempt_pipeline_requires_valid_gates() -> bool:
         return False
 
 
-def write_junit_xml(results, output_file):
+def write_junit_xml(results: list[tuple[str, bool]], output_file: str) -> None:
     """Write test results to JUnit XML format."""
     testsuite = ET.Element("testsuite", {
         "name": "ProbePrecedenceImmutability",

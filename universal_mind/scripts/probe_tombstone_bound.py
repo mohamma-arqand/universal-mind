@@ -28,13 +28,13 @@ MAX_TOMBSTONE_RATIO = 0.1  # 10% cap
 
 class InjectedClock:
     """Clock that can be advanced for testing."""
-    def __init__(self, start=0):
+    def __init__(self, start: float = 0.0) -> None:
         self._time = start
 
     def now(self) -> float:
         return self._time
 
-    def advance(self, seconds: float):
+    def advance(self, seconds: float) -> None:
         self._time += seconds
 
 
@@ -60,7 +60,7 @@ def count_tombstones_and_live(store_path: str) -> tuple[int, int]:
     return tombstones, live
 
 
-def run_tombstone_bound_probe() -> tuple[bool, dict]:
+def run_tombstone_bound_probe() -> tuple[bool, dict[str, object]]:
     """Run the tombstone bound probe."""
 
     # Create temp directory
@@ -133,7 +133,7 @@ def run_tombstone_bound_probe() -> tuple[bool, dict]:
         # Verify ratio is within bound
         ratio_ok = tombstone_ratio <= MAX_TOMBSTONE_RATIO
 
-        result = {
+        result: dict[str, object] = {
             "operations": N_OPERATIONS,
             "live_after_write": live_after_write,
             "tombstones_after_write": tombstones_after_write,
@@ -155,7 +155,7 @@ def run_tombstone_bound_probe() -> tuple[bool, dict]:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def run_tombstone_bound_auto_compaction() -> tuple[bool, dict]:
+def run_tombstone_bound_auto_compaction() -> tuple[bool, dict[str, object]]:
     """Test auto-compaction with max_tombstones parameter."""
 
     temp_dir = tempfile.mkdtemp(prefix="tombstone_auto_probe_")
@@ -208,7 +208,7 @@ def run_tombstone_bound_auto_compaction() -> tuple[bool, dict]:
 
         print(f"  After auto-compaction cycles: {live} live, {tombstones} tombstones, ratio={ratio:.4f}")
 
-        result = {
+        result: dict[str, object] = {
             "live": live,
             "tombstones": tombstones,
             "ratio": ratio,
@@ -223,7 +223,7 @@ def run_tombstone_bound_auto_compaction() -> tuple[bool, dict]:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def write_junit_xml(results, output_file):
+def write_junit_xml(results: list[tuple[str, bool]], output_file: str) -> None:
     """Write test results to JUnit XML format."""
     testsuite = ET.Element("testsuite", {
         "name": "ProbeTombstoneBound",

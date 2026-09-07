@@ -27,7 +27,7 @@ class CountingGate:
     Implements the Gate protocol properly.
     """
 
-    def __init__(self, name: str, should_deny: bool = False):
+    def __init__(self, name: str, should_deny: bool = False) -> None:
         self._name = name
         self.should_deny = should_deny
         self.call_count = 0
@@ -40,7 +40,7 @@ class CountingGate:
     def precedence(self) -> int:
         return 0  # Not used in new pipeline
 
-    def evaluate(self, context) -> Verdict:
+    def evaluate(self, context: dict[str, object]) -> Verdict:
         self.call_count += 1
         if self.should_deny:
             return Verdict.DENY
@@ -50,12 +50,12 @@ class CountingGate:
 class CountingPowerZero(PowerZero):
     """PowerZero that counts calls."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.call_count = 0
         self.veto_count = 0
 
-    def evaluate(self, context) -> Verdict:
+    def evaluate(self, context: dict[str, object]) -> Verdict:
         self.call_count += 1
         verdict = super().evaluate(context)
         if verdict == Verdict.DENY:
@@ -63,7 +63,7 @@ class CountingPowerZero(PowerZero):
         return verdict
 
 
-def test_powerzero_veto_stops_downstream() -> tuple[bool, dict]:
+def test_powerzero_veto_stops_downstream() -> tuple[bool, dict[str, object]]:
     """Test that PowerZero veto stops all downstream gates."""
     power_zero = CountingPowerZero()
 
@@ -75,7 +75,7 @@ def test_powerzero_veto_stops_downstream() -> tuple[bool, dict]:
 
     # Make PowerZero return DENY
     class VetoPowerZero(CountingPowerZero):
-        def evaluate(self, context) -> Verdict:
+        def evaluate(self, context: dict[str, object]) -> Verdict:
             self.call_count += 1
             self.veto_count += 1
             return Verdict.DENY
@@ -107,7 +107,7 @@ def test_powerzero_veto_stops_downstream() -> tuple[bool, dict]:
         feedback_gate.call_count
     )
 
-    result = {
+    result: dict[str, object] = {
         "power_zero_calls": power_zero.call_count,
         "power_zero_vetoes": power_zero.veto_count,
         "layering_calls": layering_gate.call_count,
@@ -140,7 +140,7 @@ def test_powerzero_veto_stops_downstream() -> tuple[bool, dict]:
     return success and trace_ok, result
 
 
-def test_powerzero_allow_allows_downstream() -> tuple[bool, dict]:
+def test_powerzero_allow_allows_downstream() -> tuple[bool, dict[str, object]]:
     """Test that PowerZero ALLOW allows downstream gates to run."""
     power_zero = CountingPowerZero()
 
@@ -171,7 +171,7 @@ def test_powerzero_allow_allows_downstream() -> tuple[bool, dict]:
         feedback_gate.call_count
     )
 
-    result = {
+    result: dict[str, object] = {
         "power_zero_calls": power_zero.call_count,
         "downstream_calls": downstream_calls,
         "final_decision": judgment.decision.value,
@@ -187,12 +187,12 @@ def test_powerzero_allow_allows_downstream() -> tuple[bool, dict]:
     return success, result
 
 
-def test_create_default_pipeline_powerzero_terminal() -> tuple[bool, dict]:
+def test_create_default_pipeline_powerzero_terminal() -> tuple[bool, dict[str, object]]:
     """Test create_default_pipeline with PowerZero veto."""
     power_zero = CountingPowerZero()
 
     class VetoPowerZero(CountingPowerZero):
-        def evaluate(self, context) -> Verdict:
+        def evaluate(self, context: dict[str, object]) -> Verdict:
             self.call_count += 1
             self.veto_count += 1
             return Verdict.DENY
@@ -220,7 +220,7 @@ def test_create_default_pipeline_powerzero_terminal() -> tuple[bool, dict]:
         if gate.name != "PowerZero" and hasattr(gate, 'call_count'):
             downstream_calls += gate.call_count
 
-    result = {
+    result: dict[str, object] = {
         "power_zero_calls": power_zero.call_count,
         "power_zero_vetoes": power_zero.veto_count,
         "downstream_calls": downstream_calls,
@@ -237,7 +237,7 @@ def test_create_default_pipeline_powerzero_terminal() -> tuple[bool, dict]:
     return success, result
 
 
-def write_junit_xml(results, output_file):
+def write_junit_xml(results: list[tuple[str, bool]], output_file: str) -> None:
     """Write test results to JUnit XML format."""
     testsuite = ET.Element("testsuite", {
         "name": "ProbePowerZeroTerminal",

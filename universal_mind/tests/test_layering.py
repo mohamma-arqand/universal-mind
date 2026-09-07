@@ -69,7 +69,7 @@ def extract_imports(filepath: Path) -> list[tuple[int, str, str]]:
     return imports
 
 
-def find_layer_violations() -> list[dict]:
+def find_layer_violations() -> list[dict[str, object]]:
     """Find all layering violations in the codebase."""
     violations = []
     project_root = Path(__file__).parent.parent.parent
@@ -117,7 +117,7 @@ def find_layer_violations() -> list[dict]:
     return violations
 
 
-def test_layering():
+def test_layering() -> None:
     """Test that captures layering violations (architectural debt map).
     
     This test reports violations but does not fail - it's a debt tracking test.

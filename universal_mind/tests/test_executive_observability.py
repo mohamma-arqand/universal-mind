@@ -228,7 +228,7 @@ class Regression(ObservableBase):
                              for k, v in payload.items())),
             )
 
-        def run_with(recorder: Any):
+        def run_with(recorder: Any) -> tuple[Any, list[Any]]:
             store = InMemoryStore()
             memory = Mnemosyne(store, self.clock)
             reg = PantheonRegistry(store)

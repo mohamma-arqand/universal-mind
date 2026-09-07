@@ -19,7 +19,7 @@ class PowerZero(Gate):
     Default implementation (DefaultPowerZero) vetoes nothing (open by default).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Name is fixed - all PowerZero variants are the same gate type
         self._name = "PowerZero"
 

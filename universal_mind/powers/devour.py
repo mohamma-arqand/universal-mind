@@ -71,7 +71,7 @@ class InMemoryDevour:
 
     async def devour(self, input: DevourInput) -> DevourOutput:
         tool = input.tool
-        warnings = []
+        warnings: list[str] = []
 
         # Generate capability wrapper code
         wrapper_code = self._generate_wrapper(tool)
@@ -106,7 +106,7 @@ class InMemoryDevour:
             async def execute(self, intent, params):
                 return {"status": "devoured_stub", "tool": tool.name}
 
-            def validate_intent(self, intent) -> None:
+            def validate_intent(self, intent: object) -> None:
                 pass
 
         capability = DevouredCapability()
