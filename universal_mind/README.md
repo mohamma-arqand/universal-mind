@@ -26,13 +26,15 @@ A seed-core, local-first orchestration project built around three layers:
 script (see `universal_mind/cli.py`):
 
 - `universal-mind health` — exercises the full stack and prints JSON status;
-  exit 0 only when healthy (used as the container `HEALTHCHECK`).
+  exit 0 only when healthy.
 - `universal-mind demo` — the reference end-to-end demo.
 - `universal-mind --version` — the package version.
 
-A multi-stage, non-root `Dockerfile` ships a containerized runtime
-(`docker build -t universal-mind .`). Provider keys are injected at runtime
-via environment (e.g. `UM_OPENAI_API_KEY`); the image contains none.
+The deployment shape is a plain, venv-installable package — no container
+runtime is required (the project is deliberately Docker-free). `pip install .`
+from the repo root provides the `universal-mind` console script; provider keys
+are injected at runtime via environment (e.g. `UM_OPENAI_API_KEY`) and are
+never stored or logged.
 
 ## Run tests
 
@@ -50,5 +52,6 @@ The Executive and registry accept any `MemoryStore` implementation.
 
 Every README milestone is now implemented and verified: Core / Pantheon /
 Memory / Feedback, plus ARETĒ (arbitration), the GATEWAY layer (`io/`),
-deployment (CLI + Docker), and Prometheus self-evolution. The build is closed
-end-to-end with `make test` + `make probe` (self-verifying receipt).
+deployment (a Docker-free `pip install .` package + CLI), and Prometheus
+self-evolution. The build is closed end-to-end with `make test` + `make probe`
+(self-verifying receipt).

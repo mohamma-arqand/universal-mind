@@ -4,7 +4,7 @@ A thin, non-interactive CLI exposing the package as a runnable artifact:
 
 - ``universal-mind health`` — exercise the whole stack (registry, memory,
   executive, an end-to-end echo) and print a JSON status; exit 0 only when the
-  stack is healthy. Ideal for a container ``HEALTHCHECK``.
+  stack is healthy.
 - ``universal-mind demo`` — run the reference end-to-end demo.
 - ``universal-mind -V / --version`` — print the package version.
 
@@ -26,7 +26,7 @@ def build_health_status() -> dict[str, Any]:
     """Run a full in-memory echo through the ExecutiveMind and report status.
 
     Never raises: on any failure it returns a ``stack_ok=False`` status so a
-    caller (healthcheck) can decide. Imports are lazy to keep the CLI entry
+    caller can decide. Imports are lazy to keep the CLI entry
     cheap for non-health commands.
     """
     from universal_mind.core.clock import SystemClock
