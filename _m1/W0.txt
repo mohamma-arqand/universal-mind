@@ -1,0 +1,18 @@
+/home/elitebook1/baddanKhoda
+total 3236
+drwxr-xr-x  9 elitebook1 elitebook1    4096 اوت     29 10:36 .
+drwxr-x--- 41 elitebook1 elitebook1    4096 اوت     29 10:37 ..
+-rw-r--r--  1 elitebook1 elitebook1   53248 اوت     28 13:35 .coverage
+drwxr-xr-x  8 elitebook1 elitebook1    4096 اوت     29 10:36 .git
+drwxr-xr-x  2 elitebook1 elitebook1    4096 اوت     29 10:49 _m1
+drwxr-xr-x  2 elitebook1 elitebook1    4096 اوت     29 01:16 _mission0
+drwxr-xr-x  4 elitebook1 elitebook1    4096 اوت     28 01:14 .mypy_cache
+-rw-------  1 elitebook1 elitebook1     294 اوت     28 01:14 mypy.ini
+-rw-------  1 elitebook1 elitebook1    2383 اوت     28 01:12 PHASE4_BASELINE.md
+drwxr-xr-x  3 elitebook1 elitebook1    4096 اوت     28 01:11 .pytest_cache
+-rw-------  1 elitebook1 elitebook1    9857 اوت     29 09:14 REPORT_TO_ARCHITECT_FINAL.md
+-rw-------  1 elitebook1 elitebook1   20541 اوت     29 10:35 REPORT_TO_ARCHITECT.md
+-rw-r--r--  1 elitebook1 elitebook1 2117462 اوت     29 10:36 um_m1_final_verified.tar.gz
+-rw-r--r--  1 elitebook1 elitebook1 1060705 اوت     29 10:32 um_m1_verified.tar.gz
+drwxr-xr-x 12 elitebook1 elitebook1    4096 اوت     29 01:44 universal_mind
+drwxr-xr-x  4 elitebook1 elitebook1    4096 اوت     29 01:41 .venv

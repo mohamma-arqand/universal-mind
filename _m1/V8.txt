@@ -1,0 +1,46 @@
+ REPORT_TO_ARCHITECT.md                             |   8 +-
+ REPORT_TO_ARCHITECT_FINAL.md                       | 343 ++++-----------
+ _m1/A1.txt                                         |   1 +
+ _m1/A1b.txt                                        |  77 +++-
+ _m1/A2.txt                                         |  19 +
+ _m1/B1.txt                                         |   1 +
+ _m1/B2.txt                                         |   1 +
+ _m1/B3.txt                                         |   3 +
+ _m1/B4.txt                                         |   5 +
+ _m1/C0.txt                                         | 203 +++++++++
+ _m1/P0_1_test.txt                                  |   9 +
+ _m1/P0_2_test.txt                                  |   9 +
+ _m1/P0_2b_test.txt                                 |   9 +
+ _m1/P0_3_test.txt                                  |   9 +
+ _m1/P0_6_test.txt                                  |  11 +
+ _m1/V0.txt                                         |   1 +
+ _m1/V1.txt                                         |   1 +
+ _m1/V2.txt                                         |   1 +
+ _m1/V3.txt                                         |  23 +
+ _m1/V4.txt                                         |  23 +
+ _m1/V5.txt                                         |  52 +++
+ _m1/V6.txt                                         |  10 +
+ _m1/V6b.txt                                        |  20 +
+ _m1/V7.txt                                         |   3 +
+ _m1/full_test_run.txt                              |  58 +++
+ _m1/git_diff.txt                                   |  88 ++++
+ _m1/git_log.txt                                    |   1 +
+ _m1/import_test.txt                                |   1 +
+ _m1/pwd.txt                                        |   1 +
+ _m1/pytest_final.txt                               |  58 +++
+ _m1/pytest_final_report.txt                        |  58 +++
+ _m1/pytest_full.txt                                |  58 +++
+ _m1/python.txt                                     |   2 +
+ _m1/sha256sum_all.txt                              | 483 +++++++++++++++++++++
+ .../gates/__pycache__/precedence.cpython-312.pyc   | Bin 0 -> 8276 bytes
+ universal_mind/gates/precedence.py                 | 179 ++++++++
+ universal_mind/telemetry/__init__.py               |  27 ++
+ universal_mind/telemetry/errors.py                 | 208 +++++++++
+ universal_mind/telemetry/metrics.py                |  84 ++++
+ universal_mind/telemetry/throttle.py               |  32 ++
+ .../test_layering.cpython-312-pytest-9.1.1.pyc     | Bin 0 -> 5529 bytes
+ .../__pycache__/test_layering.cpython-312.pyc      | Bin 0 -> 5191 bytes
+ .../test_precedence.cpython-312-pytest-9.1.1.pyc   | Bin 0 -> 43658 bytes
+ universal_mind/tests/test_layering.py              | 146 +++++++
+ universal_mind/tests/test_precedence.py            | 334 ++++++++++++++
+ 45 files changed, 2395 insertions(+), 265 deletions(-)

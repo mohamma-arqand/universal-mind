@@ -1,0 +1,62 @@
+universal_mind/tests/test_precedence.py:110:def test_power_zero_absolute_veto():
+universal_mind/tests/test_precedence.py:131:def test_power_zero_veto_allows_other_gates_to_run_when_false():
+universal_mind/tests/test_precedence.py:153:def test_defer_beats_allow():
+universal_mind/tests/test_precedence.py:171:def test_one_deny_is_enough():
+universal_mind/tests/test_precedence.py:192:def test_deny_at_strategic_stops_pipeline():
+universal_mind/tests/test_precedence.py:212:def test_deny_at_human_feedback():
+universal_mind/tests/test_precedence.py:231:def test_gate_order_is_immutable():
+universal_mind/tests/test_precedence.py:259:def test_conditional_veto():
+universal_mind/tests/test_precedence.py:283:def test_chain_records_all_gate_results():
+universal_mind/tests/test_precedence.py:306:def test_integrated_judgment_allowed_property():
+universal_mind/tests/test_precedence.py:318:def test_create_default_pipeline():
+universal_mind/tests/test_layering.py:124:def test_layering():
+universal_mind/tests/test_universal_mind.py:64:    def test_append_only_guarantee(self) -> None:
+universal_mind/tests/test_universal_mind.py:73:    def test_owner_id_present_on_every_persisted_record(self) -> None:
+universal_mind/tests/test_universal_mind.py:82:    def test_ttl_classification_with_frozen_clock(self) -> None:
+universal_mind/tests/test_universal_mind.py:93:    def test_intent_incomplete_raised_on_empty_goal_or_success_criteria(self) -> None:
+universal_mind/tests/test_universal_mind.py:99:    def test_duplicate_registration_raises_system_fault(self) -> None:
+universal_mind/tests/test_universal_mind.py:105:    def test_secret_leak_validator_raises_system_fault(self) -> None:
+universal_mind/tests/test_universal_mind.py:124:    def test_registry_warns_on_implicit_idempotent_default(self) -> None:
+universal_mind/tests/test_universal_mind.py:176:    def test_business_card_returns_exactly_five_lines(self) -> None:
+universal_mind/tests/test_universal_mind.py:180:    def test_executive_re_raises_system_fault_and_records(self) -> None:
+universal_mind/tests/test_universal_mind.py:189:    def test_executive_task_failure_is_recorded_and_reported(self) -> None:
+universal_mind/tests/test_universal_mind.py:199:    def test_end_to_end_echo_capability_produces_complete_audit_trail(self) -> None:
+universal_mind/tests/test_universal_mind.py:211:    def test_feedback_aggregation_works(self) -> None:
+universal_mind/tests/test_universal_mind.py:221:    def test_local_jsonl_store_runnable(self) -> None:
+universal_mind/tests/test_universal_mind.py:228:    def test_local_jsonl_store_delete_tombstone(self) -> None:
+universal_mind/tests/test_universal_mind.py:275:    def test_intent_contract_enforcement_assert_complete(self) -> None:
+universal_mind/tests/test_universal_mind.py:319:    def test_intent_validates_params(self) -> None:
+universal_mind/tests/test_universal_mind.py:333:    def test_capability_contract_validation(self) -> None:
+universal_mind/tests/test_universal_mind.py:362:    def test_memory_decay_collect_expired(self) -> None:
+universal_mind/tests/test_universal_mind.py:380:    def test_memory_decay_decay_removes_expired(self) -> None:
+universal_mind/tests/test_universal_mind.py:402:    def test_error_handler_retry_logic(self) -> None:
+universal_mind/tests/test_universal_mind.py:414:    def test_retry_on_failure_decorator(self) -> None:
+universal_mind/tests/test_universal_mind.py:431:    def test_retry_on_failure_no_retry_on_system_fault(self) -> None:
+universal_mind/tests/test_universal_mind.py:446:    def test_retry_on_failure_no_retry_on_caller_fault(self) -> None:
+universal_mind/tests/test_universal_mind.py:461:    def test_execution_throttle_excludes_caller_faults(self) -> None:
+universal_mind/tests/test_universal_mind.py:482:    def test_caller_fault_does_not_trip_throttle(self) -> None:
+universal_mind/tests/test_universal_mind.py:505:    def test_executive_with_error_handler(self) -> None:
+universal_mind/tests/test_universal_mind.py:535:    def test_executive_no_retry_on_system_fault(self) -> None:
+universal_mind/tests/test_universal_mind.py:559:    def test_executive_retry_only_on_idempotent_capability(self) -> None:
+universal_mind/tests/test_universal_mind.py:642:    def test_human_feedback_gate_blocks_on_rejection(self) -> None:
+universal_mind/tests/test_universal_mind.py:652:    def test_human_feedback_gate_blocks_on_repeated_needs_work(self) -> None:
+universal_mind/tests/test_universal_mind.py:667:    def test_human_feedback_gate_custom_policy(self) -> None:
+universal_mind/tests/test_universal_mind.py:685:    def test_strategic_gate_blocks_execution(self) -> None:
+universal_mind/tests/test_universal_mind.py:710:    def test_strategic_gate_redirects_to_capability(self) -> None:
+universal_mind/tests/test_universal_mind.py:754:    def test_risk_assessor_assesses_risk(self) -> None:
+universal_mind/tests/test_universal_mind.py:790:    def test_execution_throttle(self) -> None:
+universal_mind/tests/test_universal_mind.py:805:    def test_executive_records_risk_assessment(self) -> None:
+universal_mind/tests/test_universal_mind.py:823:    def test_risk_policy_allows_and_blocks(self) -> None:
+universal_mind/tests/test_universal_mind.py:860:    def test_strategic_decision_recorded(self) -> None:
+universal_mind/tests/test_universal_mind.py:883:    def test_executive_fallback_capability(self) -> None:
+universal_mind/tests/test_universal_mind.py:950:    def test_composite_strategic_gate(self) -> None:
+universal_mind/tests/test_universal_mind.py:1010:    def test_executive_gate_precedence(self) -> None:
+universal_mind/tests/test_universal_mind.py:1074:    def test_local_jsonl_store_auto_compaction_threshold(self) -> None:
+universal_mind/tests/test_universal_mind.py:1107:    def test_local_jsonl_store_compaction_survives_crash(self) -> None:
+universal_mind/tests/test_universal_mind.py:1132:    def test_local_jsonl_store_auto_compaction_max_tombstones(self) -> None:
+universal_mind/tests/test_universal_mind.py:1165:    def test_local_jsonl_store_compact_idempotent(self) -> None:
+universal_mind/tests/test_universal_mind.py:1190:    def test_local_jsonl_store_compaction_preserves_order(self) -> None:
+universal_mind/tests/test_universal_mind.py:1216:    def test_executive_pre_execution_pipeline(self) -> None:
+universal_mind/tests/test_universal_mind.py:1255:    def test_executive_contract_validation_in_pipeline(self) -> None:
+universal_mind/tests/test_universal_mind.py:1286:    def test_executive_multi_fallback_chain(self) -> None:
+universal_mind/tests/test_universal_mind.py:1372:    def test_executive_all_fallbacks_fail_raises_original(self) -> None:

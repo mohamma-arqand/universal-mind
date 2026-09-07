@@ -1,0 +1,90 @@
+./universal_mind/gates/precedence.py:2:PowerZero precedence gate - absolute veto authority.
+./universal_mind/gates/precedence.py:4:Order (immutable): PowerZero -> Risk -> Strategic -> HumanFeedback
+./universal_mind/gates/precedence.py:6:PowerZero.veto(intent) -> bool
+./universal_mind/gates/precedence.py:10:Output: IntegratedJudgment(decision, chain: list[(gate, verdict, reason)])
+./universal_mind/gates/precedence.py:27:    POWER_ZERO = "PowerZero"
+./universal_mind/gates/precedence.py:41:class IntegratedJudgment:
+./universal_mind/gates/precedence.py:50:class PowerZero(Protocol):
+./universal_mind/gates/precedence.py:51:    """PowerZero gate - absolute veto authority."""
+./universal_mind/gates/precedence.py:53:    def veto(self, intent: Intent) -> bool:
+./universal_mind/gates/precedence.py:55:        Returns True if the intent is absolutely vetoed.
+./universal_mind/gates/precedence.py:109:    Order: PowerZero -> Risk -> Strategic -> HumanFeedback
+./universal_mind/gates/precedence.py:110:    - PowerZero veto stops everything (absolute)
+./universal_mind/gates/precedence.py:117:        power_zero: PowerZero,
+./universal_mind/gates/precedence.py:127:    def evaluate(self, intent: Intent, capability: CapabilityDossier) -> IntegratedJudgment:
+./universal_mind/gates/precedence.py:131:        # 1. PowerZero - absolute veto
+./universal_mind/gates/precedence.py:132:        if self._power_zero.veto(intent):
+./universal_mind/gates/precedence.py:133:            chain.append(GateResult(GateName.POWER_ZERO, Verdict.DENY, "PowerZero veto"))
+./universal_mind/gates/precedence.py:134:            return IntegratedJudgment(Verdict.DENY, chain)
+./universal_mind/gates/precedence.py:136:        chain.append(GateResult(GateName.POWER_ZERO, Verdict.ALLOW, "PowerZero passed"))
+./universal_mind/gates/precedence.py:142:            return IntegratedJudgment(Verdict.DENY, chain)
+./universal_mind/gates/precedence.py:148:            return IntegratedJudgment(Verdict.DENY, chain)
+./universal_mind/gates/precedence.py:156:        return IntegratedJudgment(final, chain)
+./universal_mind/gates/precedence.py:159:# Default PowerZero implementation - vetoes nothing (open by default)
+./universal_mind/gates/precedence.py:160:class DefaultPowerZero:
+./universal_mind/gates/precedence.py:161:    """Default PowerZero that vetoes nothing."""
+./universal_mind/gates/precedence.py:163:    def veto(self, intent: Intent) -> bool:
+./universal_mind/gates/precedence.py:173:    """Create a pipeline with default PowerZero (vetoes nothing)."""
+./universal_mind/gates/precedence.py:175:        power_zero=DefaultPowerZero(),
+./universal_mind/tests/test_precedence.py:2:Tests for PowerZero precedence gate.
+./universal_mind/tests/test_precedence.py:8:    PowerZero,
+./universal_mind/tests/test_precedence.py:15:    IntegratedJudgment,
+./universal_mind/tests/test_precedence.py:17:    DefaultPowerZero,
+./universal_mind/tests/test_precedence.py:47:class AlwaysVetoPowerZero:
+./universal_mind/tests/test_precedence.py:48:    """PowerZero that always vetoes."""
+./universal_mind/tests/test_precedence.py:49:    def veto(self, intent: Intent) -> bool:
+./universal_mind/tests/test_precedence.py:53:class NeverVetoPowerZero:
+./universal_mind/tests/test_precedence.py:54:    """PowerZero that never vetoes."""
+./universal_mind/tests/test_precedence.py:55:    def veto(self, intent: Intent) -> bool:
+./universal_mind/tests/test_precedence.py:59:class ConditionalVetoPowerZero:
+./universal_mind/tests/test_precedence.py:60:    """PowerZero that vetoes based on intent goal."""
+./universal_mind/tests/test_precedence.py:61:    def __init__(self, veto_goals: list[str]):
+./universal_mind/tests/test_precedence.py:62:        self.veto_goals = veto_goals
+./universal_mind/tests/test_precedence.py:64:    def veto(self, intent: Intent) -> bool:
+./universal_mind/tests/test_precedence.py:65:        return intent.goal in self.veto_goals
+./universal_mind/tests/test_precedence.py:110:def test_power_zero_absolute_veto():
+./universal_mind/tests/test_precedence.py:111:    """Test that PowerZero veto stops all other gates."""
+./universal_mind/tests/test_precedence.py:113:        power_zero=AlwaysVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:128:    assert "PowerZero veto" in judgment.chain[0].reason
+./universal_mind/tests/test_precedence.py:131:def test_power_zero_veto_allows_other_gates_to_run_when_false():
+./universal_mind/tests/test_precedence.py:132:    """Test that when PowerZero doesn't veto, other gates execute."""
+./universal_mind/tests/test_precedence.py:134:        power_zero=NeverVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:156:        power_zero=NeverVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:175:        power_zero=NeverVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:188:    assert len(judgment.chain) == 2  # PowerZero + Risk
+./universal_mind/tests/test_precedence.py:195:        power_zero=NeverVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:208:    assert len(judgment.chain) == 3  # PowerZero + Risk + Strategic
+./universal_mind/tests/test_precedence.py:215:        power_zero=NeverVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:259:def test_conditional_veto():
+./universal_mind/tests/test_precedence.py:260:    """Test PowerZero that conditionally vetoes based on intent."""
+./universal_mind/tests/test_precedence.py:262:        power_zero=ConditionalVetoPowerZero(veto_goals=["dangerous", "forbidden"]),
+./universal_mind/tests/test_precedence.py:270:    # Should veto
+./universal_mind/tests/test_precedence.py:276:    # Should NOT veto
+./universal_mind/tests/test_precedence.py:286:        power_zero=NeverVetoPowerZero(),
+./universal_mind/tests/test_precedence.py:307:    """Test IntegratedJudgment.allowed property."""
+./universal_mind/tests/test_precedence.py:308:    allowed = IntegratedJudgment(Verdict.ALLOW, [])
+./universal_mind/tests/test_precedence.py:311:    denied = IntegratedJudgment(Verdict.DENY, [])
+./universal_mind/tests/test_precedence.py:314:    deferred = IntegratedJudgment(Verdict.DEFER, [])
+./universal_mind/tests/test_precedence.py:327:    assert isinstance(pipeline._power_zero, DefaultPowerZero)
+./universal_mind/tests/test_precedence.py:329:    # Default PowerZero should not veto
+./universal_mind/tests/test_precedence.py:330:    assert pipeline._power_zero.veto(MockIntent()) is False
+./.venv/lib/python3.12/site-packages/pygments/lexers/pascal.py:363:        'vetor',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:3451:        'curveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4223:        'moveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4224:        'movetoattribute',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4225:        'movetoattributenamespace',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4226:        'movetoelement',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4227:        'movetofirstattribute',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4228:        'movetonextattribute',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:4976:        'curveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:5153:        'moveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:5154:        'movetoattributenamespace',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:5155:        'movetoelement',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:5156:        'movetofirstattribute',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_lasso_builtins.py:5157:        'movetonextattribute',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_php_builtins.py:1965:        'ps_curveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/_php_builtins.py:1980:        'ps_moveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/graphics.py:365:                'currentpoint', 'curveto', 'cvi', 'cvs', 'def', 'defaultmatrix',
+./.venv/lib/python3.12/site-packages/pygments/lexers/graphics.py:370:                'lineto', 'ln', 'load', 'log', 'loop', 'matrix', 'mod', 'moveto',
+./.venv/lib/python3.12/site-packages/pygments/lexers/graphics.py:372:                'pstack', 'put', 'quit', 'rand', 'rangecheck', 'rcurveto', 'repeat',
+./.venv/lib/python3.12/site-packages/pygments/lexers/graphics.py:373:                'restore', 'rlineto', 'rmoveto', 'roll', 'rotate', 'round', 'run',

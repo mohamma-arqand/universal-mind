@@ -1,0 +1,5 @@
+86cecc9 fix(git): untrack compiled pyc/coverage artifacts and enforce robust .gitignore
+2c5ad14 chore: baseline universal_mind source tree
+f4279be docs: update final report with 62 tests passing
+2b7523b feat: layering guard + power zero veto
+c685764 canonical baseline v0

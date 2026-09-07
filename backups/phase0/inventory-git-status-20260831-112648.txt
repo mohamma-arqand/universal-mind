@@ -1,0 +1,18 @@
+ M REPORT_TO_ARCHITECT.md
+ M REPORT_TO_ARCHITECT_FINAL.md
+?? REPORT_TO_ARCHITECT_CORRECTED.md
+?? _m1/FINAL_VERIFICATION.txt
+?? _m1/V10.txt
+?? _m1/V11.txt
+?? _m1/V12.txt
+?? _m1/V8.txt
+?? _m1/V9.txt
+?? _m1/W0.txt
+?? _m1/W1.txt
+?? _m1/W3.txt
+?? _m1/W4.txt
+?? _m1/W5.txt
+?? _m1/W6.txt
+?? _m1/W7.txt
+?? _m1/report_prev.md
+?? backups/

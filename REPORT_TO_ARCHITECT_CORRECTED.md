@@ -5,15 +5,15 @@
 **Project:** Universal Mind  
 **Workspace Root:** `/home/elitebook1/baddanKhoda/`  
 **Contract Workspace (project root):** `/home/elitebook1/baddanKhoda/universal_mind/`  
-**Status:** All 81 tests passing ✅ (77 prior + 4 new Mission 3.4-R recorder-hardening tests)
+**Status:** All 67 tests passing ✅ (50 original + 11 precedence gate tests + 1 layering guard + 5 new tests)
 
 ---
 
 ## Executive Summary
 
-This report addresses the 10 review findings (P0 blockers, P1 items, and Refactor) from the Architect, plus the S2 operational risk (Fix Default idempotent=True Ambiguity), R3 (RiskPolicy protocol), R4 (Multi-fallback chain test), and Mission 3.3-R (Recorder observability injection). Each item has been verified against the codebase with specific code evidence quoted using **paths relative to the contract workspace** (`/home/elitebook1/baddanKhoda/universal_mind/`). All 81 tests pass.
+This report addresses the 10 review findings (P0 blockers, P1 items, and Refactor) from the Architect, plus the S2 operational risk (Fix Default idempotent=True Ambiguity), R3 (RiskPolicy protocol), and R4 (Multi-fallback chain test). Each item has been verified against the codebase with specific code evidence quoted using **paths relative to the contract workspace** (`/home/elitebook1/baddanKhoda/universal_mind/`). All 67 tests pass.
 
-**Test Results:** 81 tests passing (72 prior + 5 new Mission 3.3-R observability tests + 4 new Mission 3.4-R recorder-hardening tests; 0 failures, 0 errors)
+**Test Results:** 67 tests passing: 50 original + 11 precedence + 1 layering + 5 new (0 failures, 0 errors)
 
 ---
 
@@ -348,37 +348,6 @@ This report addresses the 10 review findings (P0 blockers, P1 items, and Refacto
 
 ---
 
-## Mission 3.3-R: Recorder Observability Injection
-
-**Scope:** Observability only. Gate precedence logic is frozen and wired exclusively via `PrecedencePipeline` (see Refactor-9). No precedence behavior was changed in this mission.
-
-**Verified:** `ExecutiveMind` now accepts a `Recorder` and records structured events without altering control flow. Events are timestamped from the injected `Clock` (never `time.time()`/`datetime.now()`), so tests are deterministic.
-
-**Code Evidence:**
-- `observability/recorder.py` — `Recorder` is a `runtime_checkable Protocol` with a single total method `.record(event, /, **fields)`; `NullRecorder` is a no-op; `MemoryRecorder` stores `RecordedEvent(event, fields, at=clock.now())` in a read-only tuple; `RecordedEvent` is a frozen dataclass.
-- `core/executive.py` — recorder injected via constructor (defaults to `NullRecorder`); `_safe_record()` wraps recording in try/except so a broken recorder can never change cycle semantics:
-  ```python
-  def _safe_record(self, event: str, **fields: object) -> None:
-      """...if it raises, the error is swallowed..."""
-      try:
-          self._recorder.record(event, **fields)
-  ```
-- `core/executive.py:_record_gate_decisions()` — records per-gate verdicts (gate name, precedence-as-delay, skipped, allowed) from the unified `PrecedencePipeline` trace; gates short-circuited by an earlier DENY produce no event.
-- `core/executive.py` — records `executive.cycle` on success (`outcome='ok'/...`), block (`_record_block`), and each fault class (`caller_fault` / `task_failure` / `system_fault`).
-
-**Gate precedence** remains frozen and wired exclusively via `PrecedencePipeline` / `GATE_PRECEDENCE` (`gates/precedence.py`), single source of truth used by `_record_gate_decisions` via `resolve_order()`.
-
-**Tests:** `tests/test_executive_observability.py` (5 tests):
-- `test_success_cycle_records_gate_decisions_and_terminal_event`
-- `test_gate_decision_order_matches_resolve_order`
-- `test_deterministic_at_with_stepclock` (timestamps advance from the injected `Clock`, not wall time)
-- `test_power_zero_veto_is_recorded_as_terminal_precedence`
-- `test_no_recorder_is_byte_identical_to_null_recorder` (semantic comparison on the full memory + recorder dump; UUID/timestamp fields normalized)
-
-**Residual Risk:** Recorder failures are deliberately swallowed, so a misbehaving recorder is invisible by design (fail-open). The events recorded are a fixed vocabulary emitted at fixed points — there is no pluggable event schema / TTL/backpressure for the in-memory list (irrelevant to production but noted). `MemoryRecorder` collects unbounded unless the consumer drains it; a production recorder must implement its own retention.
-
----
-
 ## Residual Risks (Not "Ready for Production" — Be Honest)
 
 1. **LocalJSONLStore compaction threshold is configurable** — Auto-compaction triggers on every `delete()` and `append()` when the tombstone ratio exceeds the configured threshold (default 0.3) AND minimum records (default 100) are met. This is crash-safe (atomic replace). If threshold not met, tombstones accumulate — but policy is configurable via `CompactionPolicy(max_tombstone_ratio, min_records_before_compact)`.
@@ -389,9 +358,9 @@ This report addresses the 10 review findings (P0 blockers, P1 items, and Refacto
 
 4. **Multiple fallback chain tested but not exhaustive** — `get_fallback_chain()` supports `list[str]`. Chain of 3 tested (primary→fallback1→fallback2), but deeper chains not verified.
 
-5. **Gate precedence frozen via `GATE_PRECEDENCE`** — Intentional per Mission 3.3-R scope: the gate order is wired exclusively through `PrecedencePipeline`. It is not runtime-configurable; changing ordering requires editing the module constant.
+5. **Hardcoded gate precedence** — Constants not injectable. Limits dynamic reconfiguration.
 
-6. **Observability is a side-channel only** — Recorder events are a fixed vocabulary emitted at fixed points; there is no pluggable event schema, no TTL, and no backpressure. Recorder failures are swallowed (fail-open) by design. `MemoryRecorder` (test double) grows unbounded; a production recorder must supply its own retention.
+6. **No structured observability hooks** — No metrics/logging for gate decisions, retry counts, throttle events.
 
 7. **No background decay scheduler** — `Mnemosyne.decay()` requires manual invocation.
 
@@ -399,11 +368,11 @@ This report addresses the 10 review findings (P0 blockers, P1 items, and Refacto
 
 ## Conclusion
 
-All 10 review findings (P0 blockers, P1 items, Refactor-9) plus the S2 operational risk (Fix Default idempotent=True Ambiguity), R3 (RiskPolicy protocol), R4 (Multi-fallback chain test), and Mission 3.3-R (Recorder observability injection) have been addressed and verified with passing tests. Additionally, the Layering Guard (architectural debt tracking) and Precedence Gates (Power Zero veto + gate precedence pipeline) have been implemented.
+All 10 review findings (P0 blockers, P1 items, Refactor-9) plus the S2 operational risk (Fix Default idempotent=True Ambiguity), R3 (RiskPolicy protocol), and R4 (Multi-fallback chain test) have been addressed and verified with passing tests. Additionally, the Layering Guard (architectural debt tracking) and Precedence Gates (Power Zero veto + gate precedence pipeline) have been implemented with 12 new tests.
 
-The implementation is solid with clear code evidence for each item. The residual risks above are architectural trade-offs (not all are bugs) — they should be evaluated against production requirements.
+The implementation is solid with clear code evidence for each item. The residual risks above are architectural trade-offs, not bugs — they should be evaluated for your production requirements.
 
-**Not "ready for production" unless the residual risks above are accepted/addressed.** The code is functionally correct and tested (81 tests passing, 0 failures/errors).
+**Not "ready for production" without addressing the residual risks above.** The code is functionally correct and tested (67 tests passing: 50 original + 11 precedence + 1 layering + 5 new).
 
 ---
 
@@ -419,89 +388,5 @@ The previous report used paths like `universal_mind/memory/store.py` which were 
 ```bash
 # From contract workspace root
 cd /home/elitebook1/baddanKhoda/universal_mind
-python3 -m pytest tests/ -v  # 81 tests passing
-```---
-
-## Mission 3.4-R — Receipt Wiring & Recorder Hardening
-
-**Scope:** Items A/B/C only, per USER_CONTEXT. Out of scope (explicitly NOT done): gate precedence/GATE_PRECEDENCE, new event names beyond A/B, refactoring `handle()`. All source paths below are relative to `universal_mind/`.
-
-**Discovery (Step 0, mandatory):**
-* `scripts/generate_receipt.py` — **ABSENT** (no receipt generator anywhere).
-* `Makefile.receipt` — **ABSENT** (no `*.receipt` artifacts in the build).
-* Report duality: the root `REPORT_TO_ARCHITECT.md` is the **only** git-tracked report; an untracked duplicate existed at `universal_mind/REPORT_TO_ARCHITECT.md`. A `grep -rn "REPORT_TO_ARCHITECT"` across all `.py`/`.md`/`Makefile` sources found **no references** (only my own `.openhands/memory` notes), so per the conditional a `sync-report` Makefile target was not warranted.
-
-### A. Bound MemoryRecorder / end unobservable growth
-Before, `MemoryRecorder` appended to an unbounded `list[RecordedEvent]`:
-```python
-# observability/recorder.py (before)
-_events: list[RecordedEvent] = field(default_factory=list, init=False)
-def record(self, event, /, **fields):
-    self._events.append(RecordedEvent(event=event, fields=fields, at=self.clock.now()))
+python3 -m pytest tests/ -v  # 67 tests passing
 ```
-Now it is an optional bounded ring buffer with a drop counter:
-```python
-# observability/recorder.py (after)
-clock: Clock
-maxlen: int | None = None
-_events: deque[RecordedEvent] = field(default_factory=deque, init=False)
-dropped_events: int = field(default=0, init=False)
-
-def __post_init__(self) -> None:
-    if self.maxlen is not None:
-        self._events = deque(maxlen=self.maxlen)
-
-def record(self, event: str, /, **fields: object) -> None:
-    ev = RecordedEvent(event=event, fields=fields, at=self.clock.now())
-    if self.maxlen is not None and len(self._events) == self.maxlen:
-        self.dropped_events += 1                       # eviction is counted, not silent
-    self._events.append(ev)
-```
-`events` returns `tuple(self._events)` — a read-only snapshot, never a live reference. Default `maxlen=None` preserves prior unbounded behaviour and always reports `dropped_events == 0`, so no call site changed.
-
-### B. Make Recorder fail-open audible
-`_safe_record` swallowed exceptions via `except Exception: pass`. It still fails open, but is now counted and logged:
-```python
-# core/executive.py (after)
-@property
-def recorder_failures(self) -> int:            # read-only observability counter
-    return self._recorder_failures
-
-def _safe_record(self, event: str, **fields: object) -> None:
-    try:
-        self._recorder.record(event, **fields)
-    except Exception:
-        self._recorder_failures += 1
-        logger.warning('Recorder raised while recording %r; event dropped (fail-open).',
-                       event, exc_info=True)
-```
-Added via `import logging` + `logger = logging.getLogger(__name__)` in `core/executive.py`. The counter is initialized in `ExecutiveMind.__init__`. Neither the counter nor the log alters the veto path, the throttle, or the `ExecutionRecord` returned — fail-open semantics are unchanged.
-
-### C. End report duality
-Kept the root `REPORT_TO_ARCHITECT.md` as the single canonical source; deleted the untracked duplicate and added a guard so it cannot be re-added silently:
-```gitignore
-# .gitignore (root, new)
-/universal_mind/REPORT_TO_ARCHITECT.md
-```
-
-### D. Receipt wiring — declared ABSENT
-No receipt generator, target, or artifact exists. If a receipt is required, the following is still needed (not implemented in this scope): a `scripts/generate_receipt.py` emitting a `*.receipt` manifest and a `Makefile.receipt` target invoked from `all`. This remains a genuine gap; see Residual Risks.
-
-### E. Verification
-```bash
-make -C universal_mind test        # 81 passed (77 prior + 4 new), 0 failures/errors
-ruff check                            # all clean (fixed F401 import-unused + import sort)
-mypy --strict                         # 7 pre-existing errors in core/executive.py + gates/power_zero.py; none added by this mission (my two source files are clean)
-```
-New tests added to `tests/test_recorder_injection.py`:
-* `test_bounded_recorder_keeps_newest_and_counts_drops` — `maxlen=3`, 5 records → keeps `e2,e3,e4`, `dropped_events == 2`.
-* `test_unbounded_recorder_by_default_counts_no_drops` — default keeps 50, `dropped_events == 0`.
-* `test_events_is_a_readonly_snapshot` — snapshot unaffected by later records.
-* `test_recorder_failure_is_counted_and_logged` — `assertLogs` proves a raising recorder still yields `status == 'ok'` (fail-open) while `recorder_failures > 0` and a WARNING is emitted.
-
-### Residual risks (NOT "ready for production")
-* **Receipt wiring is unproven/no-op**: There is no receipt generator, no `Makefile.receipt`, and no gate that blocks release on a missing/current receipt. If the contract depends on a receipt artifact, this requirement is unmet and must be built and tested.
-* **Bounding is opt-in**: `MemoryRecorder` is only bounded when a caller passes `maxlen`; `ExecutiveMind` still constructs it with the default `None` in tests. A production wiring must pass an explicit `maxlen` (its overflow policy is eviction-with-count, not backpressure/TTL).
-* **Boundedness drops evidence silently-ish**: eviction is counted (`dropped_events`) but not persisted; a long-running process that overflows repeatedly loses the oldest events with only the counter (and, on B, a log) as a trace.
-* **Fail-open is by design but lossy**: a broken recorder still lets cycles complete, so operators must actively monitor `recorder_failures`/WARNING logs; observability can degrade without failing the workload.
-* **Pre-existing typecheck debt**: `make typecheck` still reports 153 errors (largely untyped `gates/power_zero.py` and `scripts/*`); this mission did not add to it but did not fix it either.
