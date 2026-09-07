@@ -29,6 +29,10 @@ A seed-core, local-first orchestration project built around three layers:
   arbitrated by ARETĒ against a baseline, and Prometheus watches the same
   ledger. `InMemoryIntegrationHarness` makes the whole system runnable and
   deterministic with an injected provider.
+- **Durable** (`durable.py`): `PersistentMind` binds the composed runtime to an
+  on-disk `LocalJSONLStore`, so the ledger survives a restart. Registration is
+  idempotent across reopens (`PantheonRegistry.restore_capability`), letting a
+  reopen reload the same ledger and recover recorded faults.
 
 ## Deployment
 

@@ -142,6 +142,24 @@ class PantheonRegistry:
         except KeyError as exc:
             raise SystemFault(f'Capability dossier not found: {name} {version}.') from exc
 
+    def restore_capability(self, name: str, version: str, capability: Capability) -> bool:
+        """Re-attach a live capability to an already-restored dossier.
+
+        After reopening a durable ledger the dossiers are restored from the
+        stored registration records, but capability objects (code) are not
+        serializable and must be attached again. This attaches without appending
+        another registration record (which would duplicate). Returns True if the
+        capability was newly attached, False if it is already live. Raises
+        ``SystemFault`` if no dossier exists for ``(name, version)``.
+        """
+        key = (name, version)
+        if key in self._capabilities:
+            return False
+        if key not in self._dossiers:
+            raise SystemFault(f'No restored dossier for {name} {version}.')
+        self._capabilities[key] = capability
+        return True
+
     def get_organ(self, name: str) -> OrganDescriptor:
         """Return an organ by name."""
         try:

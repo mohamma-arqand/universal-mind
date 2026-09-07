@@ -23,7 +23,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from universal_mind.arete import ArbitrationVerdict, Dispute, InMemoryArbiter
 from universal_mind.core.clock import Clock, SystemClock
-from universal_mind.core.errors import TaskFailure
+from universal_mind.core.errors import SystemFault, TaskFailure
 from universal_mind.core.executive import ExecutiveMind
 from universal_mind.core.identity import DEFAULT_OWNER, Identity
 from universal_mind.core.intent import Determinism, Intent
@@ -115,31 +115,7 @@ class InMemoryIntegrationHarness:
 
         self._registry = PantheonRegistry(self._store)
         self._capability = GatewayCapability(gateway)
-        self._registry.register(
-            CapabilityDossier(
-                name="generate",
-                version="1.0.0",
-                signature="generate(intent, params)",
-                purpose="Produce a provider-backed response through the Gateway.",
-                cost_model="flat",
-                latency_profile="normal",
-                reliability="high",
-                side_effects="none",
-                reversible=True,
-                required_secrets=[],
-                failure_modes="none",
-                dependencies=[],
-                determinism=Determinism.CREATIVE,
-                idempotent=True,
-                provenance={
-                    "producer": "integration",
-                    "created_at": self._clock.now().isoformat(),
-                    "owner_id": owner.owner_id,
-                    "explicit_fields": ["idempotent", "determinism"],
-                },
-            ),
-            self._capability,
-        )
+        self._register_generate(owner)
 
         self._memory = Mnemosyne(self._store, self._clock)
         self._executive = ExecutiveMind(
@@ -155,6 +131,43 @@ class InMemoryIntegrationHarness:
     def store(self) -> MemoryStore:
         """The shared ledger (readable for assertions/audit)."""
         return self._store
+
+    def _register_generate(self, owner: Identity) -> None:
+        """Register the 'generate' capability, idempotently across reopens.
+
+        On a durable (on-disk) ledger the registry restores the *dossier* from
+        the stored registration record, but capability objects (code) cannot be
+        serialized, so the live instance is re-attached rather than re-registered
+        (which would raise on the duplicate key and append a duplicate record).
+        """
+        dossier = CapabilityDossier(
+            name="generate",
+            version="1.0.0",
+            signature="generate(intent, params)",
+            purpose="Produce a provider-backed response through the Gateway.",
+            cost_model="flat",
+            latency_profile="normal",
+            reliability="high",
+            side_effects="none",
+            reversible=True,
+            required_secrets=[],
+            failure_modes="none",
+            dependencies=[],
+            determinism=Determinism.CREATIVE,
+            idempotent=True,
+            provenance={
+                "producer": "integration",
+                "created_at": self._clock.now().isoformat(),
+                "owner_id": owner.owner_id,
+                "explicit_fields": ["idempotent", "determinism"],
+            },
+        )
+        try:
+            attached = self._registry.restore_capability("generate", "1.0.0", self._capability)
+        except SystemFault:
+            attached = False
+        if not attached:
+            self._registry.register(dossier, self._capability)
 
     def run(self, goal: str, raw_text: str) -> IntegrationReport:
         """Execute one intent through the composed ExecutiveMind + Gateway.
