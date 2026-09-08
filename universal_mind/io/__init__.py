@@ -10,6 +10,18 @@ provider list. API keys are resolved lazily through a
 
 from __future__ import annotations
 
+from universal_mind.io.adapters import (
+    CapabilityResolver,
+    HumanSpecialist,
+    McpSpecialist,
+    ShellSpecialist,
+    Tool,
+    ToolCapability,
+    ToolContract,
+    dossier_for,
+    organ_for,
+    register_tool,
+)
 from universal_mind.io.errors import (
     ProviderConfig,
     ProviderError,
@@ -29,10 +41,13 @@ from universal_mind.io.gateway import (
 )
 
 __all__ = [
+    "CapabilityResolver",
     "EchoProvider",
     "Gateway",
     "GatewayOutcome",
     "HttpChatProvider",
+    "HumanSpecialist",
+    "McpSpecialist",
     "Message",
     "Provider",
     "ProviderConfig",
@@ -41,5 +56,12 @@ __all__ = [
     "ProviderResult",
     "ProviderTransient",
     "ScriptedProvider",
+    "ShellSpecialist",
+    "Tool",
+    "ToolCapability",
+    "ToolContract",
+    "dossier_for",
     "env_resolver",
+    "organ_for",
+    "register_tool",
 ]

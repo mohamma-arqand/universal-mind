@@ -167,6 +167,17 @@ class PantheonRegistry:
         except KeyError as exc:
             raise SystemFault(f'Organ not found: {name}.') from exc
 
+    def attach_organ(self, organ: OrganDescriptor) -> str:
+        """Record an organ's metadata (name index) for selectable resolution.
+
+        Unlike :meth:`register_organ`, this does NOT re-append the dossier record
+        or re-register the capability — it makes an already-registered capability
+        addressable by domain/credibility for :class:`CapabilityResolver`,
+        idempotently.
+        """
+        self._organs[organ.name] = organ
+        return organ.name
+
     def search(
         self,
         *,
