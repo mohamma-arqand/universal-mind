@@ -19,6 +19,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from universal_mind.powers.judgment import CandidateOutput, Verdict
 
+from .evidence import EvidenceBundle, EvidencePoint, EvidenceSource, EvidenceType
 from .virtue import AreteError, CardinalVirtue, VirtueWeights
 
 
@@ -50,13 +51,19 @@ class VirtueScorecard:
 
 @dataclass(frozen=True)
 class ArbitrationVerdict:
-    """Binding outcome of an ARETĒ arbitration."""
+    """Binding outcome of an ARETĒ arbitration.
+
+    ``evidence`` is a mandatory :class:`EvidenceBundle`: a verdict that cannot
+    show the evidence it rests on is unrepresentable, so every decision here is
+    auditable ("judgment backed by evidence", no majority voting).
+    """
 
     decision: Verdict
     winner_strategy_id: str | None
     ranking: list[str]
     scorecards: list[VirtueScorecard]
     reasoning: str
+    evidence: EvidenceBundle
 
 
 # Per-candidate virtue observation: mapper from cardinal virtue to a 0..1 score.
@@ -146,6 +153,49 @@ class InMemoryArbiter:
         self.weights = weights if weights is not None else VirtueWeights()
         self.scorer = scorer if scorer is not None else default_virtue_scorer
 
+    @staticmethod
+    def _verdict_evidence(
+        scorecards: list[VirtueScorecard],
+        reason: str,
+        winner: str | None,
+        hard_gates: tuple[CardinalVirtue, ...],
+    ) -> EvidenceBundle:
+        """Build the evidence bundle anchoring an arbitration verdict.
+
+        Evidence is derived from the actual computed scorecards (a measurement),
+        the winner's hard-gate pass (a test), and the reasoning (a ledger note),
+        so a verdict always carries inspectable justification — never a
+        scoreless "because I said so".
+        """
+        points: list[EvidencePoint] = [
+            EvidencePoint(
+                type_=EvidenceType.RELIABILITY,
+                source=EvidenceSource.MEASUREMENT,
+                value=round(card.excellence, 4),
+                citation=f"excellence:{card.candidate_strategy_id}",
+            )
+            for card in scorecards
+        ]
+        if winner is not None:
+            points.append(
+                EvidencePoint(
+                    type_=EvidenceType.CORRECTNESS,
+                    source=EvidenceSource.TEST,
+                    value=True,
+                    citation=f"hard-gate-pass:{winner}",
+                )
+            )
+        points.append(
+            EvidencePoint(
+                type_=EvidenceType.SAFETY,
+                source=EvidenceSource.LEDGER,
+                value=reason,
+                citation="arbitration:reason",
+                weight=0.5,
+            )
+        )
+        return EvidenceBundle(tuple(points))
+
     def arbitrate(self, dispute: Dispute) -> ArbitrationVerdict:
         """Resolve a dispute to a binding verdict.
 
@@ -164,6 +214,14 @@ class InMemoryArbiter:
                 ranking=[],
                 scorecards=[],
                 reasoning="No candidates were submitted for arbitration.",
+                evidence=EvidenceBundle((
+                    EvidencePoint(
+                        type_=EvidenceType.SAFETY,
+                        source=EvidenceSource.LEDGER,
+                        value=True,
+                        citation="arbitration:empty-dispute",
+                    ),
+                )),
             )
 
         scorecards: list[VirtueScorecard] = []
@@ -218,6 +276,7 @@ class InMemoryArbiter:
                 ranking=ranking_ids,
                 scorecards=scorecards,
                 reasoning="No candidate satisfies the hard-gate virtues.",
+                evidence=self._verdict_evidence(scorecards, "no candidate satisfies hard-gate virtues", None, tuple(self.weights.hard_gate)),
             )
 
         best = qualified_ranked[0]
@@ -232,6 +291,7 @@ class InMemoryArbiter:
                 ranking=ranking_ids,
                 scorecards=scorecards,
                 reasoning=f"Excellence tie at {best.excellence:.3f}; no decisive winner.",
+                evidence=self._verdict_evidence(scorecards, f"tie at {best.excellence:.3f}", None, tuple(self.weights.hard_gate)),
             )
         if best.excellence < self.weights.accept_threshold:
             return ArbitrationVerdict(
@@ -244,6 +304,7 @@ class InMemoryArbiter:
                     f"excellence {best.excellence:.3f} is below accept depth "
                     f"{self.weights.accept_threshold:.3f}."
                 ),
+                evidence=self._verdict_evidence(scorecards, f"best below accept at {best.excellence:.3f}", None, tuple(self.weights.hard_gate)),
             )
         return ArbitrationVerdict(
             decision=Verdict.ALLOW,
@@ -254,6 +315,7 @@ class InMemoryArbiter:
                 f"Winner {best.candidate_strategy_id} with excellence "
                 f"{best.excellence:.3f}. Rubric: {self.weights}."
             ),
+            evidence=self._verdict_evidence(scorecards, f"winner {best.candidate_strategy_id}", best.candidate_strategy_id, tuple(self.weights.hard_gate)),
         )
 
     @staticmethod

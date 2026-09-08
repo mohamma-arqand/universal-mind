@@ -9,6 +9,10 @@ A seed-core, local-first orchestration project built around three layers:
 - **ARETĒ**: virtue-based, non-compensatory arbitration of competing candidates
   (`arete/`) — a candidate that violates a hard-gate virtue (Justice by default)
   is disqualified regardless of overall score; excellence ties rule DEFER.
+  Every verdict carries a mandatory evidence bundle (`arete/evidence.py`):
+  judgment is anchored to inspectable `EvidencePoint`s (a trusted source, a
+  type, a citation, a weight), never to a bare score or a majority vote —
+  enforcing "judgment backed by evidence".
 - **Gateway** (`io/`): adapters to external providers — a `Provider` protocol,
   deterministic reference providers (Echo, Scripted), an OpenAI-compatible
   `HttpChatProvider`, and a `Gateway` that retries with backoff and fails over
