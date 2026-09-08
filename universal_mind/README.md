@@ -5,6 +5,11 @@ A seed-core, local-first orchestration project built around three layers:
 - **Core**: identity, intent, clock, errors, and the Executive Mind.
 - **Pantheon**: capability contracts and the registry of executable dossiers.
 - **Memory / Mnemosyne**: append-only ledger storage and time-aware recall.
+- **MOUTH** (`mouth/`): the sole input gate — raw speech becomes a
+  `StructuredIntent` (goal, success criteria, constraints, determinism), each
+  committed field anchored to an `EvidenceBundle` pointing at the raw-text span
+  it came from. A vague or self-contradicting request is refused with an
+  `IntentNeedsClarification`/`IntentConflict`, never silently committed.
 - **Feedback**: human verdicts attached to ledger records.
 - **ARETĒ**: virtue-based, non-compensatory arbitration of competing candidates
   (`arete/`) — a candidate that violates a hard-gate virtue (Justice by default)
