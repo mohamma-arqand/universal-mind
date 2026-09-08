@@ -33,6 +33,11 @@ A seed-core, local-first orchestration project built around three layers:
   `prometheus/apply.py` routes each vetted proposal to the matching reversible
   applier (`evolve_and_apply`): `ThrottleApplier` tightens the throttle, a
   `FallbackOrderApplier` installs a fallback chain — all reversible.
+  Recursive self-improvement (`prometheus/evolve.py`) enforces the governing
+  rule `code → sandbox → benchmark → accept/reject`: a candidate is built in an
+  isolated sandbox, scored against a benchmark, and the `EvolutionGate` accepts
+  it only when it measurably beats the baseline — with a mandatory evidence
+  bundle. Nothing a self-modification produces ever lands in the live tree.
 - **Integration** (`integration.py`): the composed face that closes the loop —
   a `GatewayCapability` runs inside the ExecutiveMind, the produced output is
   arbitrated by ARETĒ against a baseline, and Prometheus watches the same

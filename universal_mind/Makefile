@@ -68,6 +68,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_evolution_apply.py --junit-xml=$(ARTIFACTS_DIR)/probe_evolution.xml
 	@echo "Running probe_durability.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_durability.py --junit-xml=$(ARTIFACTS_DIR)/probe_durability.xml
+	@echo "Running probe_evolution_loop.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_evolution_loop.py --junit-xml=$(ARTIFACTS_DIR)/probe_evolution_loop.xml
 	@echo "All probes passed"
 
 # Clean artifacts
