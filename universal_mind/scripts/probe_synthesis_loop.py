@@ -23,7 +23,6 @@ from universal_mind.synthesis import (
     FactSpecialist,
     SynthesisEngine,
     WriterSpecialist,
-    domain_for,
 )
 
 
