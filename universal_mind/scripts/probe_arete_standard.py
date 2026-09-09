@@ -33,7 +33,8 @@ def attempt_first_seed() -> bool:
     """No incumbent -> first D seeds the standard."""
     k = StandardKeeper(InMemoryStore())
     res = k.consider(_candidate("D1", FULL))
-    ok = res.decision is PromotionDecision.PROMOTED and k.current() is not None and k.current().name == "D1"
+    cur = k.current()
+    ok = res.decision is PromotionDecision.PROMOTED and cur is not None and cur.name == "D1"
     print(f"  first D seeded the standard: {ok}")
     return ok
 

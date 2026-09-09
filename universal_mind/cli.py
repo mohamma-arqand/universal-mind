@@ -115,6 +115,15 @@ def _cmd_demo(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    """Build a self-contained, real-data dashboard HTML to ``--out``."""
+    from universal_mind.dashboard import build_and_write
+
+    out = build_and_write(args.out)
+    print(f"dashboard written to {out}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse arguments and dispatch; returns the process exit code."""
     parser = argparse.ArgumentParser(
@@ -139,6 +148,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     evolve.add_argument("--throttle", type=float, default=0.5, help="starting error-rate threshold")
     evolve.add_argument("--compact", action="store_true", help="single-line JSON output")
 
+    dash = sub.add_parser("dashboard", help="build a self-contained real-data dashboard HTML")
+    dash.add_argument("--out", required=True, help="output .html path")
+
     args = parser.parse_args(argv)
 
     if args.command == "health":
@@ -153,6 +165,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_replay(args)
     if args.command == "evolve":
         return _cmd_evolve(args)
+    if args.command == "dashboard":
+        return _cmd_dashboard(args)
     return 2
 
 
