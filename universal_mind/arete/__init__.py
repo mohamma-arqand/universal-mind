@@ -28,6 +28,13 @@ from universal_mind.arete.evidence import (
     EvidenceType,
     JudgedClaim,
 )
+from universal_mind.arete.standard import (
+    PromotionDecision,
+    PromotionResult,
+    Standard,
+    StandardKeeper,
+    _as_candidate,
+)
 from universal_mind.arete.virtue import (
     AreteError,
     CardinalVirtue,
@@ -46,8 +53,13 @@ __all__ = [
     "EvidenceType",
     "InMemoryArbiter",
     "JudgedClaim",
+    "PromotionDecision",
+    "PromotionResult",
+    "Standard",
+    "StandardKeeper",
     "VirtueScorecard",
     "VirtueScorer",
     "VirtueWeights",
+    "_as_candidate",
     "default_virtue_scorer",
 ]
