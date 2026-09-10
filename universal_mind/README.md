@@ -47,6 +47,20 @@ A seed-core, local-first orchestration project built around three layers:
   on-disk `LocalJSONLStore`, so the ledger survives a restart. Registration is
   idempotent across reopens (`PantheonRegistry.restore_capability`), letting a
   reopen reload the same ledger and recover recorded faults.
+- **Power Zero, executable** (`powers/generator.py`): the charter's answer to
+  "do 37 powers cover infinity?". `PowerZeroGenerator` emits a real runnable
+  power as Python source, builds + imports it in a throwaway sandbox,
+  benchmarks it, and lets ARETĒ's non-compensatory rule accept/reject it.
+  Accepted powers are minted via `PowerZero` strictly below all 7 built-ins
+  and never land in the live tree — the mind grows without losing its bounds.
+- **Remembering Mnemosyne** (`memory/mnemosyne.py → query()`): inferential
+  recall — ranks ledger records by lexical relevance + freshness (never pure
+  recency), so the memory substrate feeds the Demiurge rather than only
+  auditing it.
+- **Human-in-the-loop** (`feedback/consent.py`): `PromotionConsent` wraps the
+  `StandardKeeper` so an ARETĒ promotion is *provisional* until a human
+  consents or vetoes it; the ruling is committed as first-class
+  `HUMAN`/`CONSENT` evidence (the highest-trust source). Deny-by-default.
 
 ## Deployment
 
