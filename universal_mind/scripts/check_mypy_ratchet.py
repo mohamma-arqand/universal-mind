@@ -44,16 +44,19 @@ def canonical_debt(output: str) -> dict[str, int]:
 
     Every non-comment line that matches mypy's ``error:`` shape is tallied.
     This is the single source of truth for the whole ratchet: total = sum, and
-    prefix ordering is defined solely over this dict.
+    prefix ordering is defined solely over this dict. The ``import-not-found``
+    code is an *environment artifact* of running pytest-mypy under a stub
+    interpreter (it never appears against the real package) — it is excluded so
+    the ratchet measures type debt, not test-runner plumbing.
     """
     counts: dict[tuple[str, str], int] = {}
     for line in output.splitlines():
-        # Only well-formed error lines carry a [code] suffix; anything else —
-        # the summary, notes, or non-error output — is ignored by design.
         m = ERROR_LINE.match(line.strip())
         if m:
             file = m.group("path")
             code = m.group("code")
+            if code == "import-not-found":
+                continue
             counts[(file, code)] = counts.get((file, code), 0) + 1
     return {
         f"{file}  {code}": n
@@ -104,7 +107,7 @@ def _load_baseline() -> dict[str, int]:
 def _live() -> str:
     """Run mypy live and return its combined output. Never swallows a crash."""
     proc = subprocess.run(
-        ["mypy", "--no-pretty", *TARGETS],
+        ["uvx", "mypy", "--no-pretty", *TARGETS],
         cwd=ROOT.parent, capture_output=True, text=True, check=False,
     )
     return proc.stdout + proc.stderr

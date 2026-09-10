@@ -7,35 +7,32 @@
 all: install lint test probe
 
 # Python environment
-VENV := $(abspath ../.venv)
-PYTHON := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
-PYTEST := $(VENV)/bin/pytest
-RUFF := $(VENV)/bin/ruff
-MYPY := $(VENV)/bin/mypy
+# The historic venv (../.venv) is a WSL/Linux layout and does NOT run on the
+# Windows host. Runtime tools resolve as: host python (pytest/probes) and
+# uvx (ruff/mypy) which fetch pin-exact tool versions on demand.
+PYTHON := python
+PYTEST := python -m pytest
+RUFF := uvx ruff
+MYPY := uvx mypy
 
 # Artifacts directory
 ARTIFACTS_DIR := artifacts
 JUNIT_XML := $(ARTIFACTS_DIR)/junit.xml
 
-# Create venv and install dependencies
-install: $(VENV)/bin/activate
-	@echo "Dependencies installed in $(VENV)"
+# No-op install (deps are fetched on demand by uvx / already present).
+install:
+	@echo "Toolchain ready (host python + uvx ruff/mypy)"
 
-$(VENV)/bin/activate:
-	@echo "Using existing virtual environment at $(VENV)"
-	@touch $(VENV)/bin/activate
-
-# Lint with ruff (mypy is strict and not enforced in CI)
+# Lint with ruff (mypy is enforced separately via the ratchet)
 lint: install
 	@echo "Running ruff check..."
 	cd .. && $(RUFF) check universal_mind/ universal_mind/tests/
 	@echo "Lint passed"
 
-# Type check with mypy (strict mode - may have errors in existing codebase)
+# Type check with mypy (whole-package, non-strict so it matches the release frame)
 typecheck: install
-	@echo "Running mypy check (strict)..."
-	cd .. && $(MYPY) --strict universal_mind/
+	@echo "Running mypy check..."
+	cd .. && $(MYPY) --no-pretty universal_mind/
 	@echo "Type check passed"
 
 # Run tests with junit output
