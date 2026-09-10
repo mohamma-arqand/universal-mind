@@ -57,9 +57,16 @@ script (see `universal_mind/cli.py`):
   exit 0 only when healthy.
 - `universal-mind demo` — the reference end-to-end demo.
 - `universal-mind interactive` — REPL over the composed harness (local providers).
-- `universal-mind chat` — REPL wired to a real OpenAI-compatible provider
-  (base URL/model/key read from `UM_OPENAI_BASE_URL`, `UM_OPENAI_MODEL`,
-  `UM_OPENAI_API_KEY`; fail-safe without a key).
+- `universal-mind chat [--local]` — REPL wired to a real OpenAI-compatible
+  provider. With `--local` it spins up the offline `StubChatServer` (no key, no
+  network) and drives the full GATEWAY→provider wire path deterministically;
+  otherwise it reads `UM_OPENAI_BASE_URL`, `UM_OPENAI_MODEL`,
+  `UM_OPENAI_API_KEY` from the environment (fail-safe without a key).
+- `universal-mind dashboard --out <path>` — build a self-contained, real-data
+  dashboard HTML (see **Dashboard** below).
+- `universal-mind cycle --dir <dir> --out <path>` — run one full
+  demo→synthesis→ARETĒ→evolve→dashboard loop over a durable ledger directory
+  (append-only; repeatable).
 - `universal-mind replay --dir <dir>` — recover + audit an on-disk ledger
   (JSON summary of record kinds and counts).
 - `universal-mind evolve --dir <dir>` — run one Prometheus self-evolution pass
@@ -72,12 +79,33 @@ from the repo root provides the `universal-mind` console script; provider keys
 are injected at runtime via environment (e.g. `UM_OPENAI_API_KEY`) and are
 never stored or logged.
 
+## Dashboard
+
+`universal-mind dashboard --out dashboard.html` (or `cycle`) writes a single
+self-contained HTML file — no server, no external fetch. It is **not a
+mockup**: it runs the actual SynthesisEngine and ARETĒ critical loop against a
+durable ledger and renders exactly what that run committed — the seven layers
+(+ MNEMOSYNE), the standing standard and its promotion trail, synthesis runs,
+the specialist contract registry, and the ledger composition. The quality gate
+measures the pytest suite size at build time, so the "tests pass" count never
+drifts from the code.
+
 ## Run tests
 
 ```bash
-cd /mnt/data/universal_mind
-python -m unittest discover
+cd <repo-root>/universal_mind
+PYTHONPATH=.. python -m pytest -q tests/
 ```
+
+Run the self-verifying probes and the full release gate:
+
+```bash
+make probe   # all probes, with JUnit XML receipts
+make verify  # lint + mypy ratchet + tests + receipt + probes -> READY
+```
+
+(`make` targets live in `universal_mind/Makefile`; invoke them from inside
+`universal_mind/`.)
 
 ## Swap the store backend
 
@@ -87,13 +115,15 @@ The Executive and registry accept any `MemoryStore` implementation.
 ## Status
 
 Every README milestone is now implemented and verified: Core / Pantheon /
-Memory / Feedback, plus ARETĒ (arbitration), the GATEWAY layer (`io/`),
+Memory / Feedback, plus ARETĒ (arbitration + the critical-loop `StandardKeeper`),
+the GATEWAY layer (`io/`, including the offline OpenAI-compatible stub server),
 deployment (a Docker-free `pip install .` package + CLI), Prometheus
-self-evolution (reversible apply to the running executive), and the
-integration face that closes the loop. The build is closed end-to-end with
-`make test` + `make probe` (self-verifying receipt), with the full release gate
-`make verify` (lint + mypy ratchet + tests + receipt + probes) printing READY
-only when everything is green.
+self-evolution (reversible apply to the running executive + the
+`sandbox→benchmark→accept/reject` loop), the synthesis engine (A+B+C→D), and
+the real-data dashboard. The build is closed end-to-end with `make test` +
+`make probe` (self-verifying receipt), with the full release gate `make verify`
+(lint + mypy ratchet + tests + receipt + probes) printing READY only when
+everything is green.
 
 See [ARCHITECTURE.md](../ARCHITECTURE.md) for the layering model, the intent
 pipeline, ledger schema, and the recovery guide.
