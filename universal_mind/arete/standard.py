@@ -142,6 +142,11 @@ class StandardKeeper(InMemoryArbiter):
             promotion_depth=int(payload.get("promotion_depth", 0)),
         )
 
+    @property
+    def store(self) -> MemoryStore:
+        """The underlying ledger store (exposed for read/compose layers)."""
+        return self._store
+
     def history(self) -> list[dict[str, Any]]:
         """The full, append-ordered promotion ledger (auditable trail)."""
         return list(self._store.find(kind="standard"))
@@ -161,20 +166,48 @@ class StandardKeeper(InMemoryArbiter):
         record_id: str | None = None
 
         if current is None:
+            # Even the first standard must clear the justice hard-gate: it is
+            # arbitrated against a refusal baseline, never self-seeded blindly.
+            refusal = CandidateOutput(
+                strategy_id="refusal",
+                output="refuse",
+                metadata={"virtues": {"justice": 1.0, "wisdom": 0.5, "courage": 1.0, "temperance": 1.0}},
+            )
+            first_dispute = Dispute(
+                goal=f"Seed standard {proposal.strategy_id}",
+                candidates=[proposal, refusal],
+            )
+            first_verdict = self.arbitrate(first_dispute)
+            if (
+                first_verdict.decision is not Verdict.ALLOW
+                or first_verdict.winner_strategy_id != proposal.strategy_id
+            ):
+                return PromotionResult(
+                    decision=PromotionDecision.REJECTED,
+                    contender=proposal,
+                    previous_standard=None,
+                    current_standard=Standard(
+                        name="refusal",
+                        artifact="refuse",
+                        promotion_depth=0,
+                        evidence=_seed_bundle("rejected-first-election", proposal.strategy_id),
+                    ),
+                    verdict=first_verdict,
+                )
             standard = Standard(
                 name=proposal.strategy_id,
                 artifact=proposal.output,
                 promotion_depth=0,
                 evidence=_seed_bundle("first-election", proposal.strategy_id),
             )
-            record_id = self._record_standard(standard, {"election": "uncontested"})
+            record_id = self._record_standard(standard, {"election": "contested"})
             verdict = ArbitrationVerdict(
                 decision=Verdict.ALLOW,
                 winner_strategy_id=proposal.strategy_id,
                 ranking=[proposal.strategy_id],
-                scorecards=[],
-                reasoning=f"First synthesis seeded the standard '{proposal.strategy_id}'.",
-                evidence=_seed_bundle("first-election", proposal.strategy_id),
+                scorecards=first_verdict.scorecards,
+                reasoning=f"First synthesis seeded the standard '{proposal.strategy_id}' after clearing the justice gate.",
+                evidence=first_verdict.evidence,
             )
             return PromotionResult(
                 decision=PromotionDecision.PROMOTED,

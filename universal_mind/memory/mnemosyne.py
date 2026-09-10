@@ -18,6 +18,47 @@ class RecallHit:
     status: RecordStatus
 
 
+@dataclass(frozen=True)
+class QueryHit:
+    """A record matched by *inferential* recall, with a relevance score."""
+
+    record: dict[str, Any]
+    score: float
+    status: RecordStatus
+
+
+def _tokens(text: str) -> set[str]:
+    """Lowercased, minimal-length word tokens for lexical overlap."""
+    return {t for t in text.lower().replace(",", " ").replace(".", " ").split() if len(t) > 2}
+
+
+def _searchable_text(record: dict[str, Any]) -> str:
+    """Concatenate the parts of a record that should match a query."""
+    parts: list[str] = []
+    kind = record.get("kind")
+    if kind:
+        parts.append(str(kind))
+    provenance = record.get("provenance")
+    if isinstance(provenance, dict):
+        for value in provenance.values():
+            parts.append(str(value))
+    payload = record.get("payload")
+    if isinstance(payload, dict):
+        parts.append(str(payload.get("goal", "")))
+        parts.append(str(payload.get("name", "")))
+    else:
+        parts.append(str(payload))
+    return " ".join(parts)
+
+
+def _clamp(value: float) -> float:
+    if value < 0.0:
+        return 0.0
+    if value > 1.0:
+        return 1.0
+    return value
+
+
 class Mnemosyne:
     """Append-only memory service for recording and classifying facts."""
 
@@ -66,6 +107,48 @@ class Mnemosyne:
                 continue
             hits.append(RecallHit(record=record, status=self._classify(record)))
         return hits
+
+    def query(
+        self,
+        text: str,
+        *,
+        owner_id: str | None = None,
+        kinds: tuple[str, ...] | None = None,
+        min_score: float = 0.0,
+        limit: int = 10,
+    ) -> list[QueryHit]:
+        """Inferential recall: rank records by lexical/kind relevance to ``text``.
+
+        Each record is scored by overlapping the query tokens with the record's
+        own searchable text (kind, citation/provenance string, and the
+        stringified payload). Freshness is not decisive but is folded into the
+        sort via the record's age classification: fresher-rankings beat older
+        ones at equal relevance. Returns the top ``limit`` hits above
+        ``min_score``, best first. This is what makes MNEMOSYNE a remembering
+        substrate rather than a bare audit index.
+        """
+        query_tokens = _tokens(text)
+        scored: list[tuple[float, QueryHit]] = []
+        for record in self.store.read_all():
+            if owner_id is not None and record.get("owner_id") != owner_id:
+                continue
+            if kinds is not None and record.get("kind") not in kinds:
+                continue
+            haystack = _searchable_text(record)
+            hay_tokens = _tokens(haystack)
+            if not hay_tokens:
+                continue
+            overlap = len(query_tokens & hay_tokens)
+            precision = overlap / len(query_tokens) if query_tokens else 0.0
+            # Freshness bonus keeps recency from being meaningless but never
+            # overrides lexical relevance.
+            status = self._classify(record)
+            freshness = {RecordStatus.FRESH: 0.1, RecordStatus.STALE: 0.05, RecordStatus.EXPIRED: 0.0}[status]
+            score = _clamp(precision + freshness)
+            if score >= min_score:
+                scored.append((score, QueryHit(record=record, score=round(score, 4), status=status)))
+        scored.sort(key=lambda entry: (-entry[0], entry[1].record.get("created_at", "")))
+        return [hit for _, hit in scored[:limit]]
 
     def _classify(self, record: dict[str, Any]) -> RecordStatus:
         created_at = datetime.fromisoformat(record['created_at'])
