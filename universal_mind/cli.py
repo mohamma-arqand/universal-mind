@@ -124,6 +124,50 @@ def _cmd_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_cycle(args: argparse.Namespace) -> int:
+    """Run one full demo->dashboard cycle on a durable ledger directory.
+
+    Opens ``--dir`` as a persistent store, runs the synthesis + ARETĒ scenario
+    (via :func:`build_and_write`, which reuses an existing store without
+    clearing it), then rewrites the dashboard HTML from that same canonical
+    ledger. Duplicate capability registrations are idempotent, so repeated
+    cycles grow only the synthesis/standard history — an audit trail — while the
+    dashboard always reflects the latest committed state.
+    """
+    from pathlib import Path
+
+    from universal_mind.core.clock import SystemClock
+    from universal_mind.core.executive import ExecutionThrottle, ExecutiveMind
+    from universal_mind.core.identity import DEFAULT_OWNER
+    from universal_mind.dashboard import build_and_write
+    from universal_mind.memory.mnemosyne import Mnemosyne
+    from universal_mind.memory.store import LocalJSONLStore
+    from universal_mind.pantheon.registry import PantheonRegistry
+    from universal_mind.prometheus import evolve_and_apply
+
+    directory = Path(args.dir)
+    store = LocalJSONLStore(directory=directory, filename=args.filename)
+
+    # Prometheus self-evolution pass on the durable ledger before rendering.
+    executive = ExecutiveMind(
+        registry=PantheonRegistry(store),
+        memory=Mnemosyne(store, SystemClock()),
+        clock=SystemClock(),
+        owner=DEFAULT_OWNER,
+        throttle=ExecutionThrottle(error_rate_threshold=args.throttle),
+    )
+    report, outcomes = evolve_and_apply(store, executive)
+
+    out = build_and_write(Path(args.out), store=store)
+    records = sum(1 for _ in store.read_all())
+    print(
+        f"cycle complete: evolution {[p.kind.value for p in report.proposals]} "
+        f"| applied {[o.detail for o in outcomes if not o.detail.startswith('ignored')]} "
+        f"| {records} ledger records -> {out}"
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse arguments and dispatch; returns the process exit code."""
     parser = argparse.ArgumentParser(
@@ -137,7 +181,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     health.add_argument("--compact", action="store_true", help="single-line JSON output")
     sub.add_parser("demo", help="run the reference end-to-end demo")
     sub.add_parser("interactive", help="REPL driving the composed integration harness")
-    sub.add_parser("chat", help="REPL wired to a real OpenAI-compatible provider (env-configured)")
+    chatp = sub.add_parser("chat", help="REPL wired to an OpenAI-compatible provider (env or --local)")
+    chatp.add_argument("--local", action="store_true", help="spin up the offline stub provider (no key/network)")
     replay = sub.add_parser("replay", help="recover + audit an on-disk ledger directory")
     replay.add_argument("--dir", required=True, help="ledger directory to recover")
     replay.add_argument("--filename", default="ledger.jsonl", help="ledger filename")
@@ -150,6 +195,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     dash = sub.add_parser("dashboard", help="build a self-contained real-data dashboard HTML")
     dash.add_argument("--out", required=True, help="output .html path")
+
+    cycle = sub.add_parser("cycle", help="run a demo->synthesis->evolve->dashboard cycle on a durable ledger")
+    cycle.add_argument("--dir", required=True, help="ledger directory (persistent)")
+    cycle.add_argument("--filename", default="ledger.jsonl", help="ledger filename")
+    cycle.add_argument("--throttle", type=float, default=0.5, help="starting error-rate threshold")
+    cycle.add_argument("--out", required=True, help="output .html path")
 
     args = parser.parse_args(argv)
 
@@ -167,6 +218,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_evolve(args)
     if args.command == "dashboard":
         return _cmd_dashboard(args)
+    if args.command == "cycle":
+        return _cmd_cycle(args)
     return 2
 
 
@@ -203,23 +256,37 @@ def _cmd_interactive(_args: argparse.Namespace) -> int:
     return _repl(harness)
 
 
-def _cmd_chat(_args: argparse.Namespace) -> int:
+def _cmd_chat(args: argparse.Namespace) -> int:
     """REPL wired to a real OpenAI-compatible provider via the Gateway.
 
-    Reads ``UM_OPENAI_BASE_URL``, ``UM_OPENAI_MODEL``, and (lazily, at the
-    request point) ``UM_OPENAI_API_KEY`` from the environment. With no key the
-    call fails safe with a clear message — nothing is attempted unauthenticated.
+    With ``--local`` the command spins up the offline stub server (no key, no
+    network) and points the harness at it, so the full GATEWAY→provider wire path
+    is exercised deterministically on the machine. Otherwise it reads
+    ``UM_OPENAI_BASE_URL``, ``UM_OPENAI_MODEL``, and (lazily) ``UM_OPENAI_API_KEY``
+    from the environment; with no key it fails safe with a clear message.
     """
     import os
 
     from universal_mind.integration import InMemoryIntegrationHarness
     from universal_mind.io.gateway import Gateway, HttpChatProvider
+    from universal_mind.io.stub_server import StubChatServer
 
-    base = os.environ.get("UM_OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = os.environ.get("UM_OPENAI_MODEL", "gpt-4o-mini")
-    provider = HttpChatProvider(base, model)
+    if args.local:
+        server = StubChatServer()
+        base = server.start()
+        model = "stub-1"
+        print(f"[local] stub provider serving at {base} (model {model})")
+        provider = HttpChatProvider(base, model, resolver=lambda _: "local-key")
+    else:
+        base = os.environ.get("UM_OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model = os.environ.get("UM_OPENAI_MODEL", "gpt-4o-mini")
+        provider = HttpChatProvider(base, model)
     harness = InMemoryIntegrationHarness(Gateway([provider]))
-    return _repl(harness)
+    try:
+        return _repl(harness)
+    finally:
+        if args.local:
+            server.stop()
 
 
 def _cmd_replay(args: argparse.Namespace) -> int:

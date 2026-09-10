@@ -39,6 +39,7 @@ from universal_mind.io.gateway import (
     ScriptedProvider,
     env_resolver,
 )
+from universal_mind.io.stub_server import StubChatServer
 
 __all__ = [
     "CapabilityResolver",
@@ -57,6 +58,7 @@ __all__ = [
     "ProviderTransient",
     "ScriptedProvider",
     "ShellSpecialist",
+    "StubChatServer",
     "Tool",
     "ToolCapability",
     "ToolContract",
