@@ -64,6 +64,7 @@ class SynthesisReport:
     evidence: EvidenceBundle
     commit_record_id: str | None
     ok: bool
+    remembered_context: str = ""
 
 
 def domain_for(goal: str) -> str:
@@ -195,6 +196,17 @@ class SynthesisEngine:
                 provenance={"producer": "SynthesisEngine", "owner_id": self._owner.owner_id},
             )
 
+        # Remember relevant prior experience before synthesizing, so the mind's
+        # past shapes this run (the remembering substrate feeds the loop).
+        from universal_mind.memory.lifespan import recall_context
+
+        remembered = recall_context(
+            self._store,
+            structured.intent.goal,
+            owner_id=self._owner.owner_id,
+            clock=self._clock,
+        ).summary
+
         return SynthesisReport(
             structured=structured,
             sub_executions=tuple(executions),
@@ -203,6 +215,7 @@ class SynthesisEngine:
             evidence=evidence,
             commit_record_id=record_id,
             ok=synthesized is not None,
+            remembered_context=remembered,
         )
 
     @staticmethod
