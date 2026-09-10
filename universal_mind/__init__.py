@@ -14,6 +14,7 @@ from .pantheon.contracts import (
     EchoCapability,
 )
 from .pantheon.registry import CapabilityDossier, PantheonRegistry
+from .sovereign import SovereignContext, build_sovereign_context, inject_preamble
 from .version import __version__
 
 __all__ = [
@@ -37,8 +38,11 @@ __all__ = [
     'Mnemosyne',
     'PantheonRegistry',
     'RecordStatus',
+    'SovereignContext',
     'SystemFault',
     'TaskFailure',
     'Verdict',
     '__version__',
+    'build_sovereign_context',
+    'inject_preamble',
 ]

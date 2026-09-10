@@ -253,6 +253,13 @@ def _cmd_interactive(_args: argparse.Namespace) -> int:
     from universal_mind.io.gateway import EchoProvider, Gateway
 
     harness = InMemoryIntegrationHarness(Gateway([EchoProvider(cost=1.0)]))
+    try:
+        from universal_mind.sovereign import build_sovereign_context
+
+        ctx = build_sovereign_context(harness.store)
+        print(f"[self] {ctx.summary}")
+    except Exception as exc:  # noqa: BLE001 — the preamble is best-effort, never fatal
+        print(f"[self] (context unavailable: {exc})", file=sys.stderr)
     return _repl(harness)
 
 
