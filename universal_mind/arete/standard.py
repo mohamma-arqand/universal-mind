@@ -151,6 +151,65 @@ class StandardKeeper(InMemoryArbiter):
         """The full, append-ordered promotion ledger (auditable trail)."""
         return list(self._store.find(kind="standard"))
 
+    def rollback(self, target_depth: int, *, reason: str = "manual rollback") -> PromotionResult | None:
+        """Rewind the standing standard to an earlier lineage depth.
+
+        A standard may later be found wrong; the mind must be able to say so and
+        return. This appends a *rollback* standard record at ``target_depth``
+        (never erases history — the ledger stays append-only) so the lineage
+        pointer returns to that generation, with an evidence trail of *why*.
+        Returns the resulting ``PromotionResult``, or ``None`` when there is no
+        standard to rewind or ``target_depth`` is out of range.
+
+        Deterministic and reversible: the rollback itself is recorded, so a
+        later promotion can grow forward again without loss.
+        """
+        current = self.current()
+        if current is None:
+            return None
+        history = self.history()
+        if target_depth < 0 or target_depth > current.promotion_depth:
+            return None
+
+        # Find the artifact name that held the standard at that depth.
+        target_name = current.name
+        for rec in history:
+            payload = rec.get("payload", {})
+            name = str(payload.get("name", ""))
+            depth = int(payload.get("promotion_depth", 0) or 0)
+            if depth == target_depth:
+                target_name = name
+
+        from universal_mind.powers.judgment import CandidateOutput as _C
+
+        rolled = Standard(
+            name=target_name,
+            artifact=current.artifact if target_depth == current.promotion_depth else "rewound",
+            promotion_depth=target_depth,
+            evidence=_seed_bundle("rollback", target_name),
+        )
+        record_id = self._record_standard(rolled, {"rollback": True, "from_depth": current.promotion_depth, "reason": reason})
+        evidence = _seed_bundle("rollback", target_name)
+        verdict = ArbitrationVerdict(
+            decision=Verdict.ALLOW,
+            winner_strategy_id=target_name,
+            ranking=[target_name],
+            scorecards=[],
+            reasoning=(
+                f"Rolled back standard from depth {current.promotion_depth} to {target_depth} "
+                f"('{target_name}'). Reason: {reason}"
+            ),
+            evidence=evidence,
+        )
+        return PromotionResult(
+            decision=PromotionDecision.PROMOTED,
+            contender=_C(strategy_id=target_name, output=rolled.artifact, metadata={}),
+            previous_standard=current,
+            current_standard=rolled,
+            verdict=verdict,
+            record_id=record_id,
+        )
+
     # -- the critical loop -------------------------------------------------
 
     def consider(self, proposal: CandidateOutput) -> PromotionResult:
