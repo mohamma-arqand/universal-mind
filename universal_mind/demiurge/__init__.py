@@ -11,6 +11,10 @@ from .graph import (
     TopologicalSortResult,
     build_graph_from_sub_intents,
 )
+from .recall import (
+    MemoryAwareDecomposition,
+    decompose_with_memory,
+)
 from .strategies import (
     ExecutionPlan,
     ExecutionStrategy,
@@ -34,6 +38,7 @@ __all__ = [
     'ExecutionGraph',
     'ExecutionPlan',
     'ExecutionStrategy',
+    'MemoryAwareDecomposition',
     'ParallelStrategy',
     'SequentialStrategy',
     'SpeculativeStrategy',
@@ -45,6 +50,7 @@ __all__ = [
     'build_graph_from_sub_intents',
     'create_n_parallel_strategies',
     'decompose_intent',
+    'decompose_with_memory',
     'synthesize_by_sub_intent',
     'synthesize_results',
 ]
