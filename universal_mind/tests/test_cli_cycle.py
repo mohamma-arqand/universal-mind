@@ -5,14 +5,17 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from universal_mind import cli
 
 
-def _extract(html: str) -> dict:
-    m = re.search(r"const DATA = (\{.*?\});\nconst", html, re.S)
+def _extract(html: str) -> Any:
+    m = re.search(r"const DATA = (\{.*?\});\nconst", html, re.DOTALL)
     assert m, "dashboard HTML must embed DATA"
-    return json.loads(m.group(1))
+    parsed = json.loads(m.group(1))
+    assert isinstance(parsed, dict)
+    return parsed
 
 
 def test_cycle_writes_dashboard_and_ledger(tmp_path: Path) -> None:
