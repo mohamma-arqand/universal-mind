@@ -61,6 +61,7 @@ PROBES = [
     "probe_synthesis_loop.py",
     "probe_arete_standard.py",
     "probe_augment_capabilities.py",
+    "probe_lifecycle.py",
 ]
 
 

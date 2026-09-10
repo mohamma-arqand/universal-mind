@@ -73,6 +73,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_arete_standard.py --junit-xml=$(ARTIFACTS_DIR)/probe_arete_standard.xml
 	@echo "Running probe_augment_capabilities.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_augment_capabilities.py --junit-xml=$(ARTIFACTS_DIR)/probe_augment_capabilities.xml
+	@echo "Running probe_lifecycle.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_lifecycle.py --junit-xml=$(ARTIFACTS_DIR)/probe_lifecycle.xml
 	@echo "All probes passed"
 
 # Clean artifacts
