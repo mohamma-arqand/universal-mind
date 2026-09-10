@@ -14,6 +14,7 @@ connects to an external provider.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -137,6 +138,7 @@ class SynthesisEngine:
         store: MemoryStore,
         clock: Clock | None = None,
         owner: Identity = DEFAULT_OWNER,
+        composer: Callable[[list[Any]], Any | None] | None = None,
     ) -> None:
         self._store = store
         self._clock = clock if clock is not None else SystemClock()
@@ -146,6 +148,7 @@ class SynthesisEngine:
         self._resolver = CapabilityResolver()
         self._mnemosyne = Mnemosyne(store, self._clock)
         self._specialists: dict[str, Tool] = {}
+        self._composer = composer
 
     def register(self, name: str, tool: Tool) -> str:
         """Register a specialist (domain index) for resolution."""
@@ -176,10 +179,20 @@ class SynthesisEngine:
                              None if result.ok else "not ok")
             )
 
-        # Synthesize A+B+C -> D (concatenate the specialist outputs into one artifact).
-        parts = [f"[{e.specialist}] {e.output}" for e in executions if e.ok]
-        synthesized = "\n".join(parts) if parts else None
-        method = "parallel_concat"
+        # Synthesize A+B+C -> D: fuse through the composer when provided, else concat.
+        outputs = [e.output for e in executions if e.ok]
+        if self._composer is not None:
+            fused = self._composer(outputs)
+            if fused is not None:
+                synthesized = fused
+                method = "fusion"
+            else:
+                synthesized = "\n".join(f"[{e.specialist}] {e.output}" for e in executions if e.ok)
+                method = "concat"
+        else:
+            parts = [f"[{e.specialist}] {e.output}" for e in executions if e.ok]
+            synthesized = "\n".join(parts) if parts else None
+            method = "parallel_concat"
         evidence = EvidenceBundle(self._evidence_points(executions))
 
         record_id: str | None = None
