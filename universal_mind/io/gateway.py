@@ -34,11 +34,31 @@ from .errors import ProviderConfig, ProviderError, ProviderPermanent, ProviderTr
 
 
 @dataclass(frozen=True)
+class MessagePart:
+    """One part of a multimodal message: text, an image, or an audio note.
+
+    ``kind`` is one of ``text``, ``image``, ``audio`` (extensible); ``data``
+    carries the part payload. Parts are *additional* to the plain-text
+    ``Message.content``, so existing text-only callers are unchanged.
+    """
+
+    kind: str
+    data: Any
+
+
+@dataclass(frozen=True)
 class Message:
-    """A single chat message with a role and content."""
+    """A single chat message: plain text with optional multimodal parts.
+
+    ``content`` is the plain-text fallback (always present). ``parts`` may carry
+    image/audio/… attachments; a provider that understands only text simply
+    ignores parts and uses ``content``, so the contract widens without breaking
+    any existing adapter.
+    """
 
     role: str
     content: str
+    parts: tuple[MessagePart, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,6 +72,19 @@ class ProviderResult:
 
 # Resolves a named secret to a value, or None when absent.
 SecretResolver = Callable[[str], str | None]
+
+
+def _serialize_message(message: Message) -> dict[str, Any]:
+    """Serialize a :class:`Message` into the OpenAI-compatible wire shape.
+
+    Plain text always rides in ``content``. Any multimodal parts are attached as
+    a ``parts`` list (``{kind, data}``) so a provider that understands them can
+    pick them up, while a text-only provider just sees ``content``.
+    """
+    out: dict[str, Any] = {"role": message.role, "content": message.content}
+    if message.parts:
+        out["parts"] = [{"kind": p.kind, "data": p.data} for p in message.parts]
+    return out
 
 
 def env_resolver(name: str) -> str | None:
@@ -193,7 +226,7 @@ class HttpChatProvider:
             )
         payload: dict[str, Any] = {
             "model": self._model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [_serialize_message(m) for m in messages],
             "max_tokens": self._max_tokens,
         }
         request = urllib.request.Request(

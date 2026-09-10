@@ -175,13 +175,20 @@ class StubChatServer:
         Uses the last user message's text plus its approximate length, wrapped
         in a stable framing — so identical input always yields identical output
         (the loop stays deterministic) yet the response is *derived* from the
-        request rather than a constant echo.
+        request rather than a constant echo. If the message carries multimodal
+        parts, a short deterministic note about them is appended.
         """
-        last_user = next(
-            (m["content"] for m in reversed(messages) if isinstance(m, dict) and m.get("role") == "user"),
-            "",
+        last_msg = next(
+            (m for m in reversed(messages) if isinstance(m, dict) and m.get("role") == "user"),
+            {},
         )
-        if isinstance(last_user, bytes):
-            last_user = last_user.decode("utf-8", errors="replace")
-        text = str(last_user)
-        return f"[{model}] received {len(text)} chars: {text}"
+        content = last_msg.get("content", "")
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="replace")
+        text = str(content)
+        base = f"[{model}] received {len(text)} chars: {text}"
+        parts = last_msg.get("parts")
+        if isinstance(parts, list) and parts:
+            kinds = sorted({str(p.get("kind")) for p in parts if isinstance(p, dict)})
+            base += f" | parts: {','.join(kinds)}"
+        return base
