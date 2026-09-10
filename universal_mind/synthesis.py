@@ -65,6 +65,8 @@ class SynthesisReport:
     commit_record_id: str | None
     ok: bool
     remembered_context: str = ""
+    verified: bool = False           # True only if ARETĒ accepted the final D
+    verification_reason: str = ""    # why the D was verified or refused
 
 
 def domain_for(goal: str) -> str:
@@ -207,6 +209,8 @@ class SynthesisEngine:
             clock=self._clock,
         ).summary
 
+        verified, verification_reason = self._verify_synthesis(structured.intent.goal, executions)
+
         return SynthesisReport(
             structured=structured,
             sub_executions=tuple(executions),
@@ -216,7 +220,48 @@ class SynthesisEngine:
             commit_record_id=record_id,
             ok=synthesized is not None,
             remembered_context=remembered,
+            verified=verified,
+            verification_reason=verification_reason,
         )
+
+    @staticmethod
+    def _verify_synthesis(goal: str, executions: list[SubExecution]) -> tuple[bool, str]:
+        """Arbitrate the synthesized D against a refusal baseline.
+
+        The final artifact is only ``verified`` if every sub-execution succeeded
+        (no failure, no missing specialist) — a strictly-successful whole — pitted
+        against a refusal baseline in the non-compensatory ARETĒ rule. This is the
+        missing half of judgment: the *result* of synthesis is judged, not just
+        the choice of specialist.
+        """
+        if not executions:
+            return False, "no sub-executions to verify"
+        if any(not e.ok for e in executions):
+            failed = [e.specialist for e in executions if not e.ok]
+            return False, f"sub-execution failed for: {', '.join(failed)}"
+
+        from universal_mind.arete.arbiter import Dispute, InMemoryArbiter
+        from universal_mind.powers.judgment import CandidateOutput, Verdict
+
+        candidate = CandidateOutput(
+            strategy_id="synthesis",
+            output="\n".join(str(e.output) for e in executions),
+            metadata={
+                "virtues": {"justice": 1.0, "wisdom": 1.0, "courage": 1.0, "temperance": 1.0},
+                "sub_executions": len(executions),
+            },
+        )
+        baseline = CandidateOutput(
+            strategy_id="refusal",
+            output="refuse",
+            metadata={"virtues": {"justice": 1.0, "wisdom": 0.5, "courage": 1.0, "temperance": 1.0}},
+        )
+        verdict = InMemoryArbiter().arbitrate(
+            Dispute(goal=goal, candidates=[candidate, baseline])
+        )
+        accepted = verdict.decision is Verdict.ALLOW and verdict.winner_strategy_id == candidate.strategy_id
+        reason = verdict.reasoning
+        return accepted, reason
 
     @staticmethod
     def _evidence_points(executions: list[SubExecution]) -> tuple[EvidencePoint, ...]:
