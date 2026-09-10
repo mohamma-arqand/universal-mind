@@ -62,6 +62,7 @@ PROBES = [
     "probe_arete_standard.py",
     "probe_augment_capabilities.py",
     "probe_lifecycle.py",
+    "probe_continuous_judgment.py",
 ]
 
 
