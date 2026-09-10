@@ -80,12 +80,14 @@ def _summarize(hits: list[QueryHit]) -> str:
 
 
 def _apply_budget(mnemosyne: Mnemosyne, budget: MemoryBudget) -> int:
-    """Forget the oldest records once the live ledger exceeds the soft cap.
+    """Forget the *least-significant* records once the live ledger exceeds cap.
 
-    Uses the existing TTL/decay machinery: for every record older than the
-    decay horizon, we *expire* it (via a synthetic TTL) so that the store's
-    compaction path removes it. Returns the number trimmed. A store without a
-    delete/compaction path simply keeps the records (soft, never errors).
+    Unlike a naive oldest-first expiry, this ranks eligible (beyond-horizon)
+    records by a value weight derived from kind/provenance — so a human-consented
+    standard survives while a one-off failed note is trimmed first. Forgetting is
+    thus evidence-shaped (judgment, not recency) while still never touching
+    fresh/relevant memory. Returns the number trimmed; a store without a
+    delete/compaction path keeps the records (soft, never errors).
     """
     from datetime import datetime, timedelta, timezone
 
@@ -99,7 +101,7 @@ def _apply_budget(mnemosyne: Mnemosyne, budget: MemoryBudget) -> int:
     horizon = timedelta(seconds=budget.decay_horizon_seconds)
     now = mnemosyne.clock.now()
 
-    # Oldest-first among those beyond the horizon.
+    # Eligible = beyond the horizon; then rank by significance (lowest first).
     eligible: list[dict[str, Any]] = []
     for record in records:
         created_raw = record.get("created_at")
@@ -114,8 +116,9 @@ def _apply_budget(mnemosyne: Mnemosyne, budget: MemoryBudget) -> int:
         if (now - created) > horizon:
             eligible.append(record)
 
-    # Stable sort by creation time ascending (oldest first).
-    eligible.sort(key=lambda r: r.get("created_at", ""))
+    # Lowest significance first (then older as a tie-break), so we forget the
+    # least-valuable, not merely the oldest.
+    eligible.sort(key=lambda r: (_significance(r), r.get("created_at", "")))
     for record in eligible:
         if trimmed >= excess:
             break
@@ -123,6 +126,28 @@ def _apply_budget(mnemosyne: Mnemosyne, budget: MemoryBudget) -> int:
         if rid and _safe_delete(mnemosyne, rid):
             trimmed += 1
     return trimmed
+
+
+def _significance(record: dict[str, Any]) -> int:
+    """A value weight for a record, derived from kind and evidence markers.
+
+    Higher is more worth keeping: human consent / a standing standard are the
+    most significant; a failed or unremarkable record the least. Deterministic
+    and purely descriptive — it only *ranks* forgetting order, nothing else.
+    """
+    kind = str(record.get("kind", ""))
+    payload = record.get("payload")
+    if kind in ("human_consent", "standard"):
+        return 90
+    if kind == "synthesis":
+        if isinstance(payload, dict) and payload.get("verified") is True:
+            return 70
+        return 40
+    if kind == "generated_power":
+        return 60
+    if kind == "feedback":
+        return 50
+    return 10
 
 
 def _safe_delete(mnemosyne: Mnemosyne, record_id: str) -> bool:
