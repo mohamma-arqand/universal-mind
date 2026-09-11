@@ -5,7 +5,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Never, Protocol, cast
+from typing import TYPE_CHECKING, Any, Never, Protocol, cast
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,9 @@ from .errors import (
 from .identity import DEFAULT_OWNER, Identity
 from .intent import Determinism, Intent
 from .models import ExecutionRecord
+
+if TYPE_CHECKING:
+    from .self_awareness import SelfAwarenessLoop
 
 
 class Decision(Enum):
@@ -571,6 +574,7 @@ class ExecutiveMind:
         feedback_gate: HumanFeedbackGate | None = None,
         power_zero: PowerZero | None = None,
         layering_gate: LayeringGate | None = None,
+        self_awareness: SelfAwarenessLoop | None = None,
         *,
         recorder: Recorder | None = None,
     ) -> None:
@@ -585,6 +589,7 @@ class ExecutiveMind:
         self.feedback_gate = feedback_gate
         self.power_zero = power_zero or DefaultPowerZero()
         self.layering_gate = layering_gate
+        self.self_awareness = self_awareness
         # The caller-supplied gate, if any, becomes the policy sub-gate of the
         # composite. If none is supplied, an always-PROCEED gate is used.
         self.strategic_gate = strategic_gate or StrategicGate()
@@ -783,6 +788,13 @@ class ExecutiveMind:
         )
         cycle_status = 'ok' if result.ok else 'not_ok'
         self._safe_record('executive.cycle', outcome=cycle_status, terminal_gate=None)
+
+        # Close the meta loop: after a successful execution, the mind introspects
+        # its own judgment. When unhealthy, this self-corrects (bar/budget) and
+        # writes its own audit entry — it never blocks or alters this cycle.
+        if self.self_awareness is not None and result.ok:
+            self.self_awareness.introspect()
+
         return ExecutionRecord(
             intent_record_id=intent_record_id,
             capability_record_id=selected_record_id,
