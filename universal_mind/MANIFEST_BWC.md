@@ -24,7 +24,7 @@ not re-derivation.
 Unit tests prove correctness, not capacity. A synthetic load harness measures
 throughput/latency of the loop under real concurrency, and a durable deploy
 story (ledger persistence + restart recovery) is exercised end-to-end.
-- [ ] G3 new module + tests + probe
+- [x] G3 new module + tests + probe  (tools/load_harness.py + probe_scale_durability.py)
 
 ## G4 — Foundational audit (shore up before adding)
 An honest, evidence-backed pass over the current base: find the real weak
