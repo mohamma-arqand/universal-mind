@@ -30,14 +30,16 @@ def test_domain_for() -> None:
 
 
 def test_engine_synthesizes_a_plus_b() -> None:
-    """Two sub-goals, two specialists, one synthesized D."""
+    """Two sub-goals, two specialists, one fused D (true synthesis)."""
     en = _engine()
     report = en.run("summarize knowledge then write the result")
     assert report.ok
     assert {e.specialist for e in report.sub_executions} == {"facts", "writer"}
     assert report.synthesized is not None
-    assert "[facts]" in report.synthesized
-    assert "[writer]" in report.synthesized
+    assert report.method == "fusion"
+    # The fact is fused INTO the draft — a single new artifact, not a concat.
+    assert "measured value is 42" in report.synthesized
+    assert "write the result" in report.synthesized
     assert report.commit_record_id is not None
     kinds = [r.get("kind") for r in en._store.read_all()]
     assert "synthesis" in kinds

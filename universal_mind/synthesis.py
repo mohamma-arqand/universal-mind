@@ -148,6 +148,12 @@ class SynthesisEngine:
         self._resolver = CapabilityResolver()
         self._mnemosyne = Mnemosyne(store, self._clock)
         self._specialists: dict[str, Tool] = {}
+        # Default to *true synthesis* (fusion), per the charter's central axiom
+        # "synthesis, not integration" — a caller may still override it.
+        if composer is None:
+            from universal_mind.compose import fuse_fact_into_draft
+
+            composer = fuse_fact_into_draft
         self._composer = composer
 
     def register(self, name: str, tool: Tool) -> str:
@@ -181,7 +187,11 @@ class SynthesisEngine:
 
         # Synthesize A+B+C -> D: fuse through the composer when provided, else concat.
         outputs = [e.output for e in executions if e.ok]
-        if self._composer is not None:
+        if not outputs:
+            # No sub-execution succeeded — there is nothing to synthesize.
+            synthesized = None
+            method = "none"
+        elif self._composer is not None:
             fused = self._composer(outputs)
             if fused is not None:
                 synthesized = fused
