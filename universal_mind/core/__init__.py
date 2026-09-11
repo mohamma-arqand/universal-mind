@@ -10,6 +10,7 @@ from .executive import Decision, ExecutiveMind, StrategicDecision, StrategicGate
 from .identity import DEFAULT_OWNER, Identity
 from .intent import Determinism, Intent, IntentIncomplete
 from .models import ExecutionRecord, LedgerRecord, RecordStatus
+from .self_awareness import SelfAwarenessLoop, SelfAwarenessResult
 
 __all__ = [
     'DEFAULT_OWNER',
@@ -24,6 +25,8 @@ __all__ = [
     'IntentIncomplete',
     'LedgerRecord',
     'RecordStatus',
+    'SelfAwarenessLoop',
+    'SelfAwarenessResult',
     'StrategicDecision',
     'StrategicGate',
     'SystemFault',

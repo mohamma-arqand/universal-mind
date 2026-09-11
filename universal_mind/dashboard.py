@@ -67,20 +67,22 @@ def _run_scenario(store: MemoryStore) -> dict[str, Any]:
         )
 
     # ARETĒ critical loop: the best synthesis becomes the standing standard.
-    from universal_mind.arete.lineage import JudgmentLineage
+    from universal_mind.core.self_awareness import SelfAwarenessLoop
 
     keeper = StandardKeeper(store, clock=clock, owner=owner)
-    lineage = JudgmentLineage(keeper)
+    loop = SelfAwarenessLoop(store, keeper, owner=owner)
+    lineage = loop.lineage
     trail = []  # promotion trail entries, oldest first
     # First (uncontested) standard.
-    k1 = lineage.consider(_candidate("report-1", {"justice": 1.0, "wisdom": 0.92, "courage": 1.0, "temperance": 0.98}))
+    k1 = loop.consider(_candidate("report-1", {"justice": 1.0, "wisdom": 0.92, "courage": 1.0, "temperance": 0.98}))
     trail.append(_trail_entry(k1))
     # A genuinely stronger D overturns it.
-    k2 = lineage.consider(_candidate("report-2", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
+    k2 = loop.consider(_candidate("report-2", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
     trail.append(_trail_entry(k2))
     # A merely-parity D is deferred (recency never wins).
-    k3 = lineage.consider(_candidate("report-2b", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
+    k3 = loop.consider(_candidate("report-2b", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
     trail.append(_trail_entry(k3))
+    introspection = loop.introspect()
     current = keeper.current()
 
     # Ledger provenance: what exists on disk after this run.
@@ -128,6 +130,14 @@ def _run_scenario(store: MemoryStore) -> dict[str, Any]:
         "standard_current": {"name": current.name if current else None, "depth": current.promotion_depth if current else 0},
         "judgment_lineage": [_judgment_entry(n) for n in lineage.nodes()],
         "judgment_health": _health_entry(lineage),
+        "self_awareness": {
+            "healthy": introspection.healthy,
+            "summary": introspection.health_summary,
+            "action_taken": introspection.action_taken,
+            "action_reason": introspection.action_reason,
+            "bar": introspection.adjusted_bar,
+            "budget": introspection.adjusted_budget,
+        },
         "specialists": specialists,
         "ledger": {"records": total_records, "kinds": kinds},
         "specialist_count": len(specialists),
@@ -401,6 +411,10 @@ _TEMPLATE = r"""<!doctype html>
       <div class="h">Judgment self-assessment</div>
       <div data-js="jhealth"></div>
     </div>
+    <div class="card">
+      <div class="h">Self-awareness loop — reactive state</div>
+      <div data-js="selfaware"></div>
+    </div>
   </div>
 
   <div class="grid row3">
@@ -481,6 +495,19 @@ function render(){
          <div class="note">${esc(s.note)}</div>
        </div>`
     ).join('');
+
+  const sa = D.self_awareness;
+  $('[data-js="selfaware"]').innerHTML =
+    `<div class="health ${sa.healthy?'':'bad'}">
+       <div class="sig"><b>${sa.healthy?'healthy':'⚠ self-correcting'}</b></div>
+       <div class="note">${esc(sa.summary)}</div>
+     </div>
+     <div class="ledger">
+       <div class="rec"><span class="k">acceptance bar</span><span class="v">${esc(sa.bar)}</span></div>
+       <div class="rec"><span class="k">execution budget</span><span class="v">${esc(sa.budget)}</span></div>
+       <div class="rec"><span class="k">action taken</span><span class="v" style="color:${sa.action_taken?'var(--warn)':'var(--good)'}">${sa.action_taken?'yes':'no'}</span></div>
+     </div>
+     ${sa.action_taken ? `<div class="note" style="color:var(--warn);margin-top:6px">${esc(sa.action_reason)}</div>` : ''}`;
 
   $('[data-js="syntheses"]').innerHTML = D.synth_runs.map(r =>
     `<div class="sr">
