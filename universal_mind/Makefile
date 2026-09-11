@@ -121,6 +121,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_persistent_identity.py --junit-xml=$(ARTIFACTS_DIR)/probe_persistent_identity.xml
 	@echo "Running probe_deploy_metrics.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_deploy_metrics.py --junit-xml=$(ARTIFACTS_DIR)/probe_deploy_metrics.xml
+	@echo "Running probe_metacognition.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_metacognition.py --junit-xml=$(ARTIFACTS_DIR)/probe_metacognition.xml
 	@echo "All probes passed"
 
 # Clean artifacts

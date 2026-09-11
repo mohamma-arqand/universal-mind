@@ -9,6 +9,7 @@ from .errors import (
 from .executive import Decision, ExecutiveMind, StrategicDecision, StrategicGate
 from .identity import DEFAULT_OWNER, Identity
 from .intent import Determinism, Intent, IntentIncomplete
+from .metacognition import MetacognitiveVerdict, MetaConfidence, assess_metacognition
 from .models import ExecutionRecord, LedgerRecord, RecordStatus
 from .persistent_identity import IdentityHandle, persist_identity, recover_identity
 from .self_awareness import SelfAwarenessLoop, SelfAwarenessResult
@@ -30,6 +31,8 @@ __all__ = [
     'Intent',
     'IntentIncomplete',
     'LedgerRecord',
+    'MetaConfidence',
+    'MetacognitiveVerdict',
     'RecordStatus',
     'SelfAwarenessLoop',
     'SelfAwarenessResult',
@@ -38,6 +41,7 @@ __all__ = [
     'SystemFault',
     'TaskFailure',
     'TemporalContext',
+    'assess_metacognition',
     'derive_temporal_context',
     'persist_identity',
     'recover_identity',
