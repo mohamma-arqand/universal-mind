@@ -42,6 +42,10 @@ from universal_mind.arete.external_evaluator import (
     ExternalAuditResult,
     evaluate_loop,
 )
+from universal_mind.arete.goal_drift import (
+    DriftAssessment,
+    assess_goal_drift,
+)
 from universal_mind.arete.health import (
     JudgmentHealthReport,
     JudgmentHealthSignal,
@@ -77,6 +81,7 @@ __all__ = [
     "CounterfactualResult",
     "CrossJudgeResult",
     "Dispute",
+    "DriftAssessment",
     "EpistemicStatus",
     "EvidenceBundle",
     "EvidencePoint",
@@ -98,6 +103,7 @@ __all__ = [
     "VirtueScorer",
     "VirtueWeights",
     "_as_candidate",
+    "assess_goal_drift",
     "assess_judgment_health",
     "assess_uncertainty",
     "assess_verdict_uncertainty",

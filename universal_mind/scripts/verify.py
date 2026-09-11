@@ -72,6 +72,7 @@ PROBES = [
     "probe_induction.py",
     "probe_uncertainty.py",
     "probe_cross_judge.py",
+    "probe_goal_drift.py",
 ]
 
 
