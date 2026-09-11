@@ -28,6 +28,7 @@ from universal_mind.arete.evidence import (
     EvidenceType,
     JudgedClaim,
 )
+from universal_mind.arete.lineage import JudgmentLineage, JudgmentNode
 from universal_mind.arete.standard import (
     PromotionDecision,
     PromotionResult,
@@ -53,6 +54,8 @@ __all__ = [
     "EvidenceType",
     "InMemoryArbiter",
     "JudgedClaim",
+    "JudgmentLineage",
+    "JudgmentNode",
     "PromotionDecision",
     "PromotionResult",
     "Standard",
