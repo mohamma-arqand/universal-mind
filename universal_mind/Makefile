@@ -93,6 +93,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_causal.py --junit-xml=$(ARTIFACTS_DIR)/probe_causal.xml
 	@echo "Running probe_episodic.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_episodic.py --junit-xml=$(ARTIFACTS_DIR)/probe_episodic.xml
+	@echo "Running probe_induction.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_induction.py --junit-xml=$(ARTIFACTS_DIR)/probe_induction.xml
 	@echo "All probes passed"
 
 # Clean artifacts

@@ -22,6 +22,12 @@ from .hypotheses import (
     HypothesisEnsemble,
     score_hypothesis,
 )
+from .induction import (
+    Example,
+    Generalization,
+    apply_rule,
+    induce,
+)
 from .recall import (
     MemoryAwareDecomposition,
     decompose_with_memory,
@@ -48,9 +54,11 @@ __all__ = [
     'DecompositionError',
     'DecompositionResult',
     'EnsembleResult',
+    'Example',
     'ExecutionGraph',
     'ExecutionPlan',
     'ExecutionStrategy',
+    'Generalization',
     'Hypothesis',
     'HypothesisEnsemble',
     'MemoryAwareDecomposition',
@@ -63,10 +71,12 @@ __all__ = [
     'SynthesisResult',
     'TopologicalSortResult',
     'TraceEvent',
+    'apply_rule',
     'build_graph_from_sub_intents',
     'create_n_parallel_strategies',
     'decompose_intent',
     'decompose_with_memory',
+    'induce',
     'infer_causes',
     'score_hypothesis',
     'synthesize_by_sub_intent',
