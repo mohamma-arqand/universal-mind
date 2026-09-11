@@ -75,6 +75,16 @@ class InMemoryJudgment:
                 reasoning="No candidates provided",
             )
 
+        # Guard: an empty criterion set cannot meaningfully score anything.
+        # Avoid a ZeroDivisionError and return DEFER instead of a false score.
+        if not input.success_criteria:
+            return JudgmentOutput(
+                verdict=Verdict.DEFER,
+                chosen_strategy_id=None,
+                scores={c.strategy_id: 0.0 for c in input.candidates},
+                reasoning="No success criteria provided to score candidates",
+            )
+
         # Simple scoring: count how many success criteria are met
         scores = {}
         for candidate in input.candidates:
