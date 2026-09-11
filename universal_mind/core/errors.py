@@ -149,9 +149,13 @@ def retry_on_failure(handler: ErrorHandler, attempts: int | None = None) -> Call
                     if delay > 0:
                         handler.sleep(delay)
             
-            # All retries exhausted
-            assert last_exception is not None
-            raise last_exception from last_exception
+            # All retries exhausted. If max_retries was 0, the loop never ran
+            # and we cannot re-raise a captured exception; that is a caller
+            # misconfiguration, surfaced explicitly rather than an opaque
+            # 'raise None'.
+            if last_exception is None:
+                raise RuntimeError("retry_on_failure exhausted with no exception captured (max_retries=0?)")
+            raise last_exception
         
         return wrapper  # type: ignore[return-value]
     return decorator
