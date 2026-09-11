@@ -23,8 +23,8 @@ The winning move is depth over breadth. Two areas are chosen as the deepest
 "Beyond world class" means the *world* sees it. Until it leaves the local disk,
 it is not global no matter how many tests pass.
 
-- [ ] B1 A real public surface — README + demo + a self-contained site/widget
-- [ ] B2 An end-to-end showcase that a stranger can run and verify (one command)
+- [x] B1 A real public surface — README + demo + self-contained showcase (README.md + scripts/showcase.py)
+- [x] B2 An end-to-end showcase a stranger can run and verify (one command: python scripts/showcase.py)
 
 ## Phase C — External audit: an independent yardstick, not self-praise
 

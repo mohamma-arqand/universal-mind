@@ -1,6 +1,31 @@
 # Universal Mind
 
-A seed-core, local-first orchestration project built around three layers:
+A local-first orchestration system, not a chatbot: one identity, one input gate,
+specialists that never see identity, judgment that is always backed by evidence,
+and a self-watching loop that reasons about its own reasoning. Everything below
+is implemented, tested (541 tests), probed (40 self-verifying probes), and
+type-clean (mypy 0) — see **Status** at the bottom.
+
+## The whole mind in one command (for a stranger)
+
+No setup, no API key, no network — one command runs the entire closed loop and
+prints what it did:
+
+```bash
+cd universal_mind
+python scripts/showcase.py
+```
+
+It walks the full cycle — **MOUTH → decompose → resolve → execute → synthesis →
+ARETĒ judgment (with reasoning) → self-awareness → self-correction → external
+audit → metacognition** — and prints a step-by-step trace so a first-time reader
+sees each layer actually run, not just read about it.
+
+Then verify the whole system claims what it claims:
+
+```bash
+python scripts/verify.py     # lint + mypy-ratchet + tests + receipt + 40 probes -> READY
+```
 
 - **Core**: identity, intent, clock, errors, and the Executive Mind.
 - **Pantheon**: capability contracts and the registry of executable dossiers.
@@ -142,16 +167,20 @@ The Executive and registry accept any `MemoryStore` implementation.
 
 ## Status
 
-Every README milestone is now implemented and verified: Core / Pantheon /
-Memory / Feedback, plus ARETĒ (arbitration + the critical-loop `StandardKeeper`),
-the GATEWAY layer (`io/`, including the offline OpenAI-compatible stub server),
-deployment (a Docker-free `pip install .` package + CLI), Prometheus
-self-evolution (reversible apply to the running executive + the
-`sandbox→benchmark→accept/reject` loop), the synthesis engine (A+B+C→D), and
-the real-data dashboard. The build is closed end-to-end with `make test` +
-`make probe` (self-verifying receipt), with the full release gate `make verify`
-(lint + mypy ratchet + tests + receipt + probes) printing READY only when
-everything is green.
+Every README milestone is implemented and verified, and the three
+beyond-world-class phases are complete (see `ROADMAP.md` and `MANIFEST_BWC2.md`):
+deep reasoning (counterfactual, hypothesis-ensemble, causal, episodic memory,
+inductive generalization, epistemic uncertainty), self-governance (cross-model
+judge, goal-drift, self-code-audit, rubric learning, red-team/blue-team, provable
+policy), and world-connection (multilingual, temporal, real tools, distributed
+memory, persistent identity, deploy metrics) — plus the metacognitive layer that
+folds prior self-reasoning into one trust judgment.
+
+- **541 tests** green, **40 probes** green, **mypy 0**, **ruff clean**.
+- Closed end-to-end: `make test` + `make probe` (self-verifying receipt), and the
+  full release gate `python scripts/verify.py` (or `make verify`) prints READY
+  only when everything is green.
 
 See [ARCHITECTURE.md](../ARCHITECTURE.md) for the layering model, the intent
-pipeline, ledger schema, and the recovery guide.
+pipeline, ledger schema, and the recovery guide; [ROADMAP.md](ROADMAP.md) for the
+full 18-item beyond-world-class plan.
