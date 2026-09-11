@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from universal_mind.arete.audit_rubric import ExternalRubric
 
 
-def _clean() -> dict:
+def _clean() -> dict[str, object]:
     return {"tests_failures": 0, "probes_failed": 0, "mypy_errors": 0, "red_team_penetrated": 0, "robust_fraction": 1.0}
 
 
