@@ -8,6 +8,11 @@ wire-up is one-directional (executive -> recorder).
 
 from __future__ import annotations
 
+from .metrics import (
+    DeployMetrics,
+    deploy_metrics_from_store,
+    derive_deploy_metrics,
+)
 from .recorder import (
     DEFAULT_RECORDER_MAXLEN,
     MemoryRecorder,
@@ -19,9 +24,12 @@ from .recorder import (
 
 __all__ = [
     "DEFAULT_RECORDER_MAXLEN",
+    "DeployMetrics",
     "MemoryRecorder",
     "NullRecorder",
     "RecordedEvent",
     "Recorder",
+    "deploy_metrics_from_store",
+    "derive_deploy_metrics",
     "make_bounded_recorder",
 ]

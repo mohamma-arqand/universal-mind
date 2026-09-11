@@ -82,6 +82,7 @@ PROBES = [
     "probe_real_tools.py",
     "probe_shared.py",
     "probe_persistent_identity.py",
+    "probe_deploy_metrics.py",
 ]
 
 

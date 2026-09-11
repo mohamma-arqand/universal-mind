@@ -119,6 +119,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_shared.py --junit-xml=$(ARTIFACTS_DIR)/probe_shared.xml
 	@echo "Running probe_persistent_identity.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_persistent_identity.py --junit-xml=$(ARTIFACTS_DIR)/probe_persistent_identity.xml
+	@echo "Running probe_deploy_metrics.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_deploy_metrics.py --junit-xml=$(ARTIFACTS_DIR)/probe_deploy_metrics.xml
 	@echo "All probes passed"
 
 # Clean artifacts
