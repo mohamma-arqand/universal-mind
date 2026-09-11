@@ -65,6 +65,7 @@ PROBES = [
     "probe_independent_evaluation.py",
     "probe_evolutionary_architecture.py",
     "probe_scale_durability.py",
+    "probe_counterfactual.py",
 ]
 
 

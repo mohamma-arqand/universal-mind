@@ -85,6 +85,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_evolutionary_architecture.py --junit-xml=$(ARTIFACTS_DIR)/probe_evolutionary_architecture.xml
 	@echo "Running probe_scale_durability.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_scale_durability.py --junit-xml=$(ARTIFACTS_DIR)/probe_scale_durability.xml
+	@echo "Running probe_counterfactual.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_counterfactual.py --junit-xml=$(ARTIFACTS_DIR)/probe_counterfactual.xml
 	@echo "All probes passed"
 
 # Clean artifacts

@@ -21,6 +21,11 @@ from universal_mind.arete.arbiter import (
     VirtueScorer,
     default_virtue_scorer,
 )
+from universal_mind.arete.counterfactual import (
+    CounterfactualError,
+    CounterfactualResult,
+    counterfactual_check,
+)
 from universal_mind.arete.evidence import (
     EvidenceBundle,
     EvidencePoint,
@@ -58,6 +63,8 @@ __all__ = [
     "AreteError",
     "AuditFinding",
     "CardinalVirtue",
+    "CounterfactualError",
+    "CounterfactualResult",
     "Dispute",
     "EvidenceBundle",
     "EvidencePoint",
@@ -79,6 +86,7 @@ __all__ = [
     "VirtueWeights",
     "_as_candidate",
     "assess_judgment_health",
+    "counterfactual_check",
     "default_virtue_scorer",
     "evaluate_loop",
 ]
