@@ -14,18 +14,36 @@ Layer ranking (lower number = higher layer = cannot import from lower):
 import ast
 from pathlib import Path
 
-# Layer mapping: module prefix -> layer number
+# Layer mapping: module prefix -> layer number, aligned with layers.py
 LAYER_MAP = {
     'universal_mind.io': 1,
+    'universal_mind.pantheon': 2,
+    'universal_mind.demiurge': 3,
+    'universal_mind.arete': 4,
+    'universal_mind.prometheus': 5,
+    'universal_mind.mouth': 6,
+    'universal_mind.memory.mnemosyne': 7,
+    'universal_mind.memory.lifespan': 7,
+    'universal_mind.sovereign': 6,
+    'universal_mind.synthesis': 3,
+    'universal_mind.lifecycle': 5,
+    'universal_mind.integration': 5,
     'universal_mind.gates': 2,
     'universal_mind.core.executive': 3,
-    'universal_mind.pantheon': 4,
-    'universal_mind.memory.mnemosyne': 5,
-    'universal_mind.telemetry': 6,
-    'universal_mind.core.clock': 7,
-    'universal_mind.core.identity': 7,
-    'universal_mind.core.models': 7,
-    'universal_mind.memory.store': 7,
+    'universal_mind.telemetry': 2,
+    'universal_mind.observability': 2,
+    'universal_mind.core.clock': 0,
+    'universal_mind.core.identity': 0,
+    'universal_mind.core.models': 0,
+    'universal_mind.core.intent': 0,
+    'universal_mind.core.errors': 0,
+    'universal_mind.memory.store': 0,
+    'universal_mind.layers': 0,
+    'universal_mind.powers': 3,
+    'universal_mind.feedback': 4,
+    'universal_mind.durable': 5,
+    'universal_mind.compose': 3,
+    'universal_mind.synergy': 3,
 }
 
 # Modules that are explicitly allowed to import from anywhere (foundation)
@@ -33,7 +51,10 @@ FOUNDATION_MODULES = {
     'universal_mind.core.clock',
     'universal_mind.core.identity',
     'universal_mind.core.models',
+    'universal_mind.core.intent',
+    'universal_mind.core.errors',
     'universal_mind.memory.store',
+    'universal_mind.layers',
 }
 
 
@@ -118,24 +139,27 @@ def find_layer_violations() -> list[dict[str, object]]:
 
 
 def test_layering() -> None:
-    """Test that captures layering violations (architectural debt map).
-    
-    This test reports violations but does not fail - it's a debt tracking test.
+    """Enforce that no module imports upward (architecture is not violated).
+
+    The AST analysis maps every module to a layer and flags any import that
+    reaches a *higher* (lower-numbered) layer. With the map aligned to the
+    authoritative 7-layer model, the codebase must be clean; a violation now
+    FAILS the suite (it is a real architectural debt, not a printed note).
     """
     violations = find_layer_violations()
 
     if violations:
-        print("LAYERING VIOLATIONS FOUND:")
         for v in violations:
-            print(f"  {v['file']}:{v['line']} - {v['import_type']} {v['imported_module']}")
-            print(f"    Importer layer: {v['importer_layer']}, Imported layer: {v['imported_layer']}")
+            print(
+                f"LAYERING VIOLATION: {v['file']}:{v['line']} "
+                f"{v['import_type']} {v['imported_module']} "
+                f"(importer {v['importer_layer']} -> imported {v['imported_layer']})"
+            )
 
-    # Report total count
-    print(f"\nTotal violations: {len(violations)}")
-
-    # This test captures debt - it passes but records the violations
-    # The violations are printed above for the architectural debt map
-    assert True  # Always pass - this is a debt tracking test
+    assert not violations, (
+        f"Found {len(violations)} layering violation(s) — a lower layer "
+        "imports upward. See the printed list."
+    )
 
 
 if __name__ == '__main__':

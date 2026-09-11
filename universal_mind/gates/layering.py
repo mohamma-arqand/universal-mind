@@ -23,23 +23,46 @@ class LayerViolation:
 
 # Layer ranking (lower number = higher layer = more privileged)
 # Rule: a module at layer N can only command layers >= N (same or lower)
-# i.e., cannot import/call upward to layers with smaller numbers
+# i.e., cannot import/call upward to layers with smaller numbers.
+#
+# Aligned with the authoritative model in universal_mind/layers.py (Layer enum):
+# SUBSTRATE=0, GATEWAY=1, PANTHEON=2, DEMIURGE=3, ARETE=4, PROMETHEUS=5,
+# MOUTH=6, MNEMOSYNE=7 (the ⟂ layer, callable by all, calls only SUBSTRATE).
 LAYER_RANKING = {
     'io': 1,
+    'pantheon': 2,
+    'demiurge': 3,
+    'arete': 4,
+    'prometheus': 5,
+    'mouth': 6,
+    'memory.mnemosyne': 7,
+    'memory.lifespan': 7,
+    'sovereign': 6,
+    'synthesis': 3,
+    'lifecycle': 5,
+    'integration': 5,
     'gates': 2,
     'core.executive': 3,
-    'pantheon': 4,
-    'memory.mnemosyne': 5,
-    'telemetry': 6,
-    'core.clock': 7,
-    'core.identity': 7,
-    'core.models': 7,
-    'memory.store': 7,
+    'telemetry': 2,
+    'observability': 2,
+    'core.clock': 0,
+    'core.identity': 0,
+    'core.models': 0,
+    'core.intent': 0,
+    'core.errors': 0,
+    'memory.store': 0,
+    'layers': 0,
+    'powers': 3,
+    'feedback': 4,
+    'durable': 5,
+    'compose': 3,
+    'synergy': 3,
 }
 
-# Foundation modules (can be imported by anyone)
+# Foundation modules (can be imported by anyone — the SUBSTRATE layer L0).
 FOUNDATION_LAYERS = {
-    'core.clock', 'core.identity', 'core.models', 'memory.store'
+    'core.clock', 'core.identity', 'core.models', 'memory.store',
+    'core.intent', 'core.errors', 'layers',
 }
 
 
