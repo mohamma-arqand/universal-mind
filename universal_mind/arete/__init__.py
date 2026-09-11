@@ -28,6 +28,11 @@ from universal_mind.arete.evidence import (
     EvidenceType,
     JudgedClaim,
 )
+from universal_mind.arete.health import (
+    JudgmentHealthReport,
+    JudgmentHealthSignal,
+    assess_judgment_health,
+)
 from universal_mind.arete.lineage import JudgmentLineage, JudgmentNode
 from universal_mind.arete.standard import (
     PromotionDecision,
@@ -54,6 +59,8 @@ __all__ = [
     "EvidenceType",
     "InMemoryArbiter",
     "JudgedClaim",
+    "JudgmentHealthReport",
+    "JudgmentHealthSignal",
     "JudgmentLineage",
     "JudgmentNode",
     "PromotionDecision",
@@ -64,5 +71,6 @@ __all__ = [
     "VirtueScorer",
     "VirtueWeights",
     "_as_candidate",
+    "assess_judgment_health",
     "default_virtue_scorer",
 ]

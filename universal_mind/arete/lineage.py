@@ -50,6 +50,13 @@ class JudgmentLineage:
         self._keeper = keeper
         self._nodes: list[JudgmentNode] = []
 
+    @classmethod
+    def from_nodes(cls, keeper: StandardKeeper, nodes: list[JudgmentNode]) -> JudgmentLineage:
+        """Build a lineage pre-populated with nodes (for analysis/tests)."""
+        instance = cls(keeper)
+        instance._nodes = list(nodes)
+        return instance
+
     @property
     def keeper(self) -> StandardKeeper:
         return self._keeper
