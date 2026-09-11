@@ -4,27 +4,29 @@
 it keeps, and how to run, verify, back up, and recover it. This is the
 operational map for the `universal_mind` package.
 
-(Build: **177 tests**, ruff-clean, mypy-ratchet within baseline; Docker-free —
-a plain `pip install .` package.)
+(Build: **342 tests**, ruff-clean, whole-package mypy 0; Docker-free — a plain
+`pip install .` package.)
 
 ---
 
 ## 1. Layering model
 
-`universal_mind/layers.py` defines a numeric layer ladder (substrate-low to
-meta-high). A component may call only its own layer, the layer directly below
-it, or `MNEMOSYNE` (the special persistent-memory layer any layer may call).
+`universal_mind/layers.py` defines the charter's seven-layer stack (L0..L6) plus
+the perpendicular MNEMOSYNE. A component may call its own layer or the layer
+directly below it; MNEMOSYNE is callable by any layer but calls only
+SUBSTRATE. `gates/layering.py` + `tests/test_layering.py` enforce this with an
+AST pass that *fails* on any upward import.
 
 | Layer | Enums / packages | Role |
 |-------|------------------|------|
-| `0 SUBSTRATE` | `core/clock|identity|errors|models|intent`, `memory/store` | Foundation: time, identity, errors, memory store, intents |
+| `0 SUBSTRATE` | `core/clock\|identity\|errors\|models\|intent`, `memory/store`, `layers` | Foundation: time, identity, errors, memory store, intents |
 | `1 GATEWAY` | `io/` | Adapters to external systems (LLM/HTTP/MCP/human) |
-| `2 PANTHEON` | `pantheon/` | Capability contracts + registry, selection |
-| `3 DEMIURGE` | `demiurge/` | Strategic decomposition, strategies, synthesis |
-| `4 MNEMOSYNE` | `memory/mnemosyne` | Append-only ledger, recall, decay; callable by all |
-| (gate meta) | `gates/` | Gate pipeline (PowerZero, Risk, Policy, Feedback, Layering) |
-| (power meta) | `powers/` | Capability powers incl. `Judgment` (verdicts) |
-| (super meta) | `arete/`, `prometheus/`, `integration.py` | Arbitration, self-evolution, composed loop |
+| `2 PANTHEON` | `pantheon/`, `gates/`, `observability/` | Capability contracts + registry, selection |
+| `3 DEMIURGE` | `demiurge/`, `synthesis.py`, `compose.py`, `powers/` | Strategic decomposition, strategies, *true* synthesis |
+| `4 ARETĒ` | `arete/`, `feedback/` | Judgment — defines "better" (non-compensatory virtue arbitration, consent) |
+| `5 PROMETHEUS` | `prometheus/`, `integration.py`, `lifecycle.py`, `durable.py` | Recursive self-improvement (observe → propose → vet → apply, reversible) |
+| `6 MOUTH` | `mouth/`, `sovereign.py` | The sole user interface — one identity, one point of interaction |
+| `⟂ MNEMOSYNE` | `memory/mnemosyne`, `memory/lifespan` | Append-only ledger, recall, lifespan/decay; callable by all |
 
 ## 2. Subsystem map
 
@@ -41,16 +43,31 @@ it, or `MNEMOSYNE` (the special persistent-memory layer any layer may call).
   order: PowerZero (absolute veto) → Layering → Policy → Risk → HumanFeedback.
 - **ARETĒ** (`arete/`) — non-compensatory **virtue arbitration** of competing
   candidates (a candidate failing a hard-gate virtue is disqualified regardless
-  of score; excellence ties rule DEFER).
+  of score; excellence ties rule DEFER). `StandardKeeper` (the critical loop)
+  grants a D the standing standard only by merit, with `rollback()` to rewind
+  a lineage; `feedback/consent.py` gates promotions on human consent.
 - **Gateway** (`io/`) — `Provider` protocol, deterministic reference providers,
-  OpenAI-compatible `HttpChatProvider`, and `Gateway` (retry/backoff + failover
-  across an ordered provider list; keys via `SecretResolver`, never stored).
+  OpenAI-compatible `HttpChatProvider` (multimodal-capable `Message.parts`),
+  an offline `StubChatServer`, and `Gateway` (retry/backoff + failover across
+  an ordered provider list; keys via `SecretResolver`, never stored).
 - **Prometheus** (`prometheus/`) — **self-evolution**: observe ledger → metrics →
   proposals → conservative policy veto → reversible `ThrottleApplier` /
-  `FallbackOrderApplier` (via `evolve_and_apply`). Proposals-only by default.
+  `FallbackOrderApplier` (via `evolve_and_apply`) plus the
+  `sandbox→benchmark→accept/reject` loop (`evolve.py`). Proposals-only by default.
+- **Synthesis** (`synthesis.py` + `compose.py`) — `SynthesisEngine` decomposes,
+  resolves specialists, and *fuses* their output into D (`method='fusion'`) —
+  true synthesis, not integration — then arbitrates D itself before commit.
+- **Power Zero, executable** (`powers/generator.py`) — generates a runnable power,
+  sandboxes + benchmarks + arbitrates it, minting only accepted powers below
+  all built-ins.
+- **Lifecycle** (`lifecycle.py`) — chains mint → remember → consent into one loop.
+- **Sovereign** (`sovereign.py`) — distills the ledger into a continuous self
+  ("one identity") injected into every interaction.
 - **Integration** (`integration.py`) — `InMemoryIntegrationHarness` composes
   ExecutiveMind + GatewayCapability + ARETĒ + Prometheus into one
   deterministic, runnable face (`UniversalMindRuntime`).
+- **Observability** (`observability/`) — `Recorder` protocol +
+  `NullRecorder`/`MemoryRecorder`; the executive emits execution events.
 
 ## 3. The intent pipeline (`ExecutiveMind.handle`)
 
@@ -95,8 +112,9 @@ make lint          # ruff check
 make typecheck     # mypy --strict
 make mypy-ratchet  # fails if mypy debt rises above the versioned baseline
 make test          # pytest (-> artifacts/junit.xml)
-make probe         # 9 self-verifying probes (-> artifacts/*.xml)
+make probe         # 16 self-verifying probes (-> artifacts/*.xml)
 make receipt       # verification receipt; fails the build if any gate is red
+python scripts/verify.py   # the same release gate without make (writes READY)
 ```
 
 The ratchet means **new code must not add mypy debt**: annotate fully and keep
