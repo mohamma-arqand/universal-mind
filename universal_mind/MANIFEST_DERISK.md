@@ -17,14 +17,15 @@ and removing real defects*, starting with what measurement just revealed.
    under-tested. This is the real gap: core logic with unfinished coverage.
 
 ## Plan (each step = one commit, resumable, green-gated)
-- [ ] S1 Remove dead async strategies (`demiurge/strategies.py`), keep the one
+- [x] S1 Remove dead async strategies (`demiurge/strategies.py`), keep the one
       live type `StrategyResult` (relocate to synthesis.py).  (fixes latent bug)
-- [ ] S2 Remove superseded powers `accretion`/`hand`/`devour` (+ dead `__init__`
+- [x] S2 Remove superseded powers `accretion`/`hand`/`devour` (+ dead `__init__`
       exports). Replaces half-tested logic with already-tested alternatives.
-- [ ] S3 Close the *real* gap: raise `powers/judgment.py` coverage (62% → target
-      90%+). Live code, must be proven — not deleted.
-- [ ] S4 Re-verify the whole system is still green after surgery (mypy 0, ruff
-      clean, all probes, full test) and confirm dead code is gone.
+- [x] S3 Close the *real* gap: raise `powers/judgment.py` coverage (62% → 100%),
+      fixed a latent ZeroDivisionError on empty criteria.
+- [x] S4 Re-verify the whole system is green after surgery: mypy 0, ruff clean,
+      41 probes READY, 547 tests pass, dead modules confirmed gone, total
+      coverage 91% → 96%.
 
 ## Success = measurable
 - Dead modules gone; imports clean; `__init__` no longer exports ghosts.
