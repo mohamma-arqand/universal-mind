@@ -55,3 +55,4 @@ universal_mind/artifacts/
 # uv-vendored lockfile (an artifact of `uv run` coverage measurement; the
 # project is a pip/pyproject package, not a uv workspace).
 uv.lock
+.bwc-backup/
