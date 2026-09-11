@@ -63,6 +63,7 @@ PROBES = [
     "probe_continuous_judgment.py",
     "probe_closed_loop.py",
     "probe_independent_evaluation.py",
+    "probe_evolutionary_architecture.py",
 ]
 
 

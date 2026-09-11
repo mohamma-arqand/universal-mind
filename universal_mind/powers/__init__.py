@@ -30,6 +30,12 @@ from .intent import (
     IntentTranslationInput,
     IntentTranslationOutput,
 )
+from .introspection_feedback import (
+    GenerationInsight,
+    extract_insights,
+    make_insight_driven_generator,
+    shaped_description,
+)
 from .judgment import (
     CandidateOutput,
     InMemoryJudgment,
@@ -56,6 +62,7 @@ __all__ = [
     "DevourInput",
     "DevourOutput",
     "Experience",
+    "GenerationInsight",
     "Hand",
     "HandInput",
     "HandOutput",
@@ -78,4 +85,7 @@ __all__ = [
     "SummonOutput",
     "ToolDescriptor",
     "Verdict",
+    "extract_insights",
+    "make_insight_driven_generator",
+    "shaped_description",
 ]

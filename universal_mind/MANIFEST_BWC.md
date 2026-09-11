@@ -18,7 +18,7 @@ branches, best-losing-contenders) are currently dead-ends: reported, then
 forgotten. Route them back into Power Zero / synthesis as *constraints* so the
 next generation is shaped by the last cycle's learning — true open-ended growth,
 not re-derivation.
-- [ ] G2 new module + tests + probe
+- [x] G2 new module + tests + probe  (powers/introspection_feedback.py + probe_evolutionary_architecture.py)
 
 ## G3 — Real scale & deployment (load, not just unit tests)
 Unit tests prove correctness, not capacity. A synthetic load harness measures
