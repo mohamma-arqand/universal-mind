@@ -51,6 +51,12 @@ from universal_mind.arete.standard import (
     StandardKeeper,
     _as_candidate,
 )
+from universal_mind.arete.uncertainty import (
+    EpistemicStatus,
+    UncertaintyAssessment,
+    assess_uncertainty,
+    assess_verdict_uncertainty,
+)
 from universal_mind.arete.virtue import (
     AreteError,
     CardinalVirtue,
@@ -66,6 +72,7 @@ __all__ = [
     "CounterfactualError",
     "CounterfactualResult",
     "Dispute",
+    "EpistemicStatus",
     "EvidenceBundle",
     "EvidencePoint",
     "EvidenceSource",
@@ -81,11 +88,14 @@ __all__ = [
     "PromotionResult",
     "Standard",
     "StandardKeeper",
+    "UncertaintyAssessment",
     "VirtueScorecard",
     "VirtueScorer",
     "VirtueWeights",
     "_as_candidate",
     "assess_judgment_health",
+    "assess_uncertainty",
+    "assess_verdict_uncertainty",
     "counterfactual_check",
     "default_virtue_scorer",
     "evaluate_loop",

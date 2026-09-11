@@ -70,6 +70,7 @@ PROBES = [
     "probe_causal.py",
     "probe_episodic.py",
     "probe_induction.py",
+    "probe_uncertainty.py",
 ]
 
 

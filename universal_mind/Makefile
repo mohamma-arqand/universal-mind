@@ -95,6 +95,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_episodic.py --junit-xml=$(ARTIFACTS_DIR)/probe_episodic.xml
 	@echo "Running probe_induction.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_induction.py --junit-xml=$(ARTIFACTS_DIR)/probe_induction.xml
+	@echo "Running probe_uncertainty.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_uncertainty.py --junit-xml=$(ARTIFACTS_DIR)/probe_uncertainty.xml
 	@echo "All probes passed"
 
 # Clean artifacts

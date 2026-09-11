@@ -22,7 +22,7 @@ over *hypotheses* and *doubt*, not lock into its first guess.
 - [x] 1.3 Causal reasoning — "why this outcome" + "what would change it"  (demiurge/causal.py)
 - [x] 1.4 Temporal episodic memory — recall *when* and *in what context*, not just *what*  (memory/episodic.py)
 - [x] 1.5 Inductive generalization — learn a rule from few examples, apply to unseen  (demiurge/induction.py)
-- [ ] 1.6 Epistemic uncertainty — a real `UNKNOWN` verdict with a reason, not a guess
+- [x] 1.6 Epistemic uncertainty — a real `UNKNOWN` verdict with a reason, not a guess  (arete/uncertainty.py)
 
 ## Phase 2 — More self-governing (Governance): provable, drift-aware, rubric-learning
 
