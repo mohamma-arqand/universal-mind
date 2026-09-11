@@ -68,6 +68,7 @@ PROBES = [
     "probe_counterfactual.py",
     "probe_hypotheses.py",
     "probe_causal.py",
+    "probe_episodic.py",
 ]
 
 
