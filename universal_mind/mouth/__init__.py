@@ -22,6 +22,7 @@ from universal_mind.mouth.commit import (
     InMemoryMouth,
     Mouth,
 )
+from universal_mind.mouth.multilingual import NormalizedIntent, normalize_intent
 from universal_mind.mouth.types import (
     CommitEvidence,
     IntentConflict,
@@ -39,5 +40,7 @@ __all__ = [
     "IntentNeedsClarification",
     "Mouth",
     "MouthError",
+    "NormalizedIntent",
     "StructuredIntent",
+    "normalize_intent",
 ]

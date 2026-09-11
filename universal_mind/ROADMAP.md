@@ -35,7 +35,7 @@ over *hypotheses* and *doubt*, not lock into its first guess.
 
 ## Phase 3 — More connected (World): multilingual, temporal, real tools
 
-- [ ] 3.1 Real multilingual understanding — language-independent intent layer
+- [x] 3.1 Real multilingual understanding — language-independent intent layer  (mouth/multilingual.py)
 - [ ] 3.2 Temporal/environment awareness — clock, zone, "what time is it and what it means"
 - [ ] 3.3 Real external tools — a real service behind the gateway, fail-safe
 - [ ] 3.4 Distributed memory — several instances share one synchronized ledger
