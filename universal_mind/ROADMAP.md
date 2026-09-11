@@ -28,7 +28,7 @@ over *hypotheses* and *doubt*, not lock into its first guess.
 
 - [x] 2.1 Cross-model judge — a second/foreign model judging the judge (anti-alignment)  (arete/cross_judge.py)
 - [x] 2.2 Goal-drift detection — notice when the path diverged from the original goal  (arete/goal_drift.py)
-- [ ] 2.3 Continuous self-code-audit — like G4, but automatic and periodic
+- [x] 2.3 Continuous self-code-audit — like G4, but automatic and periodic  (core/self_code_audit.py)
 - [ ] 2.4 Rubric learning — the evaluation rubric improves from its own mistakes
 - [ ] 2.5 Red-team/blue-team — attack + defend continuously (auto security test)
 - [ ] 2.6 Provable policy — audit every allow/deny as a verifiable reason chain

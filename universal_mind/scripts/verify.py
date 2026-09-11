@@ -73,6 +73,7 @@ PROBES = [
     "probe_uncertainty.py",
     "probe_cross_judge.py",
     "probe_goal_drift.py",
+    "probe_self_code_audit.py",
 ]
 
 

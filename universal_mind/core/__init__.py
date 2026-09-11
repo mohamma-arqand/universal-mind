@@ -11,9 +11,12 @@ from .identity import DEFAULT_OWNER, Identity
 from .intent import Determinism, Intent, IntentIncomplete
 from .models import ExecutionRecord, LedgerRecord, RecordStatus
 from .self_awareness import SelfAwarenessLoop, SelfAwarenessResult
+from .self_code_audit import AuditFinding, CodeAuditReport, run_self_audit, scan_source
 
 __all__ = [
     'DEFAULT_OWNER',
+    'AuditFinding',
+    'CodeAuditReport',
     'Decision',
     'Determinism',
     'ErrorHandler',
@@ -32,4 +35,6 @@ __all__ = [
     'SystemFault',
     'TaskFailure',
     'retry_on_failure',
+    'run_self_audit',
+    'scan_source',
 ]
