@@ -1,17 +1,9 @@
-"""Powers package: the seven fundamental powers of universal_mind.
+"""Powers package: the fundamental powers of universal_mind.
 
 Each power is a Protocol with a reference in-memory implementation.
 """
 from __future__ import annotations
 
-from .accretion import (
-    AccretionInput,
-    AccretionOutput,
-    AccretiveMemory,
-    Experience,
-    InMemoryAccretiveMemory,
-    Lesson,
-)
 from .boundary import (
     BoundaryAwareness,
     BoundaryDeferral,
@@ -22,8 +14,6 @@ from .boundary import (
     BoundaryResponseType,
     InMemoryBoundaryAwareness,
 )
-from .devour import Devour, DevourInput, DevourOutput, InMemoryDevour, ToolDescriptor
-from .hand import Hand, HandInput, HandOutput, InMemoryHand
 from .intent import (
     InMemoryIntentTranslation,
     IntentTranslation,
@@ -47,9 +37,6 @@ from .judgment import (
 from .summon import InMemorySummon, Summon, SummonInput, SummonOutput
 
 __all__ = [
-    "AccretionInput",
-    "AccretionOutput",
-    "AccretiveMemory",
     "BoundaryAwareness",
     "BoundaryDeferral",
     "BoundaryEscalation",
@@ -58,18 +45,8 @@ __all__ = [
     "BoundaryRefusal",
     "BoundaryResponseType",
     "CandidateOutput",
-    "Devour",
-    "DevourInput",
-    "DevourOutput",
-    "Experience",
     "GenerationInsight",
-    "Hand",
-    "HandInput",
-    "HandOutput",
-    "InMemoryAccretiveMemory",
     "InMemoryBoundaryAwareness",
-    "InMemoryDevour",
-    "InMemoryHand",
     "InMemoryIntentTranslation",
     "InMemoryJudgment",
     "InMemorySummon",
@@ -79,11 +56,9 @@ __all__ = [
     "Judgment",
     "JudgmentInput",
     "JudgmentOutput",
-    "Lesson",
     "Summon",
     "SummonInput",
     "SummonOutput",
-    "ToolDescriptor",
     "Verdict",
     "extract_insights",
     "make_insight_driven_generator",
