@@ -77,6 +77,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_lifecycle.py --junit-xml=$(ARTIFACTS_DIR)/probe_lifecycle.xml
 	@echo "Running probe_continuous_judgment.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_continuous_judgment.py --junit-xml=$(ARTIFACTS_DIR)/probe_continuous_judgment.xml
+	@echo "Running probe_closed_loop.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_closed_loop.py --junit-xml=$(ARTIFACTS_DIR)/probe_closed_loop.xml
 	@echo "All probes passed"
 
 # Clean artifacts

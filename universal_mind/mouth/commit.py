@@ -228,3 +228,46 @@ class InMemoryMouth:
                 if meaningful:
                     return f"clause contradicts itself: {clause.strip()!r}"
         return None
+
+
+class ConscientiousMouth:
+    """A MOUTH that gets *more careful* when the mind's judgment is unhealthy.
+
+    Wraps another :class:`Mouth` and consults a self-awareness loop: when the
+    loop reports unhealthy judgment, this mouth raises a harder bar on vague
+    goals — it refuses shorthand goals that a healthy mind would still accept,
+    asking for clarification rather than committing on behalf of a drifting
+    judge. When the mind is healthy, it defers to the wrapped mouth exactly
+    (so a healthy system's behavior is unchanged).
+    """
+
+    def __init__(self, inner: Mouth, loop: Any, *, caution_goal_words: int = 4) -> None:
+        self._inner = inner
+        self._loop = loop
+        self._caution_goal_words = caution_goal_words
+
+    def commit(self, raw_text: str, owner_id: str) -> StructuredIntent:
+        text = (raw_text or "").strip()
+        if self._caution_active():
+            # The mind is judging itself unhealthy -> be more careful before
+            # committing a short/terse goal.
+            first = text.split(".")[0].strip() if text else ""
+            word_count = len(first.split())
+            if word_count > 0 and word_count < self._caution_goal_words:
+                raise IntentNeedsClarification(
+                    ["The mind is currently being cautious: please state a fuller goal."]
+                )
+        return self._inner.commit(raw_text, owner_id)
+
+    def _caution_active(self) -> bool:
+        # Caution is a function of the reactive state, not a fresh health query:
+        # a raised acceptance bar means self-correction has already fired (the
+        # mind judged itself unhealthy), so committing should get more careful.
+        bar = getattr(self._loop, "acceptance_bar", None)
+        if bar is not None:
+            return bool(bar) and bar >= 0.95
+        healthy = getattr(self._loop, "healthy", None)
+        if callable(healthy):
+            result = healthy()
+            return not bool(result)
+        return False
