@@ -54,6 +54,7 @@ class EvolutionMetrics:
     fault_classes: dict[str, int] = field(default_factory=dict)
     risk_levels: dict[str, int] = field(default_factory=dict)
     capabilities: tuple[CapabilitySignal, ...] = field(default_factory=tuple)
+    judgment_unhealthy: bool = False
 
     @property
     def error_rate(self) -> float:
@@ -85,6 +86,7 @@ def compute_metrics(records: list[dict[str, Any]]) -> EvolutionMetrics:
     signal_map: dict[str, CapabilitySignal] = {}
     order: list[str] = []
     last_selected = "unknown"
+    judgment_unhealthy = False
 
     for record in records:
         kind = str(record.get("kind", ""))
@@ -139,6 +141,11 @@ def compute_metrics(records: list[dict[str, Any]]) -> EvolutionMetrics:
                 needs_work += 1
             continue
 
+        if kind == "self_awareness":
+            # The most recently recorded introspection pass marks judgment health.
+            judgment_unhealthy = bool(payload.get("action_taken", False))
+            continue
+
     capabilities = tuple(signal_map[name] for name in order)
     return EvolutionMetrics(
         executions=executions,
@@ -151,4 +158,5 @@ def compute_metrics(records: list[dict[str, Any]]) -> EvolutionMetrics:
         fault_classes=fault_classes,
         risk_levels=risk_levels,
         capabilities=capabilities,
+        judgment_unhealthy=judgment_unhealthy,
     )

@@ -14,6 +14,7 @@ from __future__ import annotations
 from universal_mind.prometheus.apply import (
     ApplyOutcome,
     FallbackOrderApplier,
+    SelfCorrectApplier,
     apply_proposal,
     evolve_and_apply,
 )
@@ -69,6 +70,7 @@ __all__ = [
     "Risk",
     "Sandbox",
     "SandboxResult",
+    "SelfCorrectApplier",
     "ThrottleApplier",
     "Verdict",
     "apply_proposal",

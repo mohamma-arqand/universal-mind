@@ -144,3 +144,14 @@ class SelfAwarenessLoop:
     def healthy(self) -> bool:
         """Shorthand: is the mind currently judging itself to be healthy?"""
         return assess_judgment_health(self._lineage).unhealthy is False
+
+    def tighten(self, bar_step: float = 0.03, budget_factor: float = 0.8) -> tuple[float, float]:
+        """Explicitly raise the acceptance bar and cut the budget (returns new values).
+
+        This is the *external* self-correction hook — the Prometheus applier calls
+        it to realize a ``SELF_CORRECT`` proposal on the live mind. Deterministic
+        and idempotent-per-step; repeated calls converge toward bar=1.0, budget->0.
+        """
+        self._bar = min(1.0, self._bar + bar_step)
+        self._budget = round(self._budget * budget_factor, 4)
+        return self._bar, self._budget

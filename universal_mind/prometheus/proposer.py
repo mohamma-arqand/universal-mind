@@ -23,6 +23,7 @@ class ProposalKind(str, Enum):
     REORDER_FALLBACK = "reorder_fallback"
     RESPECT_VETO = "respect_veto"
     CHAMPION = "champion"
+    SELF_CORRECT = "self_correct"
 
 
 class Risk(str, Enum):
@@ -120,6 +121,25 @@ class PrometheusProposer:
                     suggested_change="honor the human verdict (do not re-run rejected intents)",
                     evidence={
                         "rejections": metrics.feedback_rejected,
+                        "executions": metrics.executions,
+                    },
+                )
+            )
+
+        # A self-awareness pass that found the mind judging unhealthily prompts a
+        # concrete self-correction: tighten the acceptance bar / budget. This is the
+        # bridge between judgment health and the Prometheus evolution loop.
+        if metrics.judgment_unhealthy:
+            proposals.append(
+                EvolutionProposal(
+                    kind=ProposalKind.SELF_CORRECT,
+                    target="executive.self_awareness",
+                    reason="judgment health reported unhealthy — the mind is drifting",
+                    risk=Risk.LOW,
+                    reversible=True,
+                    suggested_change="raise acceptance bar / tighten execution budget",
+                    evidence={
+                        "judgment_unhealthy": True,
                         "executions": metrics.executions,
                     },
                 )

@@ -577,6 +577,7 @@ class ExecutiveMind:
         self_awareness: SelfAwarenessLoop | None = None,
         *,
         recorder: Recorder | None = None,
+        introspect_every: int = 5,
     ) -> None:
         self.registry = registry
         self.memory = memory
@@ -590,6 +591,8 @@ class ExecutiveMind:
         self.power_zero = power_zero or DefaultPowerZero()
         self.layering_gate = layering_gate
         self.self_awareness = self_awareness
+        self._introspect_every = max(1, introspect_every)
+        self._successful_runs = 0
         # The caller-supplied gate, if any, becomes the policy sub-gate of the
         # composite. If none is supplied, an always-PROCEED gate is used.
         self.strategic_gate = strategic_gate or StrategicGate()
@@ -789,11 +792,14 @@ class ExecutiveMind:
         cycle_status = 'ok' if result.ok else 'not_ok'
         self._safe_record('executive.cycle', outcome=cycle_status, terminal_gate=None)
 
-        # Close the meta loop: after a successful execution, the mind introspects
+        # Close the meta loop: after every N successful executions, the mind introspects
         # its own judgment. When unhealthy, this self-corrects (bar/budget) and
         # writes its own audit entry — it never blocks or alters this cycle.
         if self.self_awareness is not None and result.ok:
-            self.self_awareness.introspect()
+            self._successful_runs += 1
+            if self._successful_runs >= self._introspect_every:
+                self.self_awareness.introspect()
+                self._successful_runs = 0
 
         return ExecutionRecord(
             intent_record_id=intent_record_id,

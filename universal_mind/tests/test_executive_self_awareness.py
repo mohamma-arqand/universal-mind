@@ -72,11 +72,38 @@ def test_executive_with_self_awareness_closes_loop() -> None:
         clock=SystemClock(),
         owner=DEFAULT_OWNER,
         self_awareness=loop,
+        introspect_every=1,
     )
     record = executive.handle(_mk_intent())
     assert record.status == "ok"
-    # The meta loop introspects after a successful execution -> a self_awareness
-    # entry appears in the shared ledger.
+    # With introspect_every=1, a single success triggers introspection.
+    kinds = [r.get("kind") for r in store.read_all()]
+    assert "self_awareness" in kinds
+
+
+def test_introspection_respects_cadence() -> None:
+    """Introspection fires at the configured cadence, not on every run."""
+    store = InMemoryStore()
+    registry = PantheonRegistry(store)
+    registry.register(_dossier(), EchoCapability())
+    memory = Mnemosyne(store, SystemClock())
+    keeper = StandardKeeper(store, owner=DEFAULT_OWNER)
+    loop = SelfAwarenessLoop(store, keeper, owner=DEFAULT_OWNER)
+    executive = ExecutiveMind(
+        registry=registry,
+        memory=memory,
+        clock=SystemClock(),
+        owner=DEFAULT_OWNER,
+        self_awareness=loop,
+        introspect_every=3,
+    )
+    for _ in range(2):
+        assert executive.handle(_mk_intent()).status == "ok"
+    # Only 2 runs: no introspection yet.
+    kinds = [r.get("kind") for r in store.read_all()]
+    assert "self_awareness" not in kinds
+    # 3rd run trips the cadence.
+    assert executive.handle(_mk_intent()).status == "ok"
     kinds = [r.get("kind") for r in store.read_all()]
     assert "self_awareness" in kinds
 
