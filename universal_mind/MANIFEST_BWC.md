@@ -33,4 +33,4 @@ three features above — so G1–G3 stand on the strongest possible floor.
 - [x] G4 audit report + fixes + tests  (orphaned telemetry/synergy removed + layer maps cleaned)
 
 ## Final gate
-- [ ] full verify READY + consolidated status
+- [x] full verify READY + consolidated status  (434 tests · 21 probes · mypy 0 · ruff clean · READY)
