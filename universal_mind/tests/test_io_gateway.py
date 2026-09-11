@@ -244,7 +244,7 @@ def test_http_provider_real_round_trip_over_localhost() -> None:
             resolver=lambda _name: "test-secret",
             timeout_seconds=5,
         )
-        gateway = Gateway([provider], retry_policy=RetryPolicy(max_retries=0))
+        gateway = Gateway([provider], retry_policy=no_delay_policy(max_retries=3))
         outcome = gateway.generate([Message(role="user", content="hello")])
         assert outcome.ok
         assert outcome.content == "stubbed answer"
