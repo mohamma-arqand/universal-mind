@@ -5,7 +5,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Protocol, cast
+from typing import Any, Never, Protocol, cast
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,13 @@ from ..observability.recorder import NullRecorder, Recorder
 from ..pantheon.contracts import Capability
 from ..pantheon.registry import CapabilityDossier, PantheonRegistry
 from .clock import Clock
-from .errors import CallerFault, ErrorHandler, SystemFault, TaskFailure
+from .errors import (
+    CallerFault,
+    ErrorHandler,
+    SystemFault,
+    TaskFailure,
+    UniversalMindError,
+)
 from .identity import DEFAULT_OWNER, Identity
 from .intent import Determinism, Intent
 from .models import ExecutionRecord
@@ -746,32 +752,27 @@ class ExecutiveMind:
                 notes=result.notes,
             )
         except CallerFault as exc:
-            self.memory.record(
-                owner_id=intent.owner_id,
-                kind='fault',
-                payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': 'caller_fault'},
-                provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
-            )
-            self._safe_record('executive.cycle', outcome='caller_fault', terminal_gate=None)
-            raise
+            self._record_fault_and_raise(intent, exc, 'caller_fault')
         except TaskFailure as exc:
-            self.memory.record(
-                owner_id=intent.owner_id,
-                kind='fault',
-                payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': 'task_failure'},
-                provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
-            )
-            self._safe_record('executive.cycle', outcome='task_failure', terminal_gate=None)
-            raise
+            self._record_fault_and_raise(intent, exc, 'task_failure')
         except SystemFault as exc:
-            self.memory.record(
-                owner_id=intent.owner_id,
-                kind='fault',
-                payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': 'system_fault'},
-                provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
-            )
-            self._safe_record('executive.cycle', outcome='system_fault', terminal_gate=None)
-            raise
+            self._record_fault_and_raise(intent, exc, 'system_fault')
+
+    def _record_fault_and_raise(self, intent: Intent, exc: UniversalMindError, fault_class: str) -> Never:
+        """Record a fault (with its class and the exception type) and re-raise.
+
+        The three fault branches (caller / task / system) share this exact shape —
+        only ``fault_class`` and the cycle outcome differ — so it is a single
+        helper, not three near-identical blocks. Never swallows the exception.
+        """
+        self.memory.record(
+            owner_id=intent.owner_id,
+            kind='fault',
+            payload={'type': exc.__class__.__name__, 'message': str(exc), 'fault_class': fault_class},
+            provenance={'producer': 'ExecutiveMind', 'stage': 'fault'},
+        )
+        self._safe_record('executive.cycle', outcome=fault_class, terminal_gate=None)
+        raise exc
 
     def _record_block(self, owner_id: str, intent_record_id: str, reason: str, status: str,
                       terminal_gate: str | None = None) -> ExecutionRecord:
