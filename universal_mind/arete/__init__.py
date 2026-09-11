@@ -26,6 +26,10 @@ from universal_mind.arete.counterfactual import (
     CounterfactualResult,
     counterfactual_check,
 )
+from universal_mind.arete.cross_judge import (
+    CrossJudgeResult,
+    cross_judge,
+)
 from universal_mind.arete.evidence import (
     EvidenceBundle,
     EvidencePoint,
@@ -71,6 +75,7 @@ __all__ = [
     "CardinalVirtue",
     "CounterfactualError",
     "CounterfactualResult",
+    "CrossJudgeResult",
     "Dispute",
     "EpistemicStatus",
     "EvidenceBundle",
@@ -97,6 +102,7 @@ __all__ = [
     "assess_uncertainty",
     "assess_verdict_uncertainty",
     "counterfactual_check",
+    "cross_judge",
     "default_virtue_scorer",
     "evaluate_loop",
 ]

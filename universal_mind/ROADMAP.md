@@ -26,7 +26,7 @@ over *hypotheses* and *doubt*, not lock into its first guess.
 
 ## Phase 2 — More self-governing (Governance): provable, drift-aware, rubric-learning
 
-- [ ] 2.1 Cross-model judge — a second/foreign model judging the judge (anti-alignment)
+- [x] 2.1 Cross-model judge — a second/foreign model judging the judge (anti-alignment)  (arete/cross_judge.py)
 - [ ] 2.2 Goal-drift detection — notice when the path diverged from the original goal
 - [ ] 2.3 Continuous self-code-audit — like G4, but automatic and periodic
 - [ ] 2.4 Rubric learning — the evaluation rubric improves from its own mistakes
