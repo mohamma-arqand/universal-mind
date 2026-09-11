@@ -7,8 +7,7 @@ Layer ranking (lower number = higher layer = cannot import from lower):
 3 core.executive
 4 pantheon
 5 memory.mnemosyne
-6 telemetry
-7 core.clock, core.identity, core.models, memory.store
+6 core.clock, core.identity, core.models, memory.store
 """
 
 import ast
@@ -30,7 +29,6 @@ LAYER_MAP = {
     'universal_mind.integration': 5,
     'universal_mind.gates': 2,
     'universal_mind.core.executive': 3,
-    'universal_mind.telemetry': 2,
     'universal_mind.observability': 2,
     'universal_mind.core.clock': 0,
     'universal_mind.core.identity': 0,
@@ -43,7 +41,6 @@ LAYER_MAP = {
     'universal_mind.feedback': 4,
     'universal_mind.durable': 5,
     'universal_mind.compose': 3,
-    'universal_mind.synergy': 3,
 }
 
 # Modules that are explicitly allowed to import from anywhere (foundation)

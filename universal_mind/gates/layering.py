@@ -43,7 +43,6 @@ LAYER_RANKING = {
     'integration': 5,
     'gates': 2,
     'core.executive': 3,
-    'telemetry': 2,
     'observability': 2,
     'core.clock': 0,
     'core.identity': 0,
@@ -56,7 +55,6 @@ LAYER_RANKING = {
     'feedback': 4,
     'durable': 5,
     'compose': 3,
-    'synergy': 3,
 }
 
 # Foundation modules (can be imported by anyone — the SUBSTRATE layer L0).
