@@ -7,12 +7,14 @@ these are all reachable, so the work is *prove them correct*, not remove them.
 
 Priority is by (uncovered lines × bug-likelihood), most impactful first.
 
-- [ ] W1 core/executive.py  (86%, 60 lines) — the heart: handle/_validate/_gate/
-      _throttle/_execute_and_audit/fault path. Largest gap.
-- [ ] W2 cli.py             (78%, 40 lines) — public interface; error/arg paths.
-- [ ] W3 pantheon/registry.py (74%, 33 lines) — capability dossier + resolver.
-- [ ] W4 powers/boundary.py (73%, 16 lines) — refusal/escalation/deferral.
-- [ ] W5 mouth/commit.py    (88%, 15 lines) — guarded commit + attack veto.
-- [ ] W6 powers/summon.py   (77%, 6 lines)  — small; close the gap.
+- [x] W1 core/executive.py  (86%→94%, 27 cases) — throttle/risk/fallback/fault/
+      selection branches proven.
+- [x] W2 cli.py             (78%→91%, 5 cases) — dashboard/cycle/chat-local +
+      health-failure fail-safe.
+- [x] W3 pantheon/registry.py (74%→100%, 7 cases) — organ/search/restore/key-error.
+- [x] W4 powers/boundary.py (73%→100%, 6 cases) — refusal/escalation/allow.
+- [x] W5 mouth/commit.py    (88%→99%, 9 cases) — vagueness/conflict/caution/guard.
+- [x] W6 powers/summon.py   (77%→100%, 2 cases) — summon body; also fixed a flaky
+      localhost HTTP test (retry_policy=max_retries=0 race).
 
 ## Success = each module coverage up, any found bug fixed, mypy 0, READY.
