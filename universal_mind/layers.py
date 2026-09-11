@@ -16,13 +16,21 @@ from .core.errors import UniversalMindError
 
 
 class Layer(IntEnum):
-    """Architectural layers from lowest (substrate) to highest (demiurge)."""
+    """Architectural layers from lowest (substrate) to highest (mouth).
+
+    Mirrors the charter's six-layer stack L0..L6 + the perpendicular MNEMOSYNE:
+    L0 SUBSTRATE, L1 GATEWAY, L2 PANTHEON, L3 DEMIURGE, L4 ARETĒ, L5 PROMETHEUS,
+    L6 MOUTH, and ⟂ MNEMOSYNE (callable by any layer, calls only SUBSTRATE).
+    """
 
     SUBSTRATE = 0
     GATEWAY = 1
     PANTHEON = 2
     DEMIURGE = 3
-    MNEMOSYNE = 4  # Special layer: can be called by any layer, but only calls SUBSTRATE
+    ARETE = 4
+    PROMETHEUS = 5
+    MOUTH = 6
+    MNEMOSYNE = 7  # Special ⟂ layer: callable by any layer, calls only SUBSTRATE
 
 
 class LayerViolation(UniversalMindError):
@@ -136,6 +144,21 @@ LAYER_CONTRACTS: dict[Layer, LayerContract] = {
         layer=Layer.DEMIURGE,
         may_call=(Layer.DEMIURGE, Layer.PANTHEON, Layer.GATEWAY, Layer.SUBSTRATE, Layer.MNEMOSYNE),
         description="Strategic decomposition, multi-strategy execution, synthesis",
+    ),
+    Layer.ARETE: LayerContract(
+        layer=Layer.ARETE,
+        may_call=(Layer.ARETE, Layer.DEMIURGE, Layer.PANTHEON, Layer.GATEWAY, Layer.SUBSTRATE, Layer.MNEMOSYNE),
+        description="Judgment — defines what 'better' means (non-compensatory virtue arbitration)",
+    ),
+    Layer.PROMETHEUS: LayerContract(
+        layer=Layer.PROMETHEUS,
+        may_call=(Layer.PROMETHEUS, Layer.ARETE, Layer.DEMIURGE, Layer.PANTHEON, Layer.GATEWAY, Layer.SUBSTRATE, Layer.MNEMOSYNE),
+        description="Recursive self-improvement: observe -> propose -> vet -> apply (reversible)",
+    ),
+    Layer.MOUTH: LayerContract(
+        layer=Layer.MOUTH,
+        may_call=(Layer.MOUTH, Layer.PROMETHEUS, Layer.ARETE, Layer.DEMIURGE, Layer.PANTHEON, Layer.GATEWAY, Layer.SUBSTRATE, Layer.MNEMOSYNE),
+        description="The sole user interface — one identity, one point of interaction",
     ),
     Layer.MNEMOSYNE: LayerContract(
         layer=Layer.MNEMOSYNE,
