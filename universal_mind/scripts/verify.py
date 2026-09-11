@@ -74,6 +74,7 @@ PROBES = [
     "probe_cross_judge.py",
     "probe_goal_drift.py",
     "probe_self_code_audit.py",
+    "probe_rubric_learning.py",
 ]
 
 

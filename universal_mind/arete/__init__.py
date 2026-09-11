@@ -52,6 +52,10 @@ from universal_mind.arete.health import (
     assess_judgment_health,
 )
 from universal_mind.arete.lineage import JudgmentLineage, JudgmentNode
+from universal_mind.arete.rubric_learning import (
+    RubricLearning,
+    learn_rubric,
+)
 from universal_mind.arete.standard import (
     PromotionDecision,
     PromotionResult,
@@ -96,6 +100,7 @@ __all__ = [
     "JudgmentNode",
     "PromotionDecision",
     "PromotionResult",
+    "RubricLearning",
     "Standard",
     "StandardKeeper",
     "UncertaintyAssessment",
@@ -111,4 +116,5 @@ __all__ = [
     "cross_judge",
     "default_virtue_scorer",
     "evaluate_loop",
+    "learn_rubric",
 ]

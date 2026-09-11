@@ -103,6 +103,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_goal_drift.py --junit-xml=$(ARTIFACTS_DIR)/probe_goal_drift.xml
 	@echo "Running probe_self_code_audit.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_self_code_audit.py --junit-xml=$(ARTIFACTS_DIR)/probe_self_code_audit.xml
+	@echo "Running probe_rubric_learning.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_rubric_learning.py --junit-xml=$(ARTIFACTS_DIR)/probe_rubric_learning.xml
 	@echo "All probes passed"
 
 # Clean artifacts
