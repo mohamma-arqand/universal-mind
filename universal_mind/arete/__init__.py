@@ -28,6 +28,11 @@ from universal_mind.arete.evidence import (
     EvidenceType,
     JudgedClaim,
 )
+from universal_mind.arete.external_evaluator import (
+    AuditFinding,
+    ExternalAuditResult,
+    evaluate_loop,
+)
 from universal_mind.arete.health import (
     JudgmentHealthReport,
     JudgmentHealthSignal,
@@ -51,12 +56,14 @@ __all__ = [
     "ArbitrationVerdict",
     "Arbitrator",
     "AreteError",
+    "AuditFinding",
     "CardinalVirtue",
     "Dispute",
     "EvidenceBundle",
     "EvidencePoint",
     "EvidenceSource",
     "EvidenceType",
+    "ExternalAuditResult",
     "InMemoryArbiter",
     "JudgedClaim",
     "JudgmentHealthReport",
@@ -73,4 +80,5 @@ __all__ = [
     "_as_candidate",
     "assess_judgment_health",
     "default_virtue_scorer",
+    "evaluate_loop",
 ]

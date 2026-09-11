@@ -10,7 +10,7 @@ foreign standard. Build an Independent Evaluator that audits the *judgment +
 self-correction loop itself*, scoring it against an external rubric and writing
 an `external_audit` ledger entry. This is the charter's "human verdict" made
 systematic: evaluation from outside the loop, not from inside it.
-- [ ] G1 new module + tests + probe
+- [x] G1 new module + tests + probe  (arete/external_evaluator.py + probe_independent_evaluation.py)
 
 ## G2 — Evolutionary architecture (insight → generation feedback)
 The insights the mind already produces (budget cuts, bar raises, rejected
