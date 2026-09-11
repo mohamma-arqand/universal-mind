@@ -199,15 +199,11 @@ def _q(value: Any) -> str:
 
 def build_dashboard_html(store: MemoryStore | None = None) -> str:
     """Build the self-contained dashboard HTML from a real engine run."""
-    owned_store = store is None
     if store is None:
         from tempfile import mkdtemp
 
         store = LocalJSONLStore(directory=Path(mkdtemp(prefix="um_dashboard_"), "dashboard.jsonl"))
     data = _run_scenario(store)
-    if owned_store:
-        # Non-destructive: leave the temp ledger in place; nothing commits outside it.
-        pass
     data_json = _q(data)
     return _TEMPLATE.replace("/*__DATA__*/", f"const DATA = {data_json};")
 

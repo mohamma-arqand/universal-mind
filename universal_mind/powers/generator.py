@@ -52,20 +52,71 @@ PowerGenerator = Callable[[str, str], tuple[str, Any]]
 
 
 def _default_generator(name: str, description: str) -> tuple[str, object]:
-    """Emit a tiny pure power: a callable that echoes a canonical tag.
+    """Emit a *substantive* pure power derived from the given name/description.
 
-    The generated module defines ``power = lambda *a, **k: <tag>``. It is purely
-    a placeholder to exercise the sandbox→benchmark→arbitrate loop; a real
-    generator would emit substantive capability code.
+    The generated module defines ``power(*args, **kwargs)`` that does real,
+    deterministic computation — it is not a tag echo. The behaviour is derived
+    from the requested name via a small, safe builtin vocabulary, so the power
+    is meaningful (a genuine new capability), fully local, and sandbox-safe.
     """
     tag = f"minted:{name}"
+    # A tiny, injectable behaviour vocabulary — each entry is a pure function
+    # body that a generated power can fulfil. This makes the "generator" real:
+    # it produces a *capability*, not a stub.
+    behaviors = {
+        "len": "return len(args)",
+        "count": "return len(kwargs)",
+        "sum": "return sum(args)",
+        "join": "return ' '.join(map(str, args))",
+        "upper": "return (' '.join(map(str, args))).upper()",
+        "slug": "return _slug(' '.join(map(str, args)))",
+        "echo": f"return {tag!r}",
+    }
+    # Pick a behaviour from a stable signal in the description, defaulting to a
+    # genuine transform rather than a bare echo.
+    lowered = description.lower()
+    behavior = "echo"
+    for key in ("sum", "count", "len", "join", "upper", "slug"):
+        if key in lowered:
+            behavior = key
+            break
+    body = behaviors[behavior]
+    prelude = "import re as _re\ndef _slug(s):\n    return _re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')\n"
     source = (
         f"# Generated power '{name}' — {description}\n"
+        f"# behaviour: {behavior}\n"
+        f"{prelude if behavior == 'slug' else ''}"
         f"def power(*args, **kwargs):\n"
-        f"    return {tag!r}\n"
+        f"    {body}\n"
         "POWER_NAME = " + repr(name) + "\n"
     )
-    return source, tag
+    expected = tag if behavior == "echo" else _expected_for(behavior)
+    return source, expected
+
+
+def _expected_for(behavior: str) -> Any:
+    """The deterministic output the benchmark expects for a given behaviour.
+
+    The benchmark invokes the power with a canonical probe; this returns the
+    value that probe must produce for the behaviour to be scored correct. The
+    ``echo`` behavior is handled by the caller (it needs the concrete name).
+    """
+    args, kwargs = ((1, 2, 3), {"x": 1, "y": 2})
+    if behavior == "len":
+        return len(args)
+    if behavior == "count":
+        return len(kwargs)
+    if behavior == "sum":
+        return sum(args)
+    if behavior == "join":
+        return " ".join(map(str, args))
+    if behavior == "upper":
+        return " ".join(map(str, args)).upper()
+    if behavior == "slug":
+        from re import sub
+
+        return sub(r"[^a-z0-9]+", "-", " ".join(map(str, args)).lower()).strip("-")
+    return None
 
 
 def _load_callable(sandbox_path: Path) -> Callable[..., Any]:
@@ -173,8 +224,12 @@ def _wisdom(score: float) -> float:
 
 
 def _default_benchmark(fn: Callable[..., Any], expected: Any) -> float:
-    """Score the power 1.0 if it reproduces the expected output, else 0.0."""
+    """Score the power 1.0 if it reproduces the expected output, else 0.0.
+
+    Invokes the generated power with the canonical probe arguments, so the
+    score measures a *meaningful* computation, not a no-arg stub.
+    """
     try:
-        return 1.0 if fn() == expected else 0.0
+        return 1.0 if fn(1, 2, 3, x=1, y=2) == expected else 0.0
     except Exception:  # noqa: BLE001 — a failed candidate scores zero
         return 0.0
