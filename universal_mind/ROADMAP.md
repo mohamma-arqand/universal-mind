@@ -18,7 +18,7 @@ Root cause of "multi-faceted" and "infinitely intelligent": the mind must reason
 over *hypotheses* and *doubt*, not lock into its first guess.
 
 - [x] 1.1 Counterfactual reasoning — "would this still hold if X were false?"  (arete/counterfactual.py)
-- [ ] 1.2 Hypothesis ensemble — hold several readings of an intent, converge on evidence
+- [x] 1.2 Hypothesis ensemble — hold several readings of an intent, converge on evidence  (demiurge/hypotheses.py)
 - [ ] 1.3 Causal reasoning — "why this outcome" + "what would change it"
 - [ ] 1.4 Temporal episodic memory — recall *when* and *in what context*, not just *what*
 - [ ] 1.5 Inductive generalization — learn a rule from few examples, apply to unseen

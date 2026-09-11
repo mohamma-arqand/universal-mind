@@ -11,6 +11,12 @@ from .graph import (
     TopologicalSortResult,
     build_graph_from_sub_intents,
 )
+from .hypotheses import (
+    EnsembleResult,
+    Hypothesis,
+    HypothesisEnsemble,
+    score_hypothesis,
+)
 from .recall import (
     MemoryAwareDecomposition,
     decompose_with_memory,
@@ -35,9 +41,12 @@ __all__ = [
     'CycleDetected',
     'DecompositionError',
     'DecompositionResult',
+    'EnsembleResult',
     'ExecutionGraph',
     'ExecutionPlan',
     'ExecutionStrategy',
+    'Hypothesis',
+    'HypothesisEnsemble',
     'MemoryAwareDecomposition',
     'ParallelStrategy',
     'SequentialStrategy',
@@ -51,6 +60,7 @@ __all__ = [
     'create_n_parallel_strategies',
     'decompose_intent',
     'decompose_with_memory',
+    'score_hypothesis',
     'synthesize_by_sub_intent',
     'synthesize_results',
 ]
