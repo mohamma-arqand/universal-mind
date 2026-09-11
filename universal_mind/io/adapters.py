@@ -63,6 +63,7 @@ class ToolContract:
     domains: tuple[str, ...]
     credibility: float = 0.5
     layer: Layer = Layer.GATEWAY
+    cost: float = 1.0
 
 
 @runtime_checkable
@@ -108,7 +109,7 @@ def organ_for(tool: Tool, owner_id: str) -> OrganDescriptor:
     return OrganDescriptor(
         name=c.name,
         signature=c.signature,
-        cost=0.0,
+        cost=c.cost,
         latency_ms=10.0,
         credibility=c.credibility,
         domains=c.domains,

@@ -1,5 +1,10 @@
 """Capability contracts and registry."""
-from .budget import BudgetAllocation, allocate_budget, explain
+from .budget import (
+    BudgetAllocation,
+    allocate_budget,
+    explain,
+    select_organs_for_domains,
+)
 from .contracts import Capability, CapabilityResult, EchoCapability
 from .registry import CapabilityDossier, OrganDescriptor, PantheonRegistry
 
@@ -13,4 +18,5 @@ __all__ = [
     'PantheonRegistry',
     'allocate_budget',
     'explain',
+    'select_organs_for_domains',
 ]

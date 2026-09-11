@@ -68,6 +68,7 @@ class SynthesisReport:
     remembered_context: str = ""
     verified: bool = False           # True only if ARETĒ accepted the final D
     verification_reason: str = ""    # why the D was verified or refused
+    budget: Any = None               # BudgetAllocation when run under a budget, else None
 
 
 def domain_for(goal: str) -> str:
@@ -163,17 +164,43 @@ class SynthesisEngine:
         self._specialists[name] = tool
         return register_tool(self._registry, tool, self._owner.owner_id)
 
-    def run(self, raw_text: str) -> SynthesisReport:
-        """Execute the full loop and synthesize a canonical D, committed to the ledger."""
+    def run(self, raw_text: str, *, budget: float | None = None) -> SynthesisReport:
+        """Execute the full loop and synthesize a canonical D, committed to the ledger.
+
+        ``budget`` (optional) switches specialist selection from pure-credibility
+        to the execution-budgeting model: when set, one specialist per domain is
+        chosen by merit-per-cost under the shared budget, and the resulting
+        ``BudgetAllocation`` is recorded on the report.
+        """
         structured = self._mouth.commit(raw_text, self._owner.owner_id)
         decomposed = decompose_intent(structured.intent)
+
+        domains = [domain_for(sub.goal) for sub in decomposed.sub_intents]
+        allocation = None
+        if budget is not None:
+            from universal_mind.pantheon.budget import select_organs_for_domains
+
+            chosen, allocation = select_organs_for_domains(
+                self._registry.list_organs(), domains, budget
+            )
+        else:
+            chosen = {}
 
         executions: list[SubExecution] = []
         for sub in decomposed.sub_intents:
             domain = domain_for(sub.goal)
-            organ = self._resolver.resolve_organ(self._registry, domain)
-            if organ is None:
-                raise SynthesisError(f"no specialist can honor sub-goal '{sub.goal}' (domain '{domain}')")
+            if budget is not None:
+                organ_name = chosen.get(domain)
+                organ = next((o for o in self._registry.list_organs() if o.name == organ_name), None)
+                if organ is None:
+                    raise SynthesisError(
+                        f"no affordable specialist for sub-goal '{sub.goal}' (domain '{domain}') "
+                        f"under budget {budget}"
+                    )
+            else:
+                organ = self._resolver.resolve_organ(self._registry, domain)
+                if organ is None:
+                    raise SynthesisError(f"no specialist can honor sub-goal '{sub.goal}' (domain '{domain}')")
             capability = self._registry.get(organ.dossier.name, organ.dossier.version)
             try:
                 result: CapabilityResult = capability.execute(_sub_intent(sub, self._owner.owner_id), {"owner_id": self._owner.owner_id})
@@ -245,6 +272,7 @@ class SynthesisEngine:
             remembered_context=remembered,
             verified=verified,
             verification_reason=verification_reason,
+            budget=allocation,
         )
 
     @staticmethod

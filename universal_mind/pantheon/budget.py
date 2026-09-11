@@ -87,3 +87,59 @@ def explain(allocation: BudgetAllocation, organs: dict[str, OrganDescriptor]) ->
     if allocation.dropped:
         return f"selected {head} (cost {allocation.total_cost}); dropped {', '.join(allocation.dropped)}"
     return f"selected {head} (cost {allocation.total_cost}); nothing dropped"
+
+
+def select_organs_for_domains(
+    organs: list[OrganDescriptor],
+    domains: list[str],
+    budget: float,
+    *,
+    min_credibility: float = 0.0,
+) -> tuple[dict[str, str], BudgetAllocation]:
+    """Pick one organ per needed domain under a shared budget.
+
+    For each needed domain, gather the organs that can honor it (exact domain
+    match first, then substring over purpose/signature, falling back to all).
+    Then run a single :func:`allocate_budget` over that candidate pool so a
+    finite budget — not merely credibility — decides which specialist each
+    domain gets. Returns a ``domain -> organ name`` mapping plus the allocation
+    that produced it. Domains that stay unaffordable are simply absent.
+
+    This is the bridge between the budgeting model and a real resolution pass:
+    the same deterministic merit-per-cost rule picks the specialists.
+    """
+    per_domain: list[OrganDescriptor] = []
+    chosen: dict[str, str] = {}
+    for domain in domains:
+        candidates = _candidates_for(organs, domain)
+        # Budget pool = every candidate for every domain, deduplicated by name.
+        for organ in candidates:
+            if all(o.name != organ.name for o in per_domain):
+                per_domain.append(organ)
+    allocation = allocate_budget(per_domain, budget, min_credibility=min_credibility)
+    # Map back: the first selected organ that can honor each domain wins.
+    selected_by_name = {o.name: o for o in per_domain if o.name in allocation.selected}
+    for domain in domains:
+        cands = [o for o in _candidates_for(organs, domain) if o.name in selected_by_name]
+        if cands:
+            # Highest value (merit-per-cost) among the affordable candidates.
+            best = min(cands, key=lambda o: (-_value(o), o.name))
+            chosen[domain] = best.name
+    return chosen, allocation
+
+
+def _candidates_for(organs: list[OrganDescriptor], domain: str) -> list[OrganDescriptor]:
+    """Organs that can honor ``domain`` (exact → purpose → none), mirroring the resolver.
+
+    Returns an empty list when nothing fits (unlike the resolver's fall-to-everything,
+    which we must NOT do under a budget: an un-honorable domain must be treated
+    as unfundable, not silently handed to an arbitrary organ).
+    """
+    exact = [o for o in organs if domain in o.domains]
+    if exact:
+        return exact
+    purpose = [
+        o for o in organs
+        if o.dossier is not None and domain.lower() in o.dossier.purpose.lower()
+    ]
+    return purpose

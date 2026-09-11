@@ -95,3 +95,21 @@ def test_failure_is_reported_not_fatal() -> None:
     report = en.run("organize the general task")
     assert report.sub_executions  # the sub-step ran and its failure was captured
     assert not report.ok or report.synthesized is None
+
+
+def test_run_with_budget_records_allocation() -> None:
+    """Under a budget, specialist choice is budgeted and the allocation is reported."""
+    en = _engine()
+    report = en.run("summarize knowledge then write it", budget=100.0)
+    assert report.ok
+    assert report.budget is not None
+    # Both specialists fit comfortably within 100.0.
+    assert set(report.budget.selected) == {"facts", "writer"}
+    assert report.budget.total_cost <= 100.0
+
+
+def test_run_with_tiny_budget_is_unaffordable() -> None:
+    """A budget too small to fund any specialist is refused, not silently ignored."""
+    en = _engine()
+    with pytest.raises(SynthesisError):
+        en.run("summarize knowledge then write it", budget=0.001)
