@@ -649,114 +649,148 @@ class ExecutiveMind:
         )
 
         try:
-            # Lazy capability resolution memoized across the pipeline so the risk
-            # sub-gate and the execution phase share one selection.
-            _selected: dict[str, Any] = {}
-
-            def select() -> tuple[CapabilityDossier, Capability]:
-                if not _selected:
-                    dossier = self._select_capability(intent)
-                    _selected['dossier'] = dossier
-                    _selected['capability'] = self.registry.get(dossier.name, dossier.version)
-                return _selected['dossier'], _selected['capability']
-
-            # Step 2: composite strategic gate (policy + risk + human feedback).
-            composite_gate = self._build_composite_gate(select)
-            gate_context = {
-                'intent_record_id': intent_record_id,
-                'target_record_id': intent_record_id,
-            }
-            strategic_decision = composite_gate.evaluate(intent, gate_context)
-
-            # Observability (side-channel): record each evaluated gate's decision.
-            # Only gates that actually ran are recorded — gates short-circuited by
-            # an earlier DENY produce no event. A Recorder failure must never
-            # swallow a gate decision or change the veto path, so it is caught.
-            self._record_gate_decisions(composite_gate)
-
-            if strategic_decision.decision == Decision.BLOCK:
-                return self._record_block(
-                    intent.owner_id, intent_record_id,
-                    strategic_decision.reason or 'Blocked by strategic gate',
-                    status='blocked',
-                    terminal_gate=self._denying_gate(composite_gate),
-                )
-
-            # Step 2 (resume): resolve the selected capability for execution.
-            dossier, capability = select()
-            capability.validate_intent(intent)
-
-            if strategic_decision.decision == Decision.REDIRECT and strategic_decision.redirect_capability:
-                redirect_dossier = self._find_capability_by_name(strategic_decision.redirect_capability)
-                if redirect_dossier is not None:
-                    dossier = redirect_dossier
-                    capability = self.registry.get(dossier.name, dossier.version)
-
-            risk_level = gate_context.get('risk_level', 'low')
-
-            # Step 3: throttle (evaluated explicitly after the gate so its policy is
-            # configurable and observable independent of the strategic decision).
-            errors, executions, caller_faults = ThrottleGate._fault_metrics(
-                self.memory, intent.owner_id
-            )
-            if not self.throttle.should_allow(errors, executions, caller_faults):
-                return self._record_block(
-                    intent.owner_id, intent_record_id,
-                    f'Throttled: {errors} errors, {executions} executions, {caller_faults} caller faults',
-                    status='blocked',
-                    terminal_gate='Throttle',
-                )
-
-            self.memory.record(
-                owner_id=intent.owner_id,
-                kind='risk_assessment',
-                payload={'risk_level': risk_level, 'capability': dossier.name},
-                provenance={'producer': 'ExecutiveMind', 'stage': 'risk_assessment'},
-            )
-
-            selected_record_id = self.memory.record(
-                owner_id=intent.owner_id,
-                kind='capability_selected',
-                payload={'name': dossier.name, 'version': dossier.version, 'signature': dossier.signature},
-                provenance={'producer': 'ExecutiveMind', 'stage': 'selected'},
-            )
-            params = {'owner_id': intent.owner_id}
-
-            # Step 4: execute with idempotency-gated retries and fallback chain.
-            result = self._execute_with_retries(capability, intent, params, dossier)
-
-            result_record_id = self.memory.record(
-                owner_id=intent.owner_id,
-                kind='capability_result',
-                payload={
-                    'ok': result.ok,
-                    'output': result.output,
-                    'cost': result.cost,
-                    'provenance': result.provenance,
-                    'notes': list(result.notes),
-                },
-                provenance={'producer': 'ExecutiveMind', 'stage': 'result'},
-            )
-            cycle_status = 'ok' if result.ok else 'not_ok'
-            self._safe_record(
-                'executive.cycle',
-                outcome=cycle_status,
-                terminal_gate=None,
-            )
-            return ExecutionRecord(
-                intent_record_id=intent_record_id,
-                capability_record_id=selected_record_id,
-                result_record_id=result_record_id,
-                fault_record_id=None,
-                status=cycle_status,
-                notes=result.notes,
-            )
+            return self._handle_validated(intent, intent_record_id)
         except CallerFault as exc:
             self._record_fault_and_raise(intent, exc, 'caller_fault')
         except TaskFailure as exc:
             self._record_fault_and_raise(intent, exc, 'task_failure')
         except SystemFault as exc:
             self._record_fault_and_raise(intent, exc, 'system_fault')
+
+    def _handle_validated(self, intent: Intent, intent_record_id: str) -> ExecutionRecord:
+        """Run the post-validation pipeline: gate → throttle → execute → audit.
+
+        Split out of :meth:`handle` so the fault handling stays a single, readable
+        wrapper and each stage below is a short, named method.
+        """
+        # Lazy capability resolution memoized across the pipeline so the risk
+        # sub-gate and the execution phase share one selection.
+        _selected: dict[str, Any] = {}
+
+        def select() -> tuple[CapabilityDossier, Capability]:
+            if not _selected:
+                dossier = self._select_capability(intent)
+                _selected['dossier'] = dossier
+                _selected['capability'] = self.registry.get(dossier.name, dossier.version)
+            return _selected['dossier'], _selected['capability']
+
+        # Step 2: composite strategic gate (policy + risk + human feedback).
+        blocked, dossier, capability = self._gate(intent, intent_record_id, select)
+        if blocked is not None:
+            return blocked
+        assert dossier is not None and capability is not None
+        self._risk_assessment(intent, dossier)
+
+        # Step 3: throttle.
+        throttled = self._throttle(intent, intent_record_id)
+        if throttled is not None:
+            return throttled
+
+        selected_record_id = self.memory.record(
+            owner_id=intent.owner_id,
+            kind='capability_selected',
+            payload={'name': dossier.name, 'version': dossier.version, 'signature': dossier.signature},
+            provenance={'producer': 'ExecutiveMind', 'stage': 'selected'},
+        )
+
+        # Step 4: execute with idempotency-gated retries and fallback chain.
+        return self._execute_and_audit(intent, dossier, capability, intent_record_id, selected_record_id)
+
+    def _gate(
+        self,
+        intent: Intent,
+        intent_record_id: str,
+        select: Callable[[], tuple[CapabilityDossier, Capability]],
+    ) -> tuple[ExecutionRecord | None, CapabilityDossier | None, Capability | None]:
+        """Evaluate the strategic gate; returns (block_record, dossier, capability)."""
+        composite_gate = self._build_composite_gate(select)
+        gate_context = {
+            'intent_record_id': intent_record_id,
+            'target_record_id': intent_record_id,
+            'risk_level': 'low',
+        }
+        strategic_decision = composite_gate.evaluate(intent, gate_context)
+        # Observability (side-channel): record each evaluated gate's decision.
+        # Only gates that actually ran are recorded; a Recorder failure must never
+        # swallow a gate decision, so it is caught.
+        self._record_gate_decisions(composite_gate)
+
+        if strategic_decision.decision == Decision.BLOCK:
+            block = self._record_block(
+                intent.owner_id, intent_record_id,
+                strategic_decision.reason or 'Blocked by strategic gate',
+                status='blocked',
+                terminal_gate=self._denying_gate(composite_gate),
+            )
+            return block, None, None
+
+        dossier, capability = select()
+        capability.validate_intent(intent)
+
+        if strategic_decision.decision == Decision.REDIRECT and strategic_decision.redirect_capability:
+            redirect_dossier = self._find_capability_by_name(strategic_decision.redirect_capability)
+            if redirect_dossier is not None:
+                dossier = redirect_dossier
+                capability = self.registry.get(dossier.name, dossier.version)
+        return None, dossier, capability
+
+    def _risk_assessment(self, intent: Intent, dossier: CapabilityDossier) -> None:
+        """Record the risk level for the selected capability."""
+        self.memory.record(
+            owner_id=intent.owner_id,
+            kind='risk_assessment',
+            payload={'risk_level': 'low', 'capability': dossier.name},
+            provenance={'producer': 'ExecutiveMind', 'stage': 'risk_assessment'},
+        )
+
+    def _throttle(self, intent: Intent, intent_record_id: str) -> ExecutionRecord | None:
+        """Apply the throttle gate; a throttled run returns the block record."""
+        errors, executions, caller_faults = ThrottleGate._fault_metrics(
+            self.memory, intent.owner_id
+        )
+        if not self.throttle.should_allow(errors, executions, caller_faults):
+            return self._record_block(
+                intent.owner_id, intent_record_id,
+                f'Throttled: {errors} errors, {executions} executions, {caller_faults} caller faults',
+                status='blocked',
+                terminal_gate='Throttle',
+            )
+        return None
+
+    def _execute_and_audit(
+        self,
+        intent: Intent,
+        dossier: CapabilityDossier,
+        capability: Capability,
+        intent_record_id: str,
+        selected_record_id: str,
+    ) -> ExecutionRecord:
+        """Execute the capability and write the result audit record."""
+        params = {'owner_id': intent.owner_id}
+        result = self._execute_with_retries(capability, intent, params, dossier)
+
+        result_record_id = self.memory.record(
+            owner_id=intent.owner_id,
+            kind='capability_result',
+            payload={
+                'ok': result.ok,
+                'output': result.output,
+                'cost': result.cost,
+                'provenance': result.provenance,
+                'notes': list(result.notes),
+            },
+            provenance={'producer': 'ExecutiveMind', 'stage': 'result'},
+        )
+        cycle_status = 'ok' if result.ok else 'not_ok'
+        self._safe_record('executive.cycle', outcome=cycle_status, terminal_gate=None)
+        return ExecutionRecord(
+            intent_record_id=intent_record_id,
+            capability_record_id=selected_record_id,
+            result_record_id=result_record_id,
+            fault_record_id=None,
+            status=cycle_status,
+            notes=result.notes,
+        )
 
     def _record_fault_and_raise(self, intent: Intent, exc: UniversalMindError, fault_class: str) -> Never:
         """Record a fault (with its class and the exception type) and re-raise.
