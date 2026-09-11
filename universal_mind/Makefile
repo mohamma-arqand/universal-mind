@@ -107,6 +107,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_rubric_learning.py --junit-xml=$(ARTIFACTS_DIR)/probe_rubric_learning.xml
 	@echo "Running probe_red_team.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_red_team.py --junit-xml=$(ARTIFACTS_DIR)/probe_red_team.xml
+	@echo "Running probe_policy_trace.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_policy_trace.py --junit-xml=$(ARTIFACTS_DIR)/probe_policy_trace.xml
 	@echo "All probes passed"
 
 # Clean artifacts

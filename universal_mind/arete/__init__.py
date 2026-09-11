@@ -52,6 +52,11 @@ from universal_mind.arete.health import (
     assess_judgment_health,
 )
 from universal_mind.arete.lineage import JudgmentLineage, JudgmentNode
+from universal_mind.arete.policy_trace import (
+    PolicyStep,
+    PolicyTrace,
+    trace_verdict,
+)
 from universal_mind.arete.red_team import (
     AttackAttempt,
     RedTeamReport,
@@ -104,6 +109,8 @@ __all__ = [
     "JudgmentHealthSignal",
     "JudgmentLineage",
     "JudgmentNode",
+    "PolicyStep",
+    "PolicyTrace",
     "PromotionDecision",
     "PromotionResult",
     "RedTeamReport",
@@ -125,4 +132,5 @@ __all__ = [
     "evaluate_loop",
     "learn_rubric",
     "run_red_team",
+    "trace_verdict",
 ]

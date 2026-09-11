@@ -31,7 +31,7 @@ over *hypotheses* and *doubt*, not lock into its first guess.
 - [x] 2.3 Continuous self-code-audit — like G4, but automatic and periodic  (core/self_code_audit.py)
 - [x] 2.4 Rubric learning — the evaluation rubric improves from its own mistakes  (arete/rubric_learning.py)
 - [x] 2.5 Red-team/blue-team — attack + defend continuously (auto security test)  (arete/red_team.py + mouth/GuardedMouth)
-- [ ] 2.6 Provable policy — audit every allow/deny as a verifiable reason chain
+- [x] 2.6 Provable policy — audit every allow/deny as a verifiable reason chain  (arete/policy_trace.py)
 
 ## Phase 3 — More connected (World): multilingual, temporal, real tools
 
