@@ -271,3 +271,38 @@ class ConscientiousMouth:
             result = healthy()
             return not bool(result)
         return False
+
+
+class GuardedMouth:
+    """A MOUTH that refuses hostile intent before it ever reaches a specialist.
+
+    This is the blue-team half of the red/blue pair: it wraps any :class:`Mouth`
+    and rejects commits whose text matches a known hostile-intent marker (a
+    prompt injection, a secret-exfiltration ask, a destructive command, a
+    goal-hijack) — raising :class:`IntentConflict` rather than handing the attack
+    to the pantheon. Benign input defers to the wrapped mouth unchanged.
+    """
+
+    _HOSTILE_MARKERS: tuple[str, ...] = (
+        "rm -rf",
+        "delete everything",
+        "reveal the system prompt",
+        "reveal your system",
+        "print the api key",
+        "external address",
+        "attack another",
+        "forget your goal",
+        "ignore your instructions",
+        "send your internal",
+    )
+
+    def __init__(self, inner: Mouth, *, markers: tuple[str, ...] | None = None) -> None:
+        self._inner = inner
+        self._markers = markers if markers is not None else self._HOSTILE_MARKERS
+
+    def commit(self, raw_text: str, owner_id: str) -> StructuredIntent:
+        text = (raw_text or "").lower()
+        for marker in self._markers:
+            if marker in text:
+                raise IntentConflict(f"refused: hostile intent detected ({marker!r})")
+        return self._inner.commit(raw_text, owner_id)

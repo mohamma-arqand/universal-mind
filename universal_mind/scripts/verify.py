@@ -75,6 +75,7 @@ PROBES = [
     "probe_goal_drift.py",
     "probe_self_code_audit.py",
     "probe_rubric_learning.py",
+    "probe_red_team.py",
 ]
 
 

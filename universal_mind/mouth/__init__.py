@@ -16,7 +16,12 @@ field came from in the raw text, so the commitment is auditable — the same
 
 from __future__ import annotations
 
-from universal_mind.mouth.commit import ConscientiousMouth, InMemoryMouth, Mouth
+from universal_mind.mouth.commit import (
+    ConscientiousMouth,
+    GuardedMouth,
+    InMemoryMouth,
+    Mouth,
+)
 from universal_mind.mouth.types import (
     CommitEvidence,
     IntentConflict,
@@ -28,6 +33,7 @@ from universal_mind.mouth.types import (
 __all__ = [
     "CommitEvidence",
     "ConscientiousMouth",
+    "GuardedMouth",
     "InMemoryMouth",
     "IntentConflict",
     "IntentNeedsClarification",

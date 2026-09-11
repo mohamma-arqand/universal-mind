@@ -52,6 +52,11 @@ from universal_mind.arete.health import (
     assess_judgment_health,
 )
 from universal_mind.arete.lineage import JudgmentLineage, JudgmentNode
+from universal_mind.arete.red_team import (
+    AttackAttempt,
+    RedTeamReport,
+    run_red_team,
+)
 from universal_mind.arete.rubric_learning import (
     RubricLearning,
     learn_rubric,
@@ -79,6 +84,7 @@ __all__ = [
     "ArbitrationVerdict",
     "Arbitrator",
     "AreteError",
+    "AttackAttempt",
     "AuditFinding",
     "CardinalVirtue",
     "CounterfactualError",
@@ -100,6 +106,7 @@ __all__ = [
     "JudgmentNode",
     "PromotionDecision",
     "PromotionResult",
+    "RedTeamReport",
     "RubricLearning",
     "Standard",
     "StandardKeeper",
@@ -117,4 +124,5 @@ __all__ = [
     "default_virtue_scorer",
     "evaluate_loop",
     "learn_rubric",
+    "run_red_team",
 ]
