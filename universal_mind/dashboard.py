@@ -67,16 +67,19 @@ def _run_scenario(store: MemoryStore) -> dict[str, Any]:
         )
 
     # ARETĒ critical loop: the best synthesis becomes the standing standard.
+    from universal_mind.arete.lineage import JudgmentLineage
+
     keeper = StandardKeeper(store, clock=clock, owner=owner)
+    lineage = JudgmentLineage(keeper)
     trail = []  # promotion trail entries, oldest first
     # First (uncontested) standard.
-    k1 = keeper.consider(_candidate("report-1", {"justice": 1.0, "wisdom": 0.92, "courage": 1.0, "temperance": 0.98}))
+    k1 = lineage.consider(_candidate("report-1", {"justice": 1.0, "wisdom": 0.92, "courage": 1.0, "temperance": 0.98}))
     trail.append(_trail_entry(k1))
     # A genuinely stronger D overturns it.
-    k2 = keeper.consider(_candidate("report-2", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
+    k2 = lineage.consider(_candidate("report-2", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
     trail.append(_trail_entry(k2))
     # A merely-parity D is deferred (recency never wins).
-    k3 = keeper.consider(_candidate("report-2b", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
+    k3 = lineage.consider(_candidate("report-2b", {"justice": 1.0, "wisdom": 0.97, "courage": 1.0, "temperance": 1.0}))
     trail.append(_trail_entry(k3))
     current = keeper.current()
 
@@ -123,6 +126,8 @@ def _run_scenario(store: MemoryStore) -> dict[str, Any]:
         "synth_runs": synths,
         "standard_trail": trail,
         "standard_current": {"name": current.name if current else None, "depth": current.promotion_depth if current else 0},
+        "judgment_lineage": [_judgment_entry(n) for n in lineage.nodes()],
+        "judgment_health": _health_entry(lineage),
         "specialists": specialists,
         "ledger": {"records": total_records, "kinds": kinds},
         "specialist_count": len(specialists),
@@ -137,6 +142,29 @@ def _trail_entry(res: Any) -> dict[str, Any]:
         "prev": res.previous_standard.name if res.previous_standard else None,
         "current": res.current_standard.name,
         "depth": res.current_standard.promotion_depth,
+    }
+
+
+def _judgment_entry(node: Any) -> dict[str, Any]:
+    """Flatten one JudgmentLineage node for the dashboard payload."""
+    return {
+        "contender": node.contender,
+        "decision": node.decision,
+        "reasoning": node.reasoning,
+        "excellence": node.excellence,
+        "justice": node.justice,
+    }
+
+
+def _health_entry(lineage: Any) -> dict[str, Any]:
+    """Attach the judgment-health self-assessment to the dashboard."""
+    from universal_mind.arete.health import assess_judgment_health
+
+    report = assess_judgment_health(lineage)
+    return {
+        "unhealthy": report.unhealthy,
+        "summary": report.summary,
+        "signals": [{"name": s.name, "value": s.value, "ok": s.ok, "note": s.note} for s in report.signals],
     }
 
 
@@ -316,6 +344,14 @@ _TEMPLATE = r"""<!doctype html>
   .ledger .rec { display: flex; justify-content: space-between; padding: 4px 2px; border-bottom: 1px solid var(--line); }
   .ledger .rec:last-child { border-bottom: none; }
   .ledger .k { color: var(--fg); } .ledger .v { color: var(--dim); }
+  .jnode { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 6px; background: var(--panel2); font-size: 12px; }
+  .jnode .jhead { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .jnode .jreason { color: var(--muted); font-size: 11px; }
+  .jnode .jscore { margin-left: auto; color: var(--dim); font-family: var(--mono); font-size: 11px; }
+  .health { border-left: 3px solid var(--good); padding: 7px 10px; margin-bottom: 6px; }
+  .health.bad { border-left-color: var(--bad); }
+  .health .sig { display: flex; justify-content: space-between; font-size: 12px; }
+  .health .note { color: var(--dim); font-size: 11px; }
   .foot { margin-top: 22px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); padding-top: 12px; line-height: 1.7; }
 </style>
 </head>
@@ -353,6 +389,17 @@ _TEMPLATE = r"""<!doctype html>
       </div>
       <div class="h" style="margin-top:14px">Promotion trail</div>
       <div class="trail" data-js="trail"></div>
+    </div>
+  </div>
+
+  <div class="grid row2">
+    <div class="card">
+      <div class="h">Judgment lineage — the reasoning behind the standard</div>
+      <div data-js="lineage"></div>
+    </div>
+    <div class="card">
+      <div class="h">Judgment self-assessment</div>
+      <div data-js="jhealth"></div>
     </div>
   </div>
 
@@ -414,6 +461,26 @@ function render(){
        <span style="color:var(--dim)">#${t.depth}</span>
      </div>`
   ).join('') || '<span style="color:var(--dim)">no promotions yet</span>';
+
+  $('[data-js="lineage"]').innerHTML = D.judgment_lineage.map(n =>
+    `<div class="jnode">
+       <div class="jhead"><span class="tag ${n.decision}">${esc(n.decision)}</span><b>${esc(n.contender)}</b><span class="jscore">exc ${esc(n.excellence)} · justice ${esc(n.justice)}</span></div>
+       <div class="jreason">${esc(n.reasoning)}</div>
+     </div>`
+  ).join('') || '<span style="color:var(--dim)">no judgments recorded</span>';
+
+  const jh = D.judgment_health;
+  $('[data-js="jhealth"]').innerHTML =
+    `<div class="health ${jh.unhealthy?'bad':''}">
+       <div class="sig"><b>${jh.unhealthy?'⚠ unhealthy':'healthy'}</b></div>
+       <div class="note">${esc(jh.summary)}</div>
+     </div>` +
+    (jh.signals || []).map(s =>
+      `<div class="health ${s.ok?'':'bad'}">
+         <div class="sig"><span>${esc(s.name)}</span><span style="color:${s.ok?'var(--good)':'var(--bad)'};font-family:var(--mono)">${esc(s.value)}</span></div>
+         <div class="note">${esc(s.note)}</div>
+       </div>`
+    ).join('');
 
   $('[data-js="syntheses"]').innerHTML = D.synth_runs.map(r =>
     `<div class="sr">
