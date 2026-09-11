@@ -25,22 +25,20 @@ STATUS = ARTIFACTS / "verification_status.txt"
 
 
 def _host_python() -> str:
-    """Return a host-built interpreter that can run pytest (asyncio safe).
+    """Return the interpreter that can run pytest cleanly on this host.
 
-    The Hermes runtime python lacks ``_overlapped`` and cannot run pytest; the
-    machine's own interpreter (3.14) can. We prefer an explicit override, then
-    the host 3.14 install, then whatever is on PATH.
+    On this machine the runtime ``python`` (3.11) runs the whole suite green,
+    whereas the user-installed 3.14 has a stricter socket path that trips one
+    localhost HTTP test — so we prefer ``sys.executable`` (whatever launched
+    this script) unless an explicit ``UM_PYTHON`` override is given.
     """
     import os
-    import shutil
+    import sys
 
     override = os.environ.get("UM_PYTHON")
     if override:
         return override
-    candidate = Path(r"C:/Users/EliteBook/AppData/Local/Programs/Python/Python314/python.exe")
-    if candidate.is_file():
-        return str(candidate)
-    return shutil.which("python") or "python"
+    return sys.executable
 
 
 HOST_PYTHON = _host_python()

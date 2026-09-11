@@ -61,6 +61,20 @@ A seed-core, local-first orchestration project built around three layers:
   `StandardKeeper` so an ARETĒ promotion is *provisional* until a human
   consents or vetoes it; the ruling is committed as first-class
   `HUMAN`/`CONSENT` evidence (the highest-trust source). Deny-by-default.
+- **True synthesis** (`synthesis.py` + `compose.py`): the central axiom is
+  "synthesis, not integration". `SynthesisEngine` now *fuses* specialist output
+  by default — a factual line folded into a finished sentence — so D is a single
+  new artifact no part produced alone (`method='fusion'`), not a string join. A
+  run where every sub-execution failed yields no synthesis (and is not verified),
+  never an empty artifact masquerading as success.
+- **Observability** (`observability/`): a runtime-checkable `Recorder` protocol
+  with `NullRecorder`/`MemoryRecorder`; the executive emits execution events
+  through it. Wired one-directional (executive → recorder) to avoid an import
+  cycle.
+- **Layering gate** (`layers.py` + `gates/layering.py`): the authoritative
+  seven-layer model (SUBSTRATE..MOUTH + the ⟂ MNEMOSYNE) is enforced by an AST
+  test that *fails* on any upward import — no architectural debt silently noted,
+  it is a real gate.
 
 ## Deployment
 

@@ -44,10 +44,12 @@ def attempt_d_is_more_than_parts() -> bool:
     en.register("facts", FactSpecialist())
     en.register("writer", WriterSpecialist())
     report = en.run("summarize knowledge then write it")
-    has_fact = "[facts]" in report.synthesized
-    has_writing = "[writer]" in report.synthesized
-    ok = has_fact and has_writing
-    print(f"  synthesis combines specialist outputs: {ok}")
+    # True synthesis fuses the fact INTO the draft — one artifact with both
+    # contributions, not two tagged strings.
+    has_fact = "measured value is 42" in (report.synthesized or "")
+    has_writing = "write" in (report.synthesized or "").lower()
+    ok = has_fact and has_writing and report.method == "fusion"
+    print(f"  synthesis fuses specialist outputs: {ok}")
     return ok
 
 
