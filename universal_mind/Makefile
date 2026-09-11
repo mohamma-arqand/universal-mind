@@ -111,6 +111,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_policy_trace.py --junit-xml=$(ARTIFACTS_DIR)/probe_policy_trace.xml
 	@echo "Running probe_multilingual.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_multilingual.py --junit-xml=$(ARTIFACTS_DIR)/probe_multilingual.xml
+	@echo "Running probe_temporal_awareness.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_temporal_awareness.py --junit-xml=$(ARTIFACTS_DIR)/probe_temporal_awareness.xml
 	@echo "All probes passed"
 
 # Clean artifacts

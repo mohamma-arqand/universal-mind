@@ -78,6 +78,7 @@ PROBES = [
     "probe_red_team.py",
     "probe_policy_trace.py",
     "probe_multilingual.py",
+    "probe_temporal_awareness.py",
 ]
 
 
