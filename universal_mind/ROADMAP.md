@@ -39,7 +39,7 @@ over *hypotheses* and *doubt*, not lock into its first guess.
 - [x] 3.2 Temporal/environment awareness — clock, zone, "what time is it and what it means"  (core/temporal_awareness.py)
 - [x] 3.3 Real external tools — a real service behind the gateway, fail-safe  (io/real_tools.py)
 - [x] 3.4 Distributed memory — several instances share one synchronized ledger  (memory/shared.py)
-- [ ] 3.5 Cross-session identity — continuous identity survives restart
+- [x] 3.5 Cross-session identity — continuous identity survives restart  (core/persistent_identity.py)
 - [ ] 3.6 Observable deploy — real metrics (prometheus/otel), not just unit tests
 
 ---

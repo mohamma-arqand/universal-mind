@@ -81,6 +81,7 @@ PROBES = [
     "probe_temporal_awareness.py",
     "probe_real_tools.py",
     "probe_shared.py",
+    "probe_persistent_identity.py",
 ]
 
 
