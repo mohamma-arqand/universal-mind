@@ -246,7 +246,7 @@ class HttpChatProvider:
             if status >= 500 or status == 429:
                 raise ProviderTransient(f"provider HTTP {status}: {exc.reason}") from exc
             raise self._http_4xx(status, exc.reason) from exc
-        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        except (urllib.error.URLError, TimeoutError, ValueError, ConnectionError, OSError) as exc:
             raise ProviderTransient(f"provider transport failure: {exc}") from exc
 
         parsed: dict[str, Any]

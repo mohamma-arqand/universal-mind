@@ -136,11 +136,18 @@ class LayeringGate(Gate):
         # Determine target layer from capability
         target_layer = get_layer(capability.name)
 
-        # If caller is foundation, always allowed
-        if caller_layer <= 7:  # Foundation layers
+        # Unknown caller or target cannot be classified as a *clear* violation:
+        # fail-open (allow) rather than false-positive-deny, matching the gate's
+        # historical behavior when context carries no layer signal.
+        if caller_layer == 999 or target_layer == 999:
             return None
 
-        # Violation: caller at lower layer (higher number) commanding higher layer (lower number)
+        # Foundation layers (SUBSTRATE, L0) may be imported by anyone.
+        if is_foundation(capability.name) or caller_layer == 0:
+            return None
+
+        # Violation: caller at lower layer (higher number) commanding higher layer
+        # (lower number).
         if caller_layer > target_layer:
             return LayerViolation(
                 action_layer=caller_layer,
