@@ -1,4 +1,9 @@
 """Demiurge layer: strategic decomposition, multi-strategy execution, synthesis."""
+from .causal import (
+    CausalFinding,
+    TraceEvent,
+    infer_causes,
+)
 from .decompose import (
     DecompositionError,
     DecompositionResult,
@@ -38,6 +43,7 @@ from .synthesis import (
 )
 
 __all__ = [
+    'CausalFinding',
     'CycleDetected',
     'DecompositionError',
     'DecompositionResult',
@@ -56,10 +62,12 @@ __all__ = [
     'SynthesisError',
     'SynthesisResult',
     'TopologicalSortResult',
+    'TraceEvent',
     'build_graph_from_sub_intents',
     'create_n_parallel_strategies',
     'decompose_intent',
     'decompose_with_memory',
+    'infer_causes',
     'score_hypothesis',
     'synthesize_by_sub_intent',
     'synthesize_results',

@@ -67,6 +67,7 @@ PROBES = [
     "probe_scale_durability.py",
     "probe_counterfactual.py",
     "probe_hypotheses.py",
+    "probe_causal.py",
 ]
 
 
