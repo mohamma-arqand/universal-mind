@@ -80,6 +80,7 @@ PROBES = [
     "probe_multilingual.py",
     "probe_temporal_awareness.py",
     "probe_real_tools.py",
+    "probe_shared.py",
 ]
 
 
