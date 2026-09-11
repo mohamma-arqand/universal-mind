@@ -84,6 +84,7 @@ PROBES = [
     "probe_persistent_identity.py",
     "probe_deploy_metrics.py",
     "probe_metacognition.py",
+    "probe_audit_rubric.py",
 ]
 
 

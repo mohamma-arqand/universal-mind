@@ -32,8 +32,8 @@ The final proof is an *independent* measure. We build the yardstick itself —
 a fixed rubric a neutral party applies, and an adapter that scores the mind
 against it without trusting its self-report.
 
-- [ ] C1 An external-audit rubric + runner (fixed, versioned, neutral)
-- [ ] C2 A scorecard that reports "how global" against that rubric, with evidence
+- [x] C1 An external-audit rubric + runner (fixed, versioned, neutral)  (arete/audit_rubric.py)
+- [x] C2 A scorecard that reports "how global" against that rubric, with evidence  (probe_audit_rubric.py)
 
 ## Final gate
-- [ ] full verify READY + consolidated status across A, B, C
+- [x] full verify READY + consolidated status across A, B, C  (547 tests · 41 probes · mypy 0 · READY)

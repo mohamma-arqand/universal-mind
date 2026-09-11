@@ -21,6 +21,11 @@ from universal_mind.arete.arbiter import (
     VirtueScorer,
     default_virtue_scorer,
 )
+from universal_mind.arete.audit_rubric import (
+    AuditScorecard,
+    ExternalRubric,
+    RubricDimension,
+)
 from universal_mind.arete.counterfactual import (
     CounterfactualError,
     CounterfactualResult,
@@ -91,6 +96,7 @@ __all__ = [
     "AreteError",
     "AttackAttempt",
     "AuditFinding",
+    "AuditScorecard",
     "CardinalVirtue",
     "CounterfactualError",
     "CounterfactualResult",
@@ -103,6 +109,7 @@ __all__ = [
     "EvidenceSource",
     "EvidenceType",
     "ExternalAuditResult",
+    "ExternalRubric",
     "InMemoryArbiter",
     "JudgedClaim",
     "JudgmentHealthReport",
@@ -114,6 +121,7 @@ __all__ = [
     "PromotionDecision",
     "PromotionResult",
     "RedTeamReport",
+    "RubricDimension",
     "RubricLearning",
     "Standard",
     "StandardKeeper",
