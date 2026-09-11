@@ -84,7 +84,7 @@ class VirtueWeights:
         if unknown:
             raise AreteError(
                 "Hard-gate virtues must be cardinal virtues; unknown: "
-                + ", ".join(v.value for v in unknown)
+                + ", ".join(str(v) for v in unknown)
             )
         if not 0.0 <= self.hard_gate_threshold <= 1.0:
             raise AreteError("hard_gate_threshold must be in [0.0, 1.0]")
