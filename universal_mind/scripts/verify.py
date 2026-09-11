@@ -79,6 +79,7 @@ PROBES = [
     "probe_policy_trace.py",
     "probe_multilingual.py",
     "probe_temporal_awareness.py",
+    "probe_real_tools.py",
 ]
 
 

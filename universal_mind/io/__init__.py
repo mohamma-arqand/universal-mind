@@ -40,6 +40,7 @@ from universal_mind.io.gateway import (
     ScriptedProvider,
     env_resolver,
 )
+from universal_mind.io.real_tools import RealToolProvider, ToolResult, ToolService
 from universal_mind.io.stub_server import StubChatServer
 
 __all__ = [
@@ -58,12 +59,15 @@ __all__ = [
     "ProviderPermanent",
     "ProviderResult",
     "ProviderTransient",
+    "RealToolProvider",
     "ScriptedProvider",
     "ShellSpecialist",
     "StubChatServer",
     "Tool",
     "ToolCapability",
     "ToolContract",
+    "ToolResult",
+    "ToolService",
     "dossier_for",
     "env_resolver",
     "organ_for",
