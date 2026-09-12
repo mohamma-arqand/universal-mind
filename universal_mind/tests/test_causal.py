@@ -48,6 +48,29 @@ def test_support_and_absence_ratios_are_reported() -> None:
     assert a.support_ratio == 0.5
 
 
+def test_single_cause_trace_is_not_necessary_without_absence_evidence() -> None:
+    """A trace with only one cause (never absent) must NOT call it 'necessary':
+    necessity requires the effect to be observed *absent*, not just present."""
+    events = [_e("1", "A", True), _e("2", "A", True), _e("3", "A", True)]
+    findings = infer_causes(events)
+    by_cause = {f.cause: f for f in findings}
+    assert by_cause["A"].necessary is False
+
+
+def test_necessary_requires_real_absence() -> None:
+    # Same cause "A" present with effect, but "B" events show the effect NEVER
+    # occurs without "A" -> that IS a genuine absence signal -> necessary.
+    events = [
+        _e("1", "A", True),
+        _e("2", "A", True),
+        _e("3", "B", False),
+        _e("4", "B", False),
+    ]
+    findings = infer_causes(events)
+    by_cause = {f.cause: f for f in findings}
+    assert by_cause["A"].necessary is True
+
+
 def test_finding_is_frozen() -> None:
     from dataclasses import FrozenInstanceError
 

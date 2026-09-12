@@ -62,7 +62,12 @@ def infer_causes(events: list[TraceEvent]) -> tuple[CausalFinding, ...]:
         support = sum(1 for e in present if e.effect) / len(present) if present else 0.0
         absence_effect = sum(1 for e in absent if e.effect) / len(absent) if absent else 0.0
 
-        necessary = bool(present) and support > 0.0 and absence_effect == 0.0
+        # "Necessary" demands a real intervention signal: we must have observed the
+        # effect *absent* (never occurring) alongside a genuine absence of the cause.
+        # With NO absent events, absence_effect is an artifact of an empty sample,
+        # not evidence that the effect vanishes without the cause — so it must not
+        # be mistaken for necessity.
+        necessary = bool(present) and support > 0.0 and bool(absent) and absence_effect == 0.0
 
         if necessary:
             explanation = (
