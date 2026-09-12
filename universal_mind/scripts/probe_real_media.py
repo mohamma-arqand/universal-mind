@@ -41,7 +41,7 @@ def check_generation_is_deterministic_size() -> bool:
     if not result["ok"]:
         print("  size determinism skipped (ffmpeg absent)")
         return True
-    ok = result["bytes"] > 0
+    ok: bool = bool(result["bytes"] > 0)
     print(f"  a non-empty image is written to a temp dir (not the tree): {ok}")
     return ok
 
