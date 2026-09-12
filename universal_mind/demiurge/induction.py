@@ -93,11 +93,12 @@ def apply_rule(generalization: Generalization | None, features: dict[str, Any]) 
         return Generalization(rule="no rule induced", prediction=None, confidence=0.0, matched=False)
 
     sig = tuple(sorted((k, repr(v)) for k, v in features.items()))
+    matched = sig in generalization.signatures
     outcome = generalization.signatures.get(sig)
     return Generalization(
         rule=generalization.rule,
         signatures=generalization.signatures,
         prediction=outcome,
         confidence=generalization.confidence,
-        matched=outcome is not None,
+        matched=matched,
     )
