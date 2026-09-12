@@ -75,11 +75,17 @@ def counterfactual_check(
         raise CounterfactualError("cannot counterfactually check an empty dispute")
 
     original_winner = verdict.winner_strategy_id
-    # Find the original winner's scorecard value for the reversed dimension.
+    # Report the reversed dimension's value from the CANDIDATE's declared virtues
+    # (the actual premise that _reverse_candidate flips), not from the scorecard —
+    # the scorecard back-fills undeclared virtues with 0.0, which would fabricate
+    # original=0.0 / reversed=1.0 for a dimension the candidate never declared.
     original_value = 0.0
-    for card in verdict.scorecards:
-        if card.candidate_strategy_id == original_winner:
-            original_value = card.virtue_scores.get(assumption, 0.0)
+    if original_winner is not None:
+        for c in dispute.candidates:
+            if c.strategy_id == original_winner:
+                virtues = c.metadata.get("virtues", {}) if isinstance(c.metadata, dict) else {}
+                original_value = float(virtues.get(assumption, 0.5))
+                break
 
     effective_arbiter = arbiter if arbiter is not None else InMemoryArbiter()
 

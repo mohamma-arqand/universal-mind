@@ -79,3 +79,23 @@ def test_reversed_value_is_flipped() -> None:
     result = counterfactual_check(dispute, verdict, assumption="wisdom")
     assert result.original_value == 0.8
     assert math.isclose(result.reversed_value, 0.2)
+
+
+def test_undeclared_dimension_default_matches_reversal() -> None:
+    """An assumption the candidate never declared must report the same default the
+    reversal actually used (0.5), not invent original=0.0 / reversed=1.0 — the
+    reported values must reflect the flip that happened, not a phantom premise."""
+    import math
+
+    candidate = CandidateOutput(
+        strategy_id="x",
+        output="out-x",
+        # "wisdom" is absent from virtues entirely.
+        metadata={"virtues": {"justice": 1.0, "courage": 1.0, "temperance": 1.0}},
+    )
+    dispute = Dispute(goal="pick", candidates=[candidate])
+    verdict = InMemoryArbiter().arbitrate(dispute)
+    result = counterfactual_check(dispute, verdict, assumption="wisdom")
+    # Once wisdom is undeclared, _reverse_candidate flips 0.5 -> 0.5 (no-op).
+    assert math.isclose(result.original_value, 0.5)
+    assert math.isclose(result.reversed_value, 0.5)
