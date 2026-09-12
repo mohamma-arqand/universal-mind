@@ -171,20 +171,22 @@ class StandardKeeper(InMemoryArbiter):
         if target_depth < 0 or target_depth > current.promotion_depth:
             return None
 
-        # Find the artifact name that held the standard at that depth.
+        # Find the artifact name AND artifact that held the standard at that depth.
         target_name = current.name
+        target_artifact: object = current.artifact
         for rec in history:
             payload = rec.get("payload", {})
             name = str(payload.get("name", ""))
             depth = int(payload.get("promotion_depth", 0) or 0)
             if depth == target_depth:
                 target_name = name
+                target_artifact = payload.get("artifact")
 
         from universal_mind.powers.judgment import CandidateOutput as _C
 
         rolled = Standard(
             name=target_name,
-            artifact=current.artifact if target_depth == current.promotion_depth else "rewound",
+            artifact=target_artifact,
             promotion_depth=target_depth,
             evidence=_seed_bundle("rollback", target_name),
         )

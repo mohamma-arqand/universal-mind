@@ -33,6 +33,19 @@ def test_rollback_rewinds_depth() -> None:
     assert res.current_standard.name == "d1"
 
 
+def test_rollback_restores_real_artifact_not_placeholder() -> None:
+    """Rolling back must recover the real artifact, not a 'rewound' string."""
+    k = _seed_two()
+    res = k.rollback(0, reason="d2 was wrong")
+    assert res is not None
+    # the artifact at depth 0 is the original d1 artifact ("d1"), recovered from
+    # ledger history — never a placeholder.
+    assert res.current_standard.artifact == "d1"
+    # and current() reflects the same real artifact after the rollback
+    cur = k.current()
+    assert cur is not None and cur.artifact == "d1"
+
+
 def test_rollback_records_evidence() -> None:
     k = _seed_two()
     res = k.rollback(0, reason="mistake")
