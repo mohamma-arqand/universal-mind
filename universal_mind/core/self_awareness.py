@@ -110,8 +110,9 @@ class SelfAwarenessLoop:
         elif health.unhealthy:
             action_taken = True
             bad = ", ".join(s.name for s in health.signals if not s.ok)
-            self._bar = min(1.0, self._bar + 0.03)
-            self._budget = round(self._budget * 0.8, 4)
+            # Use the same step as tighten() so the two self-correction paths
+            # (introspection here, Prometheus applier there) can never drift.
+            self._bar, self._budget = self.tighten()
             action_reason = f"unhealthy ({bad}) → raised bar to {self._bar:.2f}, cut budget to {self._budget:.2f}"
         else:
             action_reason = "judgment healthy — no correction needed"
