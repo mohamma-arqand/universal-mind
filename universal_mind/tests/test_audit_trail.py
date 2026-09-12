@@ -28,8 +28,9 @@ def test_last_returns_most_recent() -> None:
     trail = AuditTrail()
     trail.record("a", "t", None, 1, True)
     trail.record("b", "t", None, 2, True)
-    assert trail.last() is not None
-    assert trail.last().capability == "b"
+    last = trail.last()
+    assert last is not None
+    assert last.capability == "b"
 
 
 def test_failure_entry_carries_error() -> None:

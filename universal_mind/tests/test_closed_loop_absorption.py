@@ -41,8 +41,10 @@ def test_malformed_spec_is_refused() -> None:
 
 
 def test_pipeline_runs_end_to_end_for_multiple_tools() -> None:
+    from typing import Any
+
     reg = ToolRegistry()
-    specs = [
+    specs: list[dict[str, Any]] = [
         {"name": "ffmpeg", "capability": "transcode", "mechanism": "subprocess", "command": "ffmpeg", "absorbable": True},
         {"name": "gmail", "capability": "send_email", "mechanism": "http", "endpoint": "http://x", "absorbable": True},
         {"name": "excel", "capability": "spreadsheet", "mechanism": "com", "prog_id": "Excel.Application"},
