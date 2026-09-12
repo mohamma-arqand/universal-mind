@@ -46,7 +46,24 @@ def _serve(body: str, status: int = 200) -> tuple[ThreadingHTTPServer, threading
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Stub)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    # Wait until the server is actually accepting connections, so the first
+    # request cannot race the accept loop and abort (WinError 10053 flake).
+    port = server.server_address[1]
+    _wait_until_ready(port)
     return server, thread
+
+
+def _wait_until_ready(port: int, *, attempts: int = 50) -> None:
+    import socket
+    import time
+
+    for _ in range(attempts):
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                return
+        except OSError:
+            time.sleep(0.02)
+    raise RuntimeError(f"stub server on {port} never became ready")
 
 
 def _provider(server: ThreadingHTTPServer) -> HttpChatProvider:
@@ -54,12 +71,41 @@ def _provider(server: ThreadingHTTPServer) -> HttpChatProvider:
     return HttpChatProvider(f"http://127.0.0.1:{port}/v1", "m", resolver=lambda _n: "k")
 
 
+def _call_once_with_retry(
+    provider: HttpChatProvider,
+    messages: list[Message],
+    *,
+    attempts: int = 5,
+) -> ProviderResult:
+    """Call once, retrying the rare Windows connection-abort race (WinError 10053).
+
+    A single localhost HTTP round-trip can occasionally abort before the stub
+    server writes its response (an OS-level race, not a code bug). Retry a small
+    number of times on ProviderTransient transport failures so the tests assert
+    the *logical* outcome (5xx transient / no-content permanent) rather than the
+    transport flake.
+    """
+    import time
+
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            return provider.call(messages)
+        except ProviderTransient as exc:
+            last = exc
+            if i < attempts - 1:
+                time.sleep(0.05)
+    assert last is not None
+    raise last
+
+
 def test_http_5xx_is_transient() -> None:
     server, thread = _serve('{"error": "boom"}', status=500)
     try:
         p = _provider(server)
+        messages = [Message(role="user", content="hi")]
         with pytest.raises(ProviderTransient):
-            p.call([Message(role="user", content="hi")])
+            _call_once_with_retry(p, messages)
     finally:
         server.shutdown(); thread.join()
 
@@ -68,8 +114,9 @@ def test_http_429_is_transient() -> None:
     server, thread = _serve('{"error": "rate"}', status=429)
     try:
         p = _provider(server)
+        messages = [Message(role="user", content="hi")]
         with pytest.raises(ProviderTransient):
-            p.call([Message(role="user", content="hi")])
+            _call_once_with_retry(p, messages)
     finally:
         server.shutdown(); thread.join()
 
@@ -79,7 +126,7 @@ def test_http_malformed_json_is_permanent() -> None:
     try:
         p = _provider(server)
         with pytest.raises(ProviderPermanent):
-            p.call([Message(role="user", content="hi")])
+            _call_once_with_retry(p, [Message(role="user", content="hi")])
     finally:
         server.shutdown(); thread.join()
 
@@ -89,7 +136,7 @@ def test_http_no_content_is_permanent() -> None:
     try:
         p = _provider(server)
         with pytest.raises(ProviderPermanent):
-            p.call([Message(role="user", content="hi")])
+            _call_once_with_retry(p, [Message(role="user", content="hi")])
     finally:
         server.shutdown(); thread.join()
 
