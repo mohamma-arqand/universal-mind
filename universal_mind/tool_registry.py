@@ -109,6 +109,10 @@ class ToolRegistry:
         """True if at least one tool can honor the capability."""
         return bool(self._by_capability.get(capability))
 
+    def capabilities(self) -> tuple[str, ...]:
+        """Every distinct capability the encyclopedia knows about (sorted)."""
+        return tuple(sorted(self._by_capability))
+
     def absorbable_for(self, capability: str) -> list[ToolEntry]:
         """The subset of tools for a capability whose code/behavior we can absorb."""
         return [t for t in self.tools_for(capability) if t.absorbable]
