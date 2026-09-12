@@ -97,12 +97,22 @@ class JudgmentLineage:
         ]
 
     def rejected_branches(self) -> tuple[str, ...]:
-        """Names of contenders that lost a head-to-head (recoverable alternatives)."""
-        return tuple(n.contender for n in self._nodes if n.decision == "rejected")
+        """Names of contenders that lost a head-to-head (recoverable alternatives).
+
+        A contender that lost includes both *rejected* and *deferred* outcomes:
+        a deferral is not a win — recency failed to overturn the standing
+        standard, so the branch did not take the seat. Excluding deferrals would
+        bury the closest near-misses.
+        """
+        return tuple(n.contender for n in self._nodes if n.decision in ("rejected", "deferred"))
 
     def best_losing_contender(self) -> JudgmentNode | None:
-        """The highest-excellence contender that still lost — the closest near-miss."""
-        losers = [n for n in self._nodes if n.decision == "rejected"]
+        """The highest-excellence contender that still lost — the closest near-miss.
+
+        "Lost" includes deferrals (parity that failed to overturn), so the closest
+        near-miss is never hidden behind a barely-rejected node.
+        """
+        losers = [n for n in self._nodes if n.decision in ("rejected", "deferred")]
         if not losers:
             return None
         return max(losers, key=lambda n: n.excellence)

@@ -68,6 +68,22 @@ def test_best_losing_contender_finds_near_miss() -> None:
     assert loser.excellence > 0
 
 
+def test_deferred_contender_counts_as_losing_branch() -> None:
+    """A deferral is not a win: a parity contender that failed to overturn the
+    standing standard 'lost' the head-to-head and must be recoverable."""
+    lin = _lineage()
+    lin.consider(_cand("stand", BETTER))          # becomes standing standard
+    # A near-but-not-equal contender is deferred (recency never wins at parity).
+    deferred = _cand("near", {"justice": 1.0, "wisdom": 0.9, "courage": 1.0, "temperance": 1.0})
+    result = lin.consider(deferred)
+    assert result.decision.value == "deferred"
+    # The deferred contender is still a losing, recoverable branch.
+    assert "near" in lin.rejected_branches()
+    loser = lin.best_losing_contender()
+    assert loser is not None
+    assert loser.contender == "near"
+
+
 def test_count_by_decision() -> None:
     lin = _lineage()
     lin.consider(_cand("d1"))
