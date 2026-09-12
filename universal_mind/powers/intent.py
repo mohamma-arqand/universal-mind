@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
-from ..core.intent import Determinism, Intent, IntentIncomplete
+from ..core.intent import Determinism, Intent
 
 
 @dataclass(frozen=True)
@@ -100,28 +100,19 @@ class InMemoryIntentTranslation:
         if any(w in raw.lower() for w in ['creative', 'explore', 'brainstorm', 'imagine']):
             determinism = Determinism.CREATIVE
 
-        try:
-            intent = Intent.from_raw(
-                raw_text=raw,
-                goal=goal,
-                success_criteria=criteria,
-                constraints=constraints,
-                deadline=None,
-                determinism=determinism,
-                owner_id=input.owner_id,
-            )
-        except IntentIncomplete as e:
-            # Fallback minimal intent
-            intent = Intent.from_raw(
-                raw_text=raw,
-                goal=goal or "Unspecified goal",
-                success_criteria=["Task completed"],
-                constraints=[],
-                deadline=None,
-                determinism=determinism,
-                owner_id=input.owner_id,
-            )
-            warnings.append(f"Intent validation warning: {e}")
+        # A vague/empty request must NOT become a fabricated "Unspecified goal" intent
+        # that the rest of the system then treats as a real, actionable commitment.
+        # We let IntentIncomplete propagate so the caller decides how to clarify,
+        # rather than guessing a placeholder goal on their behalf.
+        intent = Intent.from_raw(
+            raw_text=raw,
+            goal=goal,
+            success_criteria=criteria,
+            constraints=constraints,
+            deadline=None,
+            determinism=determinism,
+            owner_id=input.owner_id,
+        )
 
         # Confidence based on how much we extracted
         confidence = 0.5

@@ -43,10 +43,15 @@ def test_determinism_defaults_strict() -> None:
     assert out.intent.determinism.value == "strict"
 
 
-def test_empty_input_falls_back_to_default() -> None:
-    out = _translate("")
-    assert out.intent.goal  # non-empty fallback
-    assert out.warnings
+def test_empty_input_cannot_fabricate_a_goal() -> None:
+    """An empty request must NOT become a fabricated 'Unspecified goal' intent:
+    it is a missing signal and must raise, not be papered over."""
+    import pytest
+
+    from universal_mind.core.intent import IntentIncomplete
+
+    with pytest.raises(IntentIncomplete):
+        _translate("")
 
 
 def test_confidence_bounds_are_0_1() -> None:
