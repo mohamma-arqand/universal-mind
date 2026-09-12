@@ -66,22 +66,26 @@ def run_red_team(mouth: Mouth | None = None) -> RedTeamReport:
     for attack_id, payload in _ATTACKS:
         kind = ""
         raised = False
+        defense_crashed = False
         try:
             mouth.commit(payload, "attacker")
         except IntentNeedsClarification:
             kind, raised = "clarification", True
         except IntentConflict:
             kind, raised = "conflict", True
-        except Exception:  # noqa: BLE001 - any other refusal also counts as blocked
-            kind, raised = "other", True
+        except Exception:  # noqa: BLE001 — a crash is a *defense failure*, not a block
+            kind, raised = "crash", True
+            defense_crashed = True
 
-        blocked = raised
+        # A crash is NOT a held defense: the input got through to an internal fault
+        # rather than being cleanly refused. Report it as penetration, not blocked.
+        blocked = raised and not defense_crashed
         attempts.append(
             AttackAttempt(
                 attack_id=attack_id,
                 payload=payload,
                 blocked=blocked,
-                result="accepted" if not blocked else kind,
+                result=kind if raised else "accepted",
             )
         )
 

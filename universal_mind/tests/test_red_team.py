@@ -23,7 +23,21 @@ def test_unguarded_mouth_is_penetrated() -> None:
 def test_each_attempt_has_a_result() -> None:
     report = run_red_team()
     for attempt in report.attempts:
-        assert attempt.result in ("accepted", "clarification", "conflict", "other")
+        assert attempt.result in ("accepted", "clarification", "conflict", "crash")
+
+
+def test_crashing_defense_is_penetration_not_blocked() -> None:
+    """A defense that *crashes* (unexpected internal fault) must NOT be reported
+    as 'held': the attack broke through to a fault, not a clean refusal."""
+
+    class _CrashingMouth:
+        def commit(self, raw_text: str, owner_id: str) -> None:
+            raise RuntimeError("internal fault while parsing")
+
+    report = run_red_team(_CrashingMouth())  # type: ignore[arg-type]
+    assert report.penetrated == len(report.attempts)  # every 'block' was a crash
+    assert report.passed is False
+    assert all(a.result == "crash" for a in report.attempts)
 
 
 def test_sweep_is_deterministic() -> None:
