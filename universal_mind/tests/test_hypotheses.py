@@ -51,6 +51,18 @@ def test_empty_ensemble_is_not_converged() -> None:
     assert result.alternatives == ()
 
 
+def test_single_hypothesis_is_not_converged() -> None:
+    """One hypothesis has no rival to beat: 'converged' means several readings
+    resolved to one winner, not that a single reading exists. A lone hypothesis
+    with no competitor must NOT self-declare convergence."""
+    ensemble = HypothesisEnsemble(margin=0.1)
+    result = ensemble.converge([_h("only", 0.95, 0.9)])
+    assert result.best is not None
+    assert result.best.hypothesis_id == "only"
+    # no rival -> no decisive margin -> not converged
+    assert result.converged is False
+
+
 def test_score_prefers_evidence_over_simplicity() -> None:
     # More evidence, less simplicity beats less evidence, more simplicity.
     assert score_hypothesis(_h("x", 0.9, 0.1)) > score_hypothesis(_h("y", 0.2, 1.0))

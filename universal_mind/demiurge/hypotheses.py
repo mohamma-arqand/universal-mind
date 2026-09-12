@@ -67,8 +67,14 @@ class HypothesisEnsemble:
 
         ranked = tuple(sorted(hypotheses, key=lambda h: (-_score(h), h.hypothesis_id)))
         best = ranked[0]
-        second_score = _score(ranked[1]) if len(ranked) > 1 else 0.0
-        converged = _score(best) - second_score >= self._margin
+        if len(ranked) > 1:
+            second_score = _score(ranked[1])
+            converged = _score(best) - second_score >= self._margin
+        else:
+            # A single hypothesis has no rival to beat: "converged" means several
+            # readings resolved to one winner, not that one reading is present.
+            # With nothing to compare against, the field is NOT converged.
+            converged = False
 
         # Alternatives = the strongest runners-up (up to min_alternatives), which
         # remain live so the mind never loses sight of competing readings.
