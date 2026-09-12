@@ -138,3 +138,21 @@ def test_self_code_audit_finds_orphaned_import(tmp_path: Path) -> None:
     )
     findings = scan_source(Path(tmp_path))
     assert any(f.kind == "orphaned_import" for f in findings)
+
+
+def test_self_code_audit_skips_scripts_and_syntax_errors(tmp_path: Path) -> None:
+    from universal_mind.core.self_code_audit import scan_source
+
+    # a file under scripts/ is skipped entirely
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    (scripts_dir / "x.py").write_text("no docstring at all\n", encoding="utf-8")
+
+    # a module with a syntax error is skipped (OSError/SyntaxError branch)
+    (tmp_path / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+
+    findings = scan_source(Path(tmp_path))
+    # neither the scripts file nor the broken file appear as findings
+    paths = {f.path for f in findings}
+    assert not any("scripts" in p for p in paths)
+    assert not any("broken.py" in p for p in paths)
