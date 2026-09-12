@@ -13,6 +13,7 @@ latency is measured but only reported, never a correctness criterion).
 
 from __future__ import annotations
 
+import math
 import statistics
 import time
 from dataclasses import dataclass
@@ -62,7 +63,7 @@ def run_load(
     elapsed = time.perf_counter() - start
     sorted_lat = sorted(latencies_ms)
     p50 = statistics.median(sorted_lat)
-    p95 = sorted_lat[int(len(sorted_lat) * 0.95) - 1] if sorted_lat else 0.0
+    p95 = _percentile(sorted_lat, 0.95)
     throughput = requests / elapsed if elapsed > 0 else 0.0
 
     return LoadReport(
@@ -74,6 +75,16 @@ def run_load(
         final_ledger_size=mind.ledger_size,
         ledger_kinds=mind.ledger_kinds(),
     )
+
+
+def _percentile(sorted_values: list[float], q: float) -> float:
+    """Nearest-rank percentile (q in 0..1) over a sorted list.
+
+    Returns the value at index ceil(q * n) - 1. Return 0.0 for an empty list.
+    """
+    if not sorted_values:
+        return 0.0
+    return sorted_values[math.ceil(len(sorted_values) * q) - 1]
 
 
 def verify_durability_under_load(directory: str | Path) -> bool:

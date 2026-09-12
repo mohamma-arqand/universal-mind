@@ -6,9 +6,22 @@ from pathlib import Path
 
 from universal_mind.tools.load_harness import (
     LoadReport,
+    _percentile,
     run_load,
     verify_durability_under_load,
 )
+
+
+def test_percentile_nearest_rank_no_off_by_one() -> None:
+    # n=5: p95 = ceil(5*0.95)-1 = ceil(4.75)-1 = 4 -> index 4 (the max)
+    assert _percentile([1.0, 2.0, 3.0, 4.0, 5.0], 0.95) == 5.0
+    # n=10: ceil(9.5)-1 = 9 -> index 9 (the max)
+    assert _percentile([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 0.95) == 10.0
+    # n=20: ceil(19)-1 = 18 -> index 18 (the 19th), NOT 19
+    vals = [float(i) for i in range(1, 21)]
+    assert _percentile(vals, 0.95) == 19.0
+    # empty -> 0.0
+    assert _percentile([], 0.95) == 0.0
 
 
 def test_run_load_reports_honest_numbers(tmp_path: Path) -> None:
