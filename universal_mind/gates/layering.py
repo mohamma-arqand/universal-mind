@@ -1,102 +1,117 @@
-"""Layering Gate: enforces layer boundaries (no upward commands)."""
+"""Layering Gate: enforce the canonical layer boundary (no upward calls).
+
+This gate is the *runtime* enforcement of the single layer model defined in
+``universal_mind.layers``. It does NOT keep its own copy of the layer ranking:
+it derives every layer from the canonical :class:`Layer` enum and the
+:data:`LayerContract.may_call` matrix, so there is exactly one source of truth.
+
+Previously this module duplicated the model as a string-keyed ``LAYER_RANKING``
+dict and a *second* ``LayerViolation`` dataclass, and its ``caller_layer >
+target_layer => DENY`` rule was the inverse of the model's ``may_call`` rule
+(DEMIURGE may call PANTHEON, but the old gate refused it). Those are removed.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from universal_mind.core.intent import Intent
+from universal_mind.layers import LAYER_CONTRACTS, Layer, LayerViolation
 from universal_mind.pantheon.registry import CapabilityDossier
 
 from .base import Gate, Verdict
 
+__all__ = [
+    "LayerViolation",
+    "LayeringGate",
+    "call_allowed",
+    "create_layering_gate",
+    "layer_for_capability",
+]
 
-@dataclass(frozen=True)
-class LayerViolation:
-    """A layering violation detected by LayeringGate."""
-    action_layer: int
-    target_layer: int
-    action: str
-    target: str
-    message: str
-
-
-# Layer ranking (lower number = higher layer = more privileged)
-# Rule: a module at layer N can only command layers >= N (same or lower)
-# i.e., cannot import/call upward to layers with smaller numbers.
-#
-# Aligned with the authoritative model in universal_mind/layers.py (Layer enum):
-# SUBSTRATE=0, GATEWAY=1, PANTHEON=2, DEMIURGE=3, ARETE=4, PROMETHEUS=5,
-# MOUTH=6, MNEMOSYNE=7 (the ⟂ layer, callable by all, calls only SUBSTRATE).
-LAYER_RANKING = {
-    'io': 1,
-    'pantheon': 2,
-    'demiurge': 3,
-    'arete': 4,
-    'prometheus': 5,
-    'mouth': 6,
-    'memory.mnemosyne': 7,
-    'memory.lifespan': 7,
-    'sovereign': 6,
-    'synthesis': 3,
-    'lifecycle': 5,
-    'integration': 5,
-    'gates': 2,
-    'core.executive': 3,
-    'observability': 2,
-    'core.clock': 0,
-    'core.identity': 0,
-    'core.models': 0,
-    'core.intent': 0,
-    'core.errors': 0,
-    'memory.store': 0,
-    'layers': 0,
-    'powers': 3,
-    'feedback': 4,
-    'durable': 5,
-    'compose': 3,
-}
-
-# Foundation modules (can be imported by anyone — the SUBSTRATE layer L0).
-FOUNDATION_LAYERS = {
-    'core.clock', 'core.identity', 'core.models', 'memory.store',
-    'core.intent', 'core.errors', 'layers',
+# Map a capability/dossier name (or a component module path) to its canonical
+# architectural Layer. Keys are the *canonical* layer names plus the module
+# prefixes the executive actually sees. The numeric values are the Layer enum
+# members, never raw ints, so a mistake here is a loud KeyError, not a silent
+# mis-ranking.
+_MODULE_TO_LAYER: dict[str, Layer] = {
+    # L0 SUBSTRATE (foundation — importable by all)
+    "core.clock": Layer.SUBSTRATE,
+    "core.identity": Layer.SUBSTRATE,
+    "core.models": Layer.SUBSTRATE,
+    "core.intent": Layer.SUBSTRATE,
+    "core.errors": Layer.SUBSTRATE,
+    "memory.store": Layer.SUBSTRATE,
+    "layers": Layer.SUBSTRATE,
+    # L1 GATEWAY
+    "io": Layer.GATEWAY,
+    "gates": Layer.GATEWAY,
+    "observability": Layer.GATEWAY,
+    "compose": Layer.GATEWAY,
+    # L2 PANTHEON
+    "pantheon": Layer.PANTHEON,
+    # L3 DEMIURGE
+    "demiurge": Layer.DEMIURGE,
+    "core.executive": Layer.DEMIURGE,
+    "synthesis": Layer.DEMIURGE,
+    "powers": Layer.DEMIURGE,
+    # L4 ARETE
+    "arete": Layer.ARETE,
+    "feedback": Layer.ARETE,
+    # L5 PROMETHEUS
+    "prometheus": Layer.PROMETHEUS,
+    "lifecycle": Layer.PROMETHEUS,
+    "integration": Layer.PROMETHEUS,
+    "durable": Layer.PROMETHEUS,
+    # L6 MOUTH
+    "mouth": Layer.MOUTH,
+    "sovereign": Layer.MOUTH,
+    # ⟂ MNEMOSYNE
+    "memory.mnemosyne": Layer.MNEMOSYNE,
+    "memory.lifespan": Layer.MNEMOSYNE,
 }
 
 
-def get_layer(module_name: str) -> int:
-    """Get layer number for a module. Unknown = 999 (lowest)."""
-    for prefix, layer in LAYER_RANKING.items():
-        if module_name == prefix or module_name.startswith(prefix + '.'):
+def layer_for_capability(capability: CapabilityDossier) -> Layer:
+    """Resolve the canonical :class:`Layer` for a capability, by name.
+
+    Unknown names are treated as :data:`Layer.MNEMOSYNE` is NOT — an unknown
+    component is *not* a special perpendicular layer, so we refuse to classify
+    it rather than assume a rank. Callers handle the ``Unknown layer`` contract.
+    """
+    name = capability.name
+    for prefix, layer in _MODULE_TO_LAYER.items():
+        if name == prefix or name.startswith(prefix + "."):
             return layer
-    return 999
+    # A capability whose name we cannot map has no declared layer: treat it as
+    # the lowest/least-privileged (SUBSTRATE-like) so an unranked component can
+    # never be assumed to outrank a real one.
+    return Layer.MNEMOSYNE if name.startswith("memory.") else Layer.MOUTH
 
 
-def is_foundation(module_name: str) -> bool:
-    return module_name in FOUNDATION_LAYERS
+def call_allowed(caller: Layer, callee: Layer) -> bool:
+    """Whether ``caller`` may command/call ``callee`` per the canonical model.
+
+    A layer may call everything in its own :data:`LayerContract.may_call` set —
+    that is, itself, every lower layer, and (for all but MNEMOSYNE) the
+    perpendicular memory layer. MNEMOSYNE itself may only call SUBSTRATE.
+    """
+    contract = LAYER_CONTRACTS.get(caller)
+    if contract is None:
+        return False  # an unranked caller may call nothing beyond itself
+    return callee in contract.may_call
 
 
 class LayeringGate(Gate):
-    """Gate that rejects any action violating layer boundaries.
+    """Gate that rejects any intent commanding a capability outside its layer."""
 
-    Rule: A lower layer (higher number) must not command a higher layer
-    (lower number). This gate checks the call stack to detect violations.
-
-    Precedence: 900 (runs after PowerZero at 1000, before Risk at 600).
-    """
-
-    def __init__(
-        self,
-        name: str = "Layering",
-        enabled: bool = True,
-    ):
-        # Name is fixed to "Layering" to match GATE_PRECEDENCE
+    def __init__(self, name: str = "Layering", enabled: bool = True) -> None:
         self._name = name
         self._enabled = enabled
 
     @property
     def precedence(self) -> int:
-        return 900  # Not used anymore, but kept for interface compatibility
+        return 900  # kept for interface compatibility; ordering is frozen elsewhere
 
     @property
     def name(self) -> str:
@@ -106,79 +121,79 @@ class LayeringGate(Gate):
         if not self._enabled:
             return Verdict.ALLOW
 
-        intent = context.get('intent')
-        capability = context.get('capability')
+        intent = context.get("intent")
+        capability = context.get("capability")
 
         if intent is None or capability is None:
-            return Verdict.ALLOW  # Can't evaluate, allow
+            return Verdict.ALLOW  # nothing to enforce
 
-        # Check if this intent violates layer boundaries
         violation = self._check_layer_violation(intent, capability, context)
-        if violation:
+        if violation is not None:
             return Verdict.DENY
-
         return Verdict.ALLOW
 
     def _check_layer_violation(
         self,
         intent: Intent,
         capability: CapabilityDossier,
-        context: dict[str, Any]
+        context: dict[str, Any],
     ) -> LayerViolation | None:
-        """Check if intent from one layer commands a capability in a higher layer."""
-        # Determine the layer of the caller (intent owner/component)
-        # This is heuristic - in practice, you'd pass caller_layer in context
-        caller_layer = context.get('caller_layer')
+        """Return a violation when the caller's layer may not command the target.
+
+        The caller layer is inferred from ``context['caller_layer']`` when
+        supplied, else from the intent owner/goal. The target layer is the
+        capability's layer. Unknown/unclassified caller or target fails *open*
+        (allow) — a false DENY would break legal pipelines — but a classified
+        caller commanding a target outside its ``may_call`` set is refused by
+        the canonical model.
+        """
+        caller_layer = context.get("caller_layer")
         if caller_layer is None:
-            # Try to infer from owner_id or goal
             caller_layer = self._infer_caller_layer(intent)
 
-        # Determine target layer from capability
-        target_layer = get_layer(capability.name)
+        target_layer = layer_for_capability(capability)
 
-        # Unknown caller or target cannot be classified as a *clear* violation:
-        # fail-open (allow) rather than false-positive-deny, matching the gate's
-        # historical behavior when context carries no layer signal.
-        if caller_layer == 999 or target_layer == 999:
+        # Unclassified: no clear violation, so allow (fail-open).
+        if caller_layer is None or target_layer is None:
             return None
 
-        # Foundation layers (SUBSTRATE, L0) may be imported by anyone.
-        if is_foundation(capability.name) or caller_layer == 0:
+        if call_allowed(Layer(caller_layer), target_layer):
             return None
 
-        # Violation: caller at lower layer (higher number) commanding higher layer
-        # (lower number).
-        if caller_layer > target_layer:
-            return LayerViolation(
-                action_layer=caller_layer,
-                target_layer=target_layer,
-                action=f"intent:{intent.goal}",
-                target=f"capability:{capability.name}",
-                message=(
-                    f"Layer violation: layer {caller_layer} (lower) "
-                    f"cannot command layer {target_layer} (higher)"
-                )
-            )
+        return LayerViolation(
+            caller_layer=Layer(caller_layer),
+            callee_layer=target_layer,
+            caller_name=f"intent:{intent.goal}",
+            callee_name=f"capability:{capability.name}",
+        )
 
-        return None
-
-    def _infer_caller_layer(self, intent: Intent) -> int:
-        """Infer caller layer from intent metadata."""
-        # Heuristic: if owner_id or goal contains layer hints
+    def _infer_caller_layer(self, intent: Intent) -> Layer | None:
+        """Infer the caller's layer from intent owner_id or goal metadata."""
         owner = intent.owner_id.lower() if intent.owner_id else ""
         goal = intent.goal.lower() if intent.goal else ""
-
-        # Check for known layer prefixes
-        for prefix, layer in LAYER_RANKING.items():
+        for prefix, layer in _MODULE_TO_LAYER.items():
             if prefix in owner or prefix in goal:
                 return layer
+        return None
 
-        return 999  # Unknown = lowest layer (most restricted)
 
-
-# Convenience: create a layering gate for standard use
-def create_layering_gate(
-    name: str = "Layering",
-    enabled: bool = True,
-) -> LayeringGate:
+def create_layering_gate(name: str = "Layering", enabled: bool = True) -> LayeringGate:
     return LayeringGate(name=name, enabled=enabled)
+
+
+# Keep the old attribute names get_layer/is_foundation for any external importer
+# that still references the exported surface, but route them through the model.
+def get_layer(module_name: str) -> int:
+    """Return the canonical layer number for a module name (unknown → 999)."""
+    for prefix, layer in _MODULE_TO_LAYER.items():
+        if module_name == prefix or module_name.startswith(prefix + "."):
+            return int(layer.value)
+    return 999
+
+
+def is_foundation(module_name: str) -> bool:
+    """True if ``module_name`` is a SUBSTRATE (L0) component."""
+    for prefix, layer in _MODULE_TO_LAYER.items():
+        if module_name == prefix or module_name.startswith(prefix + "."):
+            return layer is Layer.SUBSTRATE
+    return False
