@@ -2,10 +2,10 @@
 
 Continuing the "absence-as-success" hunt into the remaining core modules.
 
-- [ ] H1 memory/mnemosyne.py  — query ranking / freshness / empty-haystack edge
-- [ ] H2 core/executive.py    — throttle/retry count semantics, mixed state
-- [ ] H3 io/gateway.py        — retry budget / failover / empty-provider edge
-- [ ] H4 arete/lineage.py     — excellence fallback on missing contender card
-- [ ] H5 powers/intent.py     — translation empty / non-actionable edge
+- [x] H1 memory/mnemosyne.py  — empty query returned every fresh record → now []
+- [x] H2 core/executive.py    — audited: retry loop = max_retries+1 attempts (correct); throttle caller-fault exclusion correct
+- [x] H3 io/gateway.py        — audited: while attempt<=budget = max_retries+1 (correct); socket errors now transient (prior fix)
+- [x] H4 arete/lineage.py     — audited: excellence/justice fallback to 0 is degenerate-but-harmless (no false success)
+- [x] H5 powers/intent.py     — empty input fabricated 'Unspecified goal' → now raises IntentIncomplete
 
 Success = real bug fixed + locked by test; mypy 0; ruff clean; READY.
