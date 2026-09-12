@@ -22,10 +22,11 @@ def test_empty_outcome_is_drift() -> None:
     assert result.drift is True
 
 
-def test_empty_goal_is_not_comparable() -> None:
+def test_empty_goal_is_drift_not_on_course() -> None:
+    """An empty goal cannot be judged 'on course' — symmetric with empty outcome."""
     result = assess_goal_drift("", "anything")
-    assert result.drift is False
-    assert "no goal tokens" in result.reason
+    assert result.drift is True
+    assert "no substantive tokens" in result.reason
 
 
 def test_threshold_is_configurable() -> None:

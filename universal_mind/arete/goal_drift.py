@@ -45,7 +45,13 @@ def assess_goal_drift(goal: str, outcome: str, *, threshold: float = 0.3) -> Dri
     outcome_tokens = _tokens(outcome)
 
     if not goal_tokens:
-        return DriftAssessment(drift=False, overlap=0.0, threshold=threshold, reason="no goal tokens to compare")
+        # An empty/unparseable goal has no substance to hold course toward, so it
+        # cannot be judged "on course" — flag it, symmetric with the empty-outcome
+        # case below (both empty inputs mean "nothing to compare", not "on course").
+        return DriftAssessment(
+            drift=True, overlap=0.0, threshold=threshold,
+            reason="goal has no substantive tokens — nothing to hold course toward",
+        )
 
     if not outcome_tokens:
         return DriftAssessment(
