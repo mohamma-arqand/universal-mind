@@ -86,3 +86,15 @@ def test_query_scores_are_bounded() -> None:
 def test_query_handles_empty_store() -> None:
     m = _mnemosyne()
     assert m.query("anything") == []
+
+
+def test_empty_query_returns_nothing_not_every_fresh_record() -> None:
+    """An empty/unparseable query has no signal; it must return [], not surface
+    every fresh record via the freshness bonus (absence-as-success)."""
+    m = _mnemosyne()
+    _record(m, goal="write the report")
+    _record(m, goal="summarize the posture")
+    # a query with no substantive tokens (only <3-char words / punctuation)
+    assert m.query("") == []
+    assert m.query("a b") == []
+    assert m.query(".. /") == []

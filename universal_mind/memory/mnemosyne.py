@@ -129,6 +129,12 @@ class Mnemosyne:
         """
         query_tokens = _tokens(text)
         scored: list[tuple[float, QueryHit]] = []
+        if not query_tokens:
+            # An empty/unparseable query has no signal to rank by: returning
+            # every fresh record (precision 0 + freshness bonus) would surface
+            # arbitrary "matches" for a question that carried no intent. Return
+            # nothing instead — an empty question gets an empty recall.
+            return []
         for record in self.store.read_all():
             if owner_id is not None and record.get("owner_id") != owner_id:
                 continue
