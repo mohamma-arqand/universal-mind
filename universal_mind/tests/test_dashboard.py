@@ -82,6 +82,17 @@ def test_dashboard_is_static_no_server(tmp_path: Path) -> None:
     assert "src=" not in html.replace("data-js", "")
 
 
+def test_dashboard_std_depth_uses_name_not_depth_truthiness(tmp_path: Path) -> None:
+    """std-depth render must key off 'name' (an election exists), never 'depth'
+    (which is 0 for a first uncontested standard — a falsy that would wrongly
+    print 'awaiting first election' beside an already-elected standard)."""
+    data = _extract_data(build_dashboard_html(InMemoryStore()))
+    assert data["standard_current"]["name"] is not None
+    html = build_dashboard_html(InMemoryStore())
+    # the depth line must be keyed to name, not to depth truthiness:
+    assert "cur.name ? `lineage depth" in html
+
+
 def test_dashboard_mnemosyne_and_layers_present(tmp_path: Path) -> None:
     """The seven layers + MNEMOSYNE are all rendered from the payload."""
     data = _extract_data(build_dashboard_html(InMemoryStore()))

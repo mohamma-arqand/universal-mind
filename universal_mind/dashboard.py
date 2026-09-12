@@ -466,7 +466,7 @@ function render(){
   const cur = D.standard_current;
   $('[data-js="std-status"]').textContent = cur.name ? 'current standard' : 'none elected yet';
   $('[data-js="std-cur"]').textContent = cur.name ? cur.name : '—';
-  $('[data-js="std-depth"]').innerHTML = cur.depth ? `lineage depth <b>${cur.depth}</b> · earned by evidence, never recency` : 'awaiting first election';
+  $('[data-js="std-depth"]').innerHTML = cur.name ? `lineage depth <b>${cur.depth}</b> · earned by evidence, never recency` : 'awaiting first election';
   const arrow = `<span class="arrow">→</span>`;
   $('[data-js="trail"]').innerHTML = D.standard_trail.map(t =>
     `<div class="trow">
