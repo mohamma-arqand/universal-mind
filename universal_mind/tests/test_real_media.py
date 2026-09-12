@@ -34,3 +34,29 @@ def test_ffmpeg_error_reports_stderr() -> None:
         result = MediaTool().generate_image()
     assert result["ok"] is False
     assert result["path"] is None
+
+
+def test_inspect_reads_real_metadata() -> None:
+    tool = MediaTool()
+    img = tool.generate_image(size="48x24")
+    assert img["ok"] is True
+    meta = tool.inspect(img["path"])
+    assert meta["ok"] is True
+    assert meta["meta"]["width"] == 48
+    assert meta["meta"]["height"] == 24
+
+
+def test_inspect_missing_file_fails_clean() -> None:
+    tool = MediaTool()
+    result = tool.inspect("nonexistent_file_12345.mp4")
+    assert result["ok"] is False
+    assert "file not found" in result["error"]
+
+
+def test_transcode_produces_a_real_output() -> None:
+    tool = MediaTool()
+    img = tool.generate_image()
+    assert img["ok"] is True
+    out = tool.transcode(img["path"], out_format="png")
+    assert out["ok"] is True
+    assert out["bytes"] > 0
