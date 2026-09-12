@@ -87,12 +87,21 @@ class InMemoryJudgment:
 
         # Simple scoring: count how many success criteria are met
         scores = {}
+        criteria = [c for c in input.success_criteria if str(c).strip()]
+        if not criteria:
+            # Every criterion was blank — nothing meaningful to score against.
+            return JudgmentOutput(
+                verdict=Verdict.DEFER,
+                chosen_strategy_id=None,
+                scores={c.strategy_id: 0.0 for c in input.candidates},
+                reasoning="No non-empty success criteria provided to score candidates",
+            )
         for candidate in input.candidates:
             score = 0.0
             output_str = str(candidate.output).lower()
-            for criterion in input.success_criteria:
+            for criterion in criteria:
                 if criterion.lower() in output_str:
-                    score += 1.0 / len(input.success_criteria)
+                    score += 1.0 / len(criteria)
             scores[candidate.strategy_id] = score
 
         # Choose best

@@ -308,7 +308,7 @@ def _mind(env: _Env, **kw: Any) -> ExecutiveMind:
     return ExecutiveMind(env.registry, env.memory, env.clock, DEFAULT_OWNER, **kw)
 
 
-def test_select_capability_exact_then_substring_then_first() -> None:
+def test_select_capability_exact_then_substring_then_raises() -> None:
     env = _Env.make()
     env.registry.register(_dossier(name="alpha", purpose="first thing"), _Echo())
     env.registry.register(_dossier(name="beta", purpose="second thing"), _Echo())
@@ -317,8 +317,17 @@ def test_select_capability_exact_then_substring_then_first() -> None:
     assert mind._select_capability(_intent(goal="beta")).name == "beta"
     # substring match via purpose
     assert mind._select_capability(_intent(goal="second")).name == "beta"
-    # fallback: no match -> first dossier
-    assert mind._select_capability(_intent(goal="zzz")).name == "alpha"
+    # multiple dossiers, no match -> raise, not an unrelated first-dossier fallback
+    with pytest.raises(TaskFailure):
+        mind._select_capability(_intent(goal="zzz"))
+
+
+def test_select_capability_single_dossier_is_general_fallback() -> None:
+    env = _Env.make()
+    env.registry.register(_dossier(name="generate", purpose="provider response"), _Echo())
+    mind = _mind(env)
+    # a single capability honors any goal (de-facto general-purpose)
+    assert mind._select_capability(_intent(goal="summarize")).name == "generate"
 
 
 def test_select_capability_no_dossiers_raises_task_failure() -> None:

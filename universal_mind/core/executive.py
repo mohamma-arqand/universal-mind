@@ -1006,4 +1006,13 @@ class ExecutiveMind:
             blob = f"{dossier.name} {dossier.signature} {dossier.purpose}".lower()
             if goal and goal in blob:
                 return dossier
-        return dossiers[0]
+        if len(dossiers) == 1:
+            # A single registered capability is de-facto general-purpose: it must
+            # honor any goal (there is no other specialist to route to).
+            return dossiers[0]
+        # Several capabilities exist but none matches the goal — do not silently
+        # fall back to the first (an unrelated specialist doing unrelated work).
+        raise TaskFailure(
+            f'No capability matches intent goal: {intent.goal!r} '
+            f'(registered: {[d.name for d in dossiers]}).'
+        )

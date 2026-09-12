@@ -211,7 +211,12 @@ class CapabilityResolver:
             if domain.lower() in o.dossier.purpose.lower()
             or domain.lower() in o.signature.lower()
         ]
-        pool = exact or purpose or organs
+        pool = exact or purpose
+        if not pool:
+            # No organ fits the requested domain — return None so the caller can
+            # raise an honest "no specialist" error, rather than silently serving
+            # an unrelated organ (the highest-credibility one) as a false match.
+            return None
         # Highest credibility; ties by name for determinism.
         return max(pool, key=lambda o: (o.credibility, -len(o.name)))
 

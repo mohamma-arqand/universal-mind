@@ -152,3 +152,13 @@ def test_resolver_prefers_credible_on_tie() -> None:
 def test_resolver_empty_registry() -> None:
     """No organs -> resolver returns None, not an error."""
     assert CapabilityResolver().resolve_organ(_registry(), "anything") is None
+
+
+def test_resolver_no_domain_match_returns_none_not_arbitrary_organ() -> None:
+    """No organ fits the requested domain -> None, not the highest-credibility
+    unrelated organ (a false match that would silently do the wrong work)."""
+    reg = _registry()
+    register_tool(reg, ShellSpecialist(), "owner")   # domain ("system",)
+    register_tool(reg, HumanSpecialist(), "owner")   # domains ("general", "safety")
+    # "writing" matches nothing — must be None, not "human" (credibility 1.0).
+    assert CapabilityResolver().resolve_organ(reg, "writing") is None

@@ -53,6 +53,15 @@ def test_empty_criteria_defers_instead_of_crashing() -> None:
     assert out.scores == {"a": 0.0}
 
 
+def test_blank_criteria_do_not_fabricate_a_full_match() -> None:
+    # A blank criterion ("") would substring-match every output -> every
+    # candidate scored 1.0 -> a false ALLOW. Blank criteria must be ignored,
+    # and if *all* are blank the judgment defers instead of allowing.
+    out = _run(_input([_cand("a", "anything at all")], criteria=["", "   "]))
+    assert out.verdict is Verdict.DEFER
+    assert out.chosen_strategy_id is None
+
+
 def test_full_match_allows_and_picks_best() -> None:
     out = _run(_input([
         _cand("weak", "no match here"),
