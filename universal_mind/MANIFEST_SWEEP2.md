@@ -5,17 +5,19 @@ Continuation of the coverage-to-bug-fix method. Remaining live modules under
 
 Priority = (uncovered lines × bug-likelihood). Most impactful first.
 
-- [ ] X1 gates/layering.py        (87%,  8 lines) — layer enforcement, safety-critical
-- [ ] X2 core/errors.py           (92%,  6 lines) — retry/backoff/fallback helpers
-- [ ] X3 io/real_tools.py         (91%,  8 lines) — fail-safe real tool execution
-- [ ] X4 io/adapters.py           (93%,  8 lines) — provider adapters
-- [ ] X5 powers/generator.py      (90%,  9 lines) — insight-driven generation
-- [ ] X6 io/gateway.py            (90%, 17 lines) — provider routing (largest io gap)
-- [ ] X7 arete/virtue.py          (87%,  5 lines) — virtue weighting
-- [ ] X8 powers/power_zero.py     (88%,  7 lines) — absolute veto
-- [ ] X9 io/stub_server.py        (90%, 11 lines) — offline stub HTTP
-- [ ] X10 memory/mnemosyne.py     (90%, 12 lines) — durable memory lifecycle
-
-Then: end-to-end multi-layer scenarios (X11).
+- [x] X1 gates/layering.py        (87%→100%, 9 cases) — FIXED dead downward-command
+      enforcement + Flaky HTTP test root cause (socket→transient retry).
+- [x] X2 core/errors.py           (92%→100%, 5 cases) — get_fallback/recovery/
+      retry-exhaustion; hardened max_retries=0.
+- [x] X3 io/real_tools.py         (91%→100%, 6 cases) — url/health/404/unknown-op.
+- [x] X4 io/adapters.py           (93%→100%, 9 cases) — secret-env/shell/mcp.
+- [x] X5 powers/generator.py      (90%→99%, 6 cases) — expected/load/benchmark.
+- [x] X6 io/gateway.py            (90%→98%, 13 cases) — 5xx/429/malformed/scripted.
+- [x] X7 arete/virtue.py          (87%→97%, +FIX AttributeError on unknown gate).
+- [x] X8 powers/power_zero.py     (88%→98%) — immutability + minting.
+- [x] X9 io/stub_server.py        (90%→98%, 11 cases total w/ mnemosyne).
+- [x] X10 memory/mnemosyne.py     (90%→98%) — recall/decay/clamp branches.
+- [x] X11 end-to-end multi-layer test (test_end_to_end_multilayer.py) — one intent
+      through MOUTH→executive→judgment→durable→self-awareness, all auditable.
 
 ## Success = each module coverage up, real bugs fixed, mypy 0, READY.
