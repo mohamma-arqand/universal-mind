@@ -344,7 +344,7 @@ class CompositeStrategicGate(StrategicGate):
                 self._gates = gates
 
             def evaluate(self, intent: Intent, context: dict[str, Any]) -> StrategicDecision:
-                for precedence, gate in self._gates:
+                for _precedence, gate in self._gates:
                     decision = gate.evaluate(intent, context)
                     if decision.decision != Decision.PROCEED:
                         return decision

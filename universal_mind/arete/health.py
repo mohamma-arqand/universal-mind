@@ -104,6 +104,6 @@ def _excellence_trend(accepted: list[JudgmentNode]) -> float:
     xs = list(range(n))
     mean_x = sum(xs) / n
     mean_y = sum(node.excellence for node in accepted) / n
-    num = sum((x - mean_x) * (node.excellence - mean_y) for x, node in zip(xs, accepted))
+    num = sum((x - mean_x) * (node.excellence - mean_y) for x, node in zip(xs, accepted, strict=True))
     den = sum((x - mean_x) ** 2 for x in xs)
     return num / den if den else 0.0
