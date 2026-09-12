@@ -35,13 +35,19 @@ def test_courage_gate_makes_second_judge_diverge() -> None:
     assert "diverge" in result.explanation
 
 
-def test_both_decline_is_inconclusive_not_contradictory() -> None:
+def test_both_decline_is_aligned_when_same_outcome() -> None:
+    """Two judges both ruling 'no winner' (both DENY) are in AGREEMENT, not
+    merely inconclusive: a paired refusal is as decisive as a paired pick."""
     dispute = Dispute(goal="pick", candidates=[_candidate("a", 0.3), _candidate("b", 0.3)])
     primary = InMemoryArbiter().arbitrate(dispute)
     assert primary.winner_strategy_id is None
     result = cross_judge(dispute, primary)
     assert result.primary_winner is None
-    assert result.confidence == 0.5
+    assert result.second_winner is None
+    # both denied -> full alignment, not 0.5
+    assert result.aligned is True
+    assert result.confidence == 1.0
+    assert result.primary_decision == result.second_decision
 
 
 def test_result_is_frozen() -> None:

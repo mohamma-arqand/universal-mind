@@ -50,16 +50,28 @@ def cross_judge(
 
     primary_winner = primary_verdict.winner_strategy_id
     second_winner = second_verdict.winner_strategy_id
-    aligned = primary_winner is not None and primary_winner == second_winner
+    # Alignment is per-decision, not just per-winner: two judges that both rule
+    # "no winner" (both DENY, or both DEFER) are equally in agreement as two that
+    # pick the same winner. Only an actual divergence is a disagreement.
+    same_winner = primary_winner is not None and primary_winner == second_winner
+    same_decision = primary_verdict.decision == second_verdict.decision
+    aligned = same_winner or (primary_winner is None and second_winner is None and same_decision)
 
     if aligned:
         confidence = 1.0
-        explanation = (
-            f"two independent rubrics agree on {primary_winner!r} — alignment confidence high"
-        )
+        if same_winner:
+            explanation = (
+                f"two independent rubrics agree on {primary_winner!r} — alignment confidence high"
+            )
+        else:
+            explanation = (
+                f"two independent rubrics both ruled no winner "
+                f"({primary_verdict.decision.value}) — alignment confidence high"
+            )
     elif primary_winner is None and second_winner is None:
+        # both declined/deferred but to different decisions (DENY vs DEFER)
         confidence = 0.5
-        explanation = "both judges declined/deferred (no winner) — inconclusive but not contradictory"
+        explanation = "both judges declined/deferred but to different outcomes — inconclusive"
     else:
         confidence = 0.0
         explanation = (
