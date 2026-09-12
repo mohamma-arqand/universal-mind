@@ -61,6 +61,16 @@ def test_empty_recall_has_empty_summary() -> None:
     assert result.summary == ""
 
 
+def test_empty_context_returns_nothing_not_everything() -> None:
+    """An empty/whitespace context must not match every episode."""
+    store = InMemoryStore()
+    record_episode(store, owner_id="sovereign", kind="a", context="finance", clock=_clock())
+    record_episode(store, owner_id="sovereign", kind="b", context="health", clock=_clock())
+    result = recall_episodes(store, "")
+    assert result.episodes == ()
+    assert result.summary == ""
+
+
 def test_episode_is_frozen_dataclass() -> None:
     from dataclasses import FrozenInstanceError
 

@@ -84,6 +84,10 @@ def recall_episodes(
     """
     records = list(store.read_all())
     matches: list[Episode] = []
+    if not context.strip():
+        # An empty context is not "match everything": it cannot meaningfully scope
+        # a temporal recall, so return nothing rather than surface every episode.
+        return EpisodeRecall(episodes=(), summary="")
     for record in records:
         if record.get("kind") != "episode":
             continue
