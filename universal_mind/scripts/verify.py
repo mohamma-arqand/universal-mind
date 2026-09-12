@@ -87,6 +87,7 @@ PROBES = [
     "probe_audit_rubric.py",
     "probe_superplatform_connectors.py",
     "probe_real_media.py",
+    "probe_media_pipeline.py",
 ]
 
 
