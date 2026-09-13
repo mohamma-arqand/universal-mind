@@ -19,8 +19,17 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from universal_mind.connectors import connector_for
-from universal_mind.tool_registry import ToolRegistry
+from universal_mind.connectors import Connector, connector_for
+from universal_mind.tool_registry import ToolEntry, ToolRegistry
+
+# Resolve the connector for a tool. Defaults to the built-in mechanism mapping,
+# but a caller may inject a factory (e.g. to route a capability to a custom
+# connector such as MediaToolConnector).
+ConnectorFactory = Callable[[ToolEntry], Connector]
+
+
+def _default_connector(tool: ToolEntry) -> Connector:
+    return connector_for(tool.connection_mechanism)
 
 
 class OrchestrationError(Exception):
@@ -63,6 +72,7 @@ def orchestrate(
     capabilities: list[str],
     *,
     composer: Composer | None = None,
+    connector_factory: ConnectorFactory | None = None,
 ) -> Synthesis:
     """Reach a tool for each needed capability and fuse their outputs into one D.
 
@@ -73,8 +83,11 @@ def orchestrate(
 
     The ``composer`` fuses the sub-outputs; the default produces a structured
     bundle so D carries exactly which tool satisfied which capability (auditable).
+    ``connector_factory`` overrides the mechanism-derived connector (e.g. to route
+    a capability to a custom connector such as ``MediaToolConnector``).
     """
     fuse = composer if composer is not None else _default_composer
+    factory = connector_factory if connector_factory is not None else _default_connector
     sub_outputs: list[SubOutput] = []
     for capability in capabilities:
         tool = registry.best_for(capability)
@@ -84,7 +97,7 @@ def orchestrate(
                           error=f"no tool can honor '{capability}'")
             )
             continue
-        result = connector_for(tool.connection_mechanism).connect(tool.connection, {})
+        result = factory(tool).connect(tool.connection, {})
         sub_outputs.append(
             SubOutput(
                 capability=capability,
@@ -103,4 +116,4 @@ def orchestrate(
     return Synthesis(output=fused, sub_outputs=tuple(sub_outputs), ok=all_ok)
 
 
-__all__ = ["OrchestrationError", "SubOutput", "Synthesis", "orchestrate"]
+__all__ = ["ConnectorFactory", "OrchestrationError", "SubOutput", "Synthesis", "orchestrate"]
