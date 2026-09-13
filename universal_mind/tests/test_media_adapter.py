@@ -79,7 +79,7 @@ def test_media_tool_runs_through_orchestrate_via_connector_factory() -> None:
     )
     reg.register(entry)
 
-    def media_factory(tool):
+    def media_factory(tool: object) -> MediaToolConnector:
         from universal_mind.media_adapter import MediaToolConnector
         return MediaToolConnector()
 
