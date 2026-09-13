@@ -37,7 +37,7 @@ def test_two_real_effects_fuse_into_one_synthesis() -> None:
     reg.register(_entry("ffmpeg-media", "media"))
     reg.register(_entry("gzip-archive", "archive"))
 
-    def factory(tool: ToolEntry):
+    def factory(tool: ToolEntry) -> MediaToolConnector | ArchiveToolConnector:
         if tool.capability == "media":
             return MediaToolConnector()
         if tool.capability == "archive":
