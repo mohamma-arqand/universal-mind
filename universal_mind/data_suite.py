@@ -11,6 +11,7 @@ error (never a fabricated number).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -37,7 +38,7 @@ class DataSuite:
     def _array(data: Any) -> np.ndarray:
         return np.asarray(data, dtype=float)
 
-    def stats(self, data: list[float]) -> dict[str, Any]:
+    def stats(self, data: Sequence[float]) -> dict[str, Any]:
         """Real descriptive statistics over a series: mean, std, min, max, median."""
         arr = self._array(data)
         if arr.size == 0:
@@ -87,7 +88,7 @@ class DataSuite:
             return {"ok": False, "error": str(exc)}
         return {"ok": True, "eigenvalues": [complex(v).real for v in values], "error": ""}
 
-    def normalize(self, data: list[float]) -> dict[str, Any]:
+    def normalize(self, data: Sequence[float]) -> dict[str, Any]:
         """Real min-max normalization of a series to [0, 1]."""
         arr = self._array(data)
         if arr.size == 0:
