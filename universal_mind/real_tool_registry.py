@@ -12,20 +12,27 @@ capability, gets the connector that produces that real effect.
 from __future__ import annotations
 
 from universal_mind.archive_adapter import ArchiveToolConnector
+from universal_mind.chart_suite import ChartSuiteConnector
 from universal_mind.clipboard_adapter import ClipboardToolConnector
 from universal_mind.compute_adapter import ComputeToolConnector
 from universal_mind.connectors import Connector
+from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
+from universal_mind.pdf_suite import PdfSuiteConnector
 from universal_mind.tool_registry import ToolEntry
 
 # capability -> connector constructor (no-arg), kept in one place.
+# The *_Suite entries are integrated PROGRAMS (whole toolboxes), not single ops.
 _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "media": MediaToolConnector,
     "archive": ArchiveToolConnector,
     "compute": ComputeToolConnector,
     "notify": NotifyToolConnector,
     "clipboard": ClipboardToolConnector,
+    "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)
+    "pdf": PdfSuiteConnector,          # full reportlab surface (documents/tables/images)
+    "chart": ChartSuiteConnector,      # full matplotlib surface (line/bar/pie/hist/scatter)
 }
 
 
