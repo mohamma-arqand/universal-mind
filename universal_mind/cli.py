@@ -202,6 +202,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     cycle.add_argument("--throttle", type=float, default=0.5, help="starting error-rate threshold")
     cycle.add_argument("--out", required=True, help="output .html path")
 
+    run = sub.add_parser("run", help="run one real capability through the super-platform (JSON output)")
+    run.add_argument("capability", help="capability to invoke (data/database/image/chart/pdf/media/archive/compute/notify/clipboard or any registered tool)")
+    run.add_argument("--params", default="{}", help="JSON params for the operation (e.g. '{\"operation\":\"stats\",\"data\":[1,2,3]}')")
+    run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
+
     args = parser.parse_args(argv)
 
     if args.command == "health":
@@ -220,6 +225,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_dashboard(args)
     if args.command == "cycle":
         return _cmd_cycle(args)
+    if args.command == "run":
+        return _cmd_run(args)
     return 2
 
 
@@ -347,6 +354,69 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
     }
     print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
     return 0
+
+
+def _cmd_run(args: argparse.Namespace) -> int:
+    """Run one (or several) real capabilities through the super-platform.
+
+    This is the single command-line door to every integrated suite and real tool:
+    data/database/image/chart/pdf suites, media/archive/compute real effects, and
+    notify/clipboard. Prints a JSON result; exit 0 on success, 1 on failure.
+    """
+    import json as _json
+
+    from universal_mind.orchestration import orchestrate
+    from universal_mind.real_tool_registry import real_connector_factory
+    from universal_mind.tool_registry import (
+        ConnectionMechanism,
+        ToolConnectionSpec,
+        ToolEntry,
+        ToolRegistry,
+    )
+
+    try:
+        params = _json.loads(args.params)
+        if not isinstance(params, dict):
+            raise ValueError("params must be a JSON object")
+    except (_json.JSONDecodeError, ValueError) as exc:
+        print(_json.dumps({"ok": False, "error": f"invalid --params: {exc}"}))
+        return 1
+
+    registry = ToolRegistry()
+    if args.capabilities:
+        capabilities = [c.strip() for c in args.capabilities.split(",") if c.strip()]
+    else:
+        capabilities = [args.capability.strip()]
+
+    # Known real capabilities get routed to their suite; anything else falls back
+    # to the mechanism connector (subprocess), so an unknown name is honestly
+    # reported by the connector rather than silently misrouted.
+    from universal_mind.real_tool_registry import _REAL_CONNECTORS
+
+    known = set(_REAL_CONNECTORS)
+    for cap in capabilities:
+        registry.register(
+            ToolEntry(
+                name=f"cli-{cap}",
+                capability=cap,
+                connection=ToolConnectionSpec(
+                    mechanism=ConnectionMechanism.SUBPROCESS,
+                    command=(f"universal-mind-internal:{cap}" if cap in known else "unused"),
+                ),
+                absorbable=True,
+            )
+        )
+
+    syn = orchestrate(registry, capabilities, connector_factory=real_connector_factory)
+    output = {
+        "ok": syn.ok,
+        "capabilities": capabilities,
+        "result": syn.output["synthesized_from"],
+        "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
+        "durations_ms": {s.capability: s.duration_ms for s in syn.sub_outputs},
+    }
+    print(_json.dumps(output, indent=2, sort_keys=True, ensure_ascii=False))
+    return 0 if syn.ok else 1
 
 
 if __name__ == "__main__":

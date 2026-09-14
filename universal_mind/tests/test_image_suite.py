@@ -99,8 +99,8 @@ def test_connector_dispatches_operations(tmp_path: Path) -> None:
 
 def test_suite_flows_through_orchestrate(tmp_path: Path) -> None:
     """The whole image program participates in the multi-tool synthesis loop."""
-    import universal_mind.real_tool_registry as rtr
     from universal_mind.orchestration import orchestrate
+    from universal_mind.real_tool_registry import real_connector_factory
     from universal_mind.tool_registry import (
         ConnectionMechanism,
         ToolConnectionSpec,
@@ -112,11 +112,8 @@ def test_suite_flows_through_orchestrate(tmp_path: Path) -> None:
     reg.register(ToolEntry(name="img", capability="image",
                            connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                            absorbable=True))
-    # Route the image capability through the suite via the unified factory:
-    rtr._REAL_CONNECTORS["image"] = ImageSuiteConnector  # one-line registration
-    try:
-        syn = orchestrate(reg, ["image"], connector_factory=rtr.real_connector_factory)
-        assert syn.ok is True
-        assert syn.output["synthesized_from"]["image"]["format"] == "PNG"
-    finally:
-        del rtr._REAL_CONNECTORS["image"]
+    # "image" is a registered real capability — no mutation of the shared table
+    # (the earlier mutate-then-delete pattern was a cross-test contamination bug).
+    syn = orchestrate(reg, ["image"], connector_factory=real_connector_factory)
+    assert syn.ok is True
+    assert syn.output["synthesized_from"]["image"]["format"] == "PNG"

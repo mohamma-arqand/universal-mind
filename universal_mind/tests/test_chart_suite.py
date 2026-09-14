@@ -47,8 +47,8 @@ def test_unknown_operation_fails_clean() -> None:
 
 def test_chart_suite_joins_the_synthesis_loop() -> None:
     """The whole charting program participates in the multi-tool synthesis loop."""
-    import universal_mind.real_tool_registry as rtr
     from universal_mind.orchestration import orchestrate
+    from universal_mind.real_tool_registry import real_connector_factory
     from universal_mind.tool_registry import (
         ConnectionMechanism,
         ToolConnectionSpec,
@@ -60,10 +60,9 @@ def test_chart_suite_joins_the_synthesis_loop() -> None:
     reg.register(ToolEntry(name="chart", capability="chart",
                            connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                            absorbable=True))
-    rtr._REAL_CONNECTORS["chart"] = ChartSuiteConnector  # one-line registration
-    try:
-        syn = orchestrate(reg, ["chart"], connector_factory=rtr.real_connector_factory)
-        assert syn.ok is True
-        assert syn.output["synthesized_from"]["chart"]["bytes"] > 0
-    finally:
-        del rtr._REAL_CONNECTORS["chart"]
+    # "chart" is a registered real capability in real_tool_registry — no mutation
+    # of the shared table needed (the earlier mutate-then-delete pattern here was
+    # a real cross-test contamination bug).
+    syn = orchestrate(reg, ["chart"], connector_factory=real_connector_factory)
+    assert syn.ok is True
+    assert syn.output["synthesized_from"]["chart"]["bytes"] > 0

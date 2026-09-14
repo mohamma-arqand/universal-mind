@@ -85,9 +85,13 @@ def test_unknown_operation_fails_clean() -> None:
 
 
 def test_data_suite_joins_the_synthesis_loop() -> None:
-    """The whole numeric program participates in the multi-tool synthesis loop."""
-    import universal_mind.real_tool_registry as rtr
+    """The whole numeric program participates in the multi-tool synthesis loop.
+
+    'data' is an officially registered real capability — the loop works without
+    mutating the shared connector table (the earlier mutate-then-delete pattern
+    here caused real cross-test contamination in the full suite)."""
     from universal_mind.orchestration import orchestrate
+    from universal_mind.real_tool_registry import real_connector_factory
     from universal_mind.tool_registry import (
         ConnectionMechanism,
         ToolConnectionSpec,
@@ -99,12 +103,8 @@ def test_data_suite_joins_the_synthesis_loop() -> None:
     reg.register(ToolEntry(name="data", capability="data",
                            connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                            absorbable=True))
-    rtr._REAL_CONNECTORS["data"] = DataSuiteConnector  # one-line registration
-    try:
-        syn = orchestrate(reg, ["data"], connector_factory=rtr.real_connector_factory)
-        assert syn.ok is True
-        # The no-params call now computes real stats over the default series.
-        stats = syn.output["synthesized_from"]["data"]
-        assert stats["mean"] == 5.0
-    finally:
-        del rtr._REAL_CONNECTORS["data"]
+    syn = orchestrate(reg, ["data"], connector_factory=real_connector_factory)
+    assert syn.ok is True
+    # The no-params call computes real stats over the default series.
+    stats = syn.output["synthesized_from"]["data"]
+    assert stats["mean"] == 5.0

@@ -52,8 +52,8 @@ def test_connector_dispatches_operations() -> None:
 
 def test_pdf_suite_joins_the_synthesis_loop() -> None:
     """The whole PDF program participates in the multi-tool synthesis loop."""
-    import universal_mind.real_tool_registry as rtr
     from universal_mind.orchestration import orchestrate
+    from universal_mind.real_tool_registry import real_connector_factory
     from universal_mind.tool_registry import (
         ConnectionMechanism,
         ToolConnectionSpec,
@@ -65,10 +65,7 @@ def test_pdf_suite_joins_the_synthesis_loop() -> None:
     reg.register(ToolEntry(name="pdf", capability="pdf",
                            connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                            absorbable=True))
-    rtr._REAL_CONNECTORS["pdf"] = PdfSuiteConnector  # one-line registration
-    try:
-        syn = orchestrate(reg, ["pdf"], connector_factory=rtr.real_connector_factory)
-        assert syn.ok is True
-        assert syn.output["synthesized_from"]["pdf"]["bytes"] > 0
-    finally:
-        del rtr._REAL_CONNECTORS["pdf"]
+    # "pdf" is a registered real capability — no mutation of the shared table.
+    syn = orchestrate(reg, ["pdf"], connector_factory=real_connector_factory)
+    assert syn.ok is True
+    assert syn.output["synthesized_from"]["pdf"]["bytes"] > 0

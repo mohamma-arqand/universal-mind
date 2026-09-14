@@ -95,12 +95,38 @@ class StubChatServer:
         return self._log
 
     def start(self) -> str:
-        """Start serving on a background thread; returns the base URL."""
+        """Start serving on a background thread; returns the base URL.
+
+        Waits until the server is actually accepting connections, so the first
+        request cannot race the accept loop and abort (the WinError 10053 flake
+        seen on Windows when a client connects before serve_forever begins).
+        """
         handler = self._make_handler()
         self._server = ThreadingHTTPServer(("127.0.0.1", self._port), handler)
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
+        self._wait_until_ready()
         return self.base_url
+
+    def _wait_until_ready(self, attempts: int = 50) -> None:
+        """Block until the stub actually accepts a TCP connection (or raise)."""
+        import socket
+        import time
+
+        assert self._server is not None
+        # Read the actually-bound port from the live server object (self._port
+        # may still hold the configured 0 = ephemeral).
+        host, port = self._server.server_address[:2]
+        if isinstance(host, bytes):
+            host = host.decode("utf-8", errors="replace")
+        port_num = int(port)
+        for _ in range(attempts):
+            try:
+                with socket.create_connection((str(host), port_num), timeout=0.1):
+                    return
+            except OSError:
+                time.sleep(0.02)
+        raise RuntimeError("stub server never became ready")
 
     def stop(self) -> None:
         """Shut the server down and join the serving thread."""
