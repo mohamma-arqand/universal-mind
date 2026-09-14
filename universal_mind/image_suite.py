@@ -20,9 +20,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from universal_mind.connectors import ConnectorResult
-
 from PIL import Image, ImageFilter
+
+from universal_mind.connectors import ConnectorResult
 
 
 class ImageSuite:

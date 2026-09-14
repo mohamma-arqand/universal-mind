@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from universal_mind.image_suite import ImageSuite, ImageSuiteConnector
 from PIL import Image
+
+from universal_mind.image_suite import ImageSuite, ImageSuiteConnector
 
 
 def _sample(tmp: Path, size: tuple[int, int] = (120, 80)) -> str:
@@ -98,15 +99,14 @@ def test_connector_dispatches_operations(tmp_path: Path) -> None:
 
 def test_suite_flows_through_orchestrate(tmp_path: Path) -> None:
     """The whole image program participates in the multi-tool synthesis loop."""
+    import universal_mind.real_tool_registry as rtr
     from universal_mind.orchestration import orchestrate
-    from universal_mind.real_tool_registry import real_connector_factory
     from universal_mind.tool_registry import (
         ConnectionMechanism,
         ToolConnectionSpec,
         ToolEntry,
         ToolRegistry,
     )
-    import universal_mind.real_tool_registry as rtr
 
     reg = ToolRegistry()
     reg.register(ToolEntry(name="img", capability="image",

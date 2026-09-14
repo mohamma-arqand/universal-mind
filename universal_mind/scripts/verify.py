@@ -106,7 +106,11 @@ def _sh(cmd: list[str], *, cwd: Path | None = None, check: bool = True, env: dic
 
 def step_lint() -> int:
     print("\n=== lint (ruff) ===")
-    return _sh(["uvx", "ruff", "check", "universal_mind/", "universal_mind/tests/"], check=False)
+    # Pinned: uvx resolves to the latest ruff, and a new minor version added
+    # E-rules (E402/E712/E731/E741) that flag pre-existing intentional patterns
+    # across the suite — pinning keeps the gate measuring *our* rules, not ruff's
+    # version drift.
+    return _sh(["uvx", "ruff@0.15.18", "check", "universal_mind/", "universal_mind/tests/"], check=False)
 
 
 def step_mypy_ratchet() -> int:

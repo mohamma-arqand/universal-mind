@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from universal_mind.pdf_suite import PdfSuite, PdfSuiteConnector
 from PIL import Image
+
+from universal_mind.pdf_suite import PdfSuite, PdfSuiteConnector
 
 
 def test_document_builds_a_real_pdf() -> None:

@@ -15,17 +15,19 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from universal_mind.connectors import ConnectorResult
-
 from reportlab.lib.pagesizes import A4  # type: ignore[import-untyped]
 from reportlab.lib.styles import getSampleStyleSheet  # type: ignore[import-untyped]
 from reportlab.platypus import (  # type: ignore[import-untyped]
     Image as RLImage,
+)
+from reportlab.platypus import (
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
 )
+
+from universal_mind.connectors import ConnectorResult
 
 
 class PdfSuite:

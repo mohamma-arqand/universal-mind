@@ -14,12 +14,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from universal_mind.connectors import ConnectorResult
-
 import matplotlib
 
+from universal_mind.connectors import ConnectorResult
+
 matplotlib.use("Agg")  # headless: real files, no display
-from matplotlib import pyplot as plt  # noqa: E402
+from matplotlib import pyplot as plt
 
 
 class ChartSuite:
