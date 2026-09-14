@@ -16,8 +16,8 @@ from universal_mind.chart_suite import ChartSuiteConnector
 from universal_mind.clipboard_adapter import ClipboardToolConnector
 from universal_mind.compute_adapter import ComputeToolConnector
 from universal_mind.connectors import Connector
-from universal_mind.database_suite import DatabaseSuiteConnector
 from universal_mind.data_suite import DataSuiteConnector
+from universal_mind.database_suite import DatabaseSuiteConnector
 from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector

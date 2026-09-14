@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import pytest
 from _pytest.capture import CaptureFixture
 
 from universal_mind.cli import main

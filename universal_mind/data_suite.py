@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from universal_mind.connectors import ConnectorResult
-
 import numpy as np
+
+from universal_mind.connectors import ConnectorResult
 
 
 class DataSuite:
@@ -31,7 +31,7 @@ class DataSuite:
 
     # A real default series so a no-params call (as orchestrate issues) still
     # performs genuine numeric work instead of failing on an empty series.
-    DEFAULT_SERIES: list[float] = [2, 4, 4, 4, 5, 5, 7, 9]
+    DEFAULT_SERIES: tuple[float, ...] = (2, 4, 4, 4, 5, 5, 7, 9)
 
     @staticmethod
     def _array(data: Any) -> np.ndarray:

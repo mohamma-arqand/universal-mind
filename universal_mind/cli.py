@@ -377,8 +377,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
     try:
         params = _json.loads(args.params)
         if not isinstance(params, dict):
-            raise ValueError("params must be a JSON object")
-    except (_json.JSONDecodeError, ValueError) as exc:
+            raise TypeError("params must be a JSON object")
+    except (_json.JSONDecodeError, TypeError, ValueError) as exc:
         print(_json.dumps({"ok": False, "error": f"invalid --params: {exc}"}))
         return 1
 
