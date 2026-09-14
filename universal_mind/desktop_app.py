@@ -42,6 +42,17 @@ _CAPABILITY_DESCRIPTIONS: dict[str, str] = {
     "clipboard": "خواندن/نوشتن کلیپبورد ویندوز",
 }
 
+# Preset chains: multi-capability sequences that run with one click. Each step's
+# real output feeds the synthesis; the weaver folds all outputs into one artifact.
+_PRESET_CHAINS: dict[str, list[str]] = {
+    "media → chart → pdf (گزارش تصویری)": ["media", "chart", "pdf"],
+    "data → chart → pdf (گزارش داده)": ["data", "chart", "pdf"],
+    "media → archive (پشتیبان تصویر)": ["media", "archive"],
+    "data → database (ذخیره تحلیل)": ["data", "database"],
+    "compute → clipboard (نتیجه در کلیپبورد)": ["compute", "clipboard"],
+    "media → notify (اطلاع رسانی پس از کار)": ["media", "notify"],
+}
+
 _DEFAULT_PARAMS: dict[str, str] = {
     "data": '{"operation": "stats", "data": [2, 4, 4, 4, 5, 5, 7, 9]}',
     "database": '{"operation": "query"}',
@@ -85,15 +96,20 @@ class MindDesktopApp:
         body = ttk.Frame(self._root, padding=(8, 0, 8, 8))
         body.pack(fill=tk.BOTH, expand=True)
 
-        # Left: capability list
-        left = ttk.LabelFrame(body, text="قابلیتها", padding=6)
+        self._notebook = ttk.Notebook(body)
+        self._notebook.pack(fill=tk.BOTH, expand=True)
+
+        # --- Tab 1: single capability (the original three-pane form) ---
+        single = ttk.Frame(self._notebook, padding=6)
+        self._notebook.add(single, text="تک قابلیت")
+
+        left = ttk.LabelFrame(single, text="قابلیتها", padding=6)
         left.pack(side=tk.LEFT, fill=tk.Y)
         self._cap_list = tk.Listbox(left, width=24, height=24, font=("Segoe UI", 10))
         self._cap_list.pack(fill=tk.Y, expand=True)
         self._cap_list.bind("<<ListboxSelect>>", self._on_select)
 
-        # Middle: params + run button
-        middle = ttk.LabelFrame(body, text="پارامترها (JSON)", padding=6)
+        middle = ttk.LabelFrame(single, text="پارامترها (JSON)", padding=6)
         middle.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
         self._params_text = scrolledtext.ScrolledText(middle, height=12, font=("Consolas", 10))
         self._params_text.pack(fill=tk.X)
@@ -104,12 +120,33 @@ class MindDesktopApp:
         self._result_text = scrolledtext.ScrolledText(middle, height=18, font=("Consolas", 9))
         self._result_text.pack(fill=tk.BOTH, expand=True)
 
-        # Right: engine status
-        right = ttk.LabelFrame(body, text="وضعیت موتور", padding=6)
+        right = ttk.LabelFrame(single, text="وضعیت موتور", padding=6)
         right.pack(side=tk.RIGHT, fill=tk.Y)
         self._status_text = scrolledtext.ScrolledText(right, width=34, height=24, font=("Segoe UI", 9))
         self._status_text.pack(fill=tk.Y, expand=True)
         self._write_status()
+
+        # --- Tab 2: chain (multi-capability, one click) ---
+        chain_tab = ttk.Frame(self._notebook, padding=6)
+        self._notebook.add(chain_tab, text="زنجیره")
+
+        chain_left = ttk.LabelFrame(chain_tab, text="زنجیرههای آماده", padding=6)
+        chain_left.pack(side=tk.LEFT, fill=tk.Y)
+        self._chain_list = tk.Listbox(chain_left, width=40, height=24, font=("Segoe UI", 10))
+        self._chain_list.pack(fill=tk.Y, expand=True)
+        for name in _PRESET_CHAINS:
+            self._chain_list.insert(tk.END, name)
+        if self._chain_list.size():
+            self._chain_list.selection_set(0)
+
+        chain_right = ttk.LabelFrame(chain_tab, text="نتیجهی زنجیره", padding=6)
+        chain_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
+        self._chain_run_btn = ttk.Button(
+            chain_right, text="▶ اجرای زنجیره (کار واقعی)", command=self._run_chain
+        )
+        self._chain_run_btn.pack(anchor=tk.W, pady=4)
+        self._chain_result = scrolledtext.ScrolledText(chain_right, font=("Consolas", 9))
+        self._chain_result.pack(fill=tk.BOTH, expand=True)
 
     def _write_status(self) -> None:
         box = self._status_text
@@ -193,6 +230,57 @@ class MindDesktopApp:
         self._result_text.delete("1.0", tk.END)
         self._result_text.insert(tk.END, text)
 
+    # ------------------------------------------------------------------ chain
+    def _selected_chain(self) -> list[str] | None:
+        selection: tuple[int, ...] = tuple(self._chain_list.curselection())  # type: ignore[no-untyped-call]
+        if not selection:
+            return None
+        name = self._chain_list.get(selection[0])
+        return _PRESET_CHAINS.get(name)
+
+    def _run_chain(self) -> None:
+        caps = self._selected_chain()
+        if not caps:
+            messagebox.showinfo("Universal Mind", "ابتدا یک زنجیره انتخاب کن")
+            return
+        self._chain_run_btn.configure(state=tk.DISABLED)
+        self._chain_result.delete("1.0", tk.END)
+        self._chain_result.insert(tk.END, f"در حال اجرای زنجیره: {' → '.join(caps)}\n\n")
+        thread = threading.Thread(target=self._do_chain_work, args=(caps,), daemon=True)
+        thread.start()
+
+    def _do_chain_work(self, caps: list[str]) -> None:
+        """Run the real multi-capability synthesis (all real programs at once)."""
+        try:
+            registry = ToolRegistry()
+            for cap in caps:
+                registry.register(
+                    ToolEntry(
+                        name=f"chain-{cap}",
+                        capability=cap,
+                        connection=ToolConnectionSpec(
+                            mechanism=ConnectionMechanism.SUBPROCESS, command="unused"
+                        ),
+                        absorbable=True,
+                    )
+                )
+            syn = orchestrate(registry, caps, connector_factory=_multi_factory(caps))
+            payload = {
+                "ok": syn.ok,
+                "chain": caps,
+                "results": syn.output["synthesized_from"],
+                "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
+                "durations_ms": {s.capability: s.duration_ms for s in syn.sub_outputs},
+            }
+        except Exception as exc:  # noqa: BLE001 — a crashed engine is a real error
+            payload = {"ok": False, "chain": caps, "error": str(exc)}
+        self._root.after(0, self._post_chain_result, payload)
+
+    def _post_chain_result(self, payload: dict[str, Any]) -> None:
+        self._chain_run_btn.configure(state=tk.NORMAL)
+        self._chain_result.delete("1.0", tk.END)
+        self._chain_result.insert(tk.END, json.dumps(payload, indent=2, ensure_ascii=False))
+
     def _post_result(self, payload: dict[str, Any]) -> None:
         self._run_btn.configure(state=tk.NORMAL)
         self._show_result(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -205,6 +293,20 @@ def _factory_for(cap: str) -> "Callable[[ToolEntry], Any]":
     def factory(tool: ToolEntry) -> Any:
         constructor = _REAL_CONNECTORS.get(cap)
         if constructor is not None:
+            return constructor()
+        return real_connector_factory(tool)
+
+    return factory
+
+
+def _multi_factory(caps: list[str]) -> "Callable[[ToolEntry], Any]":
+    """A connector factory routing EACH requested capability to its real connector
+    (so a chain like media→archive drives two different real programs in one run)."""
+    from universal_mind.real_tool_registry import real_connector_factory
+
+    def factory(tool: ToolEntry) -> Any:
+        constructor = _REAL_CONNECTORS.get(tool.capability)
+        if constructor is not None and tool.capability in caps:
             return constructor()
         return real_connector_factory(tool)
 

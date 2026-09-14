@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import tkinter as tk
 from collections.abc import Iterator
 
@@ -78,6 +80,32 @@ def test_factory_resolves_to_the_real_connector() -> None:
                       absorbable=True)
     conn = _factory_for("data")(entry)
     assert isinstance(conn, DataSuiteConnector)
+
+
+def test_chains_are_listed_and_all_real(tk_root: tk.Tk) -> None:
+    """Every preset chain lists only capabilities that are genuinely wired."""
+    import universal_mind.real_tool_registry as rtr
+    from universal_mind.desktop_app import _PRESET_CHAINS
+
+    app = MindDesktopApp(tk_root)
+    listed = list(app._chain_list.get(0, tk.END))
+    assert len(listed) == len(_PRESET_CHAINS)
+    for name, caps in _PRESET_CHAINS.items():
+        assert name in listed
+        for cap in caps:
+            assert cap in rtr._REAL_CONNECTORS, f"chain '{name}' uses non-real '{cap}'"
+
+
+def test_chain_work_is_real(tk_root: tk.Tk) -> None:
+    """_do_chain_work runs a genuine two-real-program synthesis (media + archive)."""
+    app = MindDesktopApp(tk_root)
+    app._do_chain_work(["media", "archive"])
+    tk_root.update()
+    shown = app._chain_result.get("1.0", tk.END)
+    payload = json.loads(shown)
+    assert payload["ok"] is True
+    assert payload["results"]["media"]["bytes"] > 0
+    assert payload["results"]["archive"]["bytes"] > 0
 
 
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:
