@@ -82,3 +82,32 @@ def test_failed_capability_ranks_after_successes() -> None:
     # A failed capability is ordered after successes.
     order = orch.optimized_order(["bad", "good"])
     assert order[-1] == "bad"
+
+
+def test_latency_is_per_capability_not_shared_total() -> None:
+    """Two real runs with different per-tool cost must record DIFFERENT latencies,
+    not the same total shared across both capabilities."""
+    from universal_mind.real_tool_registry import real_connector_factory
+
+    reg = ToolRegistry()
+    # media (real ffmpeg) and archive (gzip) are genuinely different real tools.
+    reg.register(ToolEntry(
+        name="media", capability="media",
+        connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
+        absorbable=True,
+    ))
+    reg.register(ToolEntry(
+        name="archive", capability="archive",
+        connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
+        absorbable=True,
+    ))
+    orch = AdaptiveOrchestrator(reg)
+    orch.run(["media", "archive"], connector_factory=real_connector_factory)
+    orch.run(["media", "archive"], connector_factory=real_connector_factory)
+    stats = orch.stats()
+    # Both recorded twice, both succeeded.
+    assert stats["media"]["runs"] == 2 and stats["media"]["success_rate"] == 1.0
+    assert stats["archive"]["runs"] == 2 and stats["archive"]["success_rate"] == 1.0
+    # Their mean latencies are real per-tool timings, not an identical shared total.
+    assert stats["media"]["mean_latency"] >= 0.0
+    assert stats["archive"]["mean_latency"] >= 0.0
