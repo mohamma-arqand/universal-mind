@@ -12,9 +12,11 @@ capability, gets the connector that produces that real effect.
 from __future__ import annotations
 
 from universal_mind.archive_adapter import ArchiveToolConnector
+from universal_mind.clipboard_adapter import ClipboardToolConnector
 from universal_mind.compute_adapter import ComputeToolConnector
 from universal_mind.connectors import Connector
 from universal_mind.media_adapter import MediaToolConnector
+from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.tool_registry import ToolEntry
 
 # capability -> connector constructor (no-arg), kept in one place.
@@ -22,6 +24,8 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "media": MediaToolConnector,
     "archive": ArchiveToolConnector,
     "compute": ComputeToolConnector,
+    "notify": NotifyToolConnector,
+    "clipboard": ClipboardToolConnector,
 }
 
 
