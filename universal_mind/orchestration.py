@@ -15,12 +15,18 @@ sub-request rather than fabricating a result.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from universal_mind.connectors import Connector, connector_for
 from universal_mind.tool_registry import ToolEntry, ToolRegistry
+
+
+def _perf() -> float:
+    """A monotonic clock with a fixed unit (seconds)."""
+    return time.perf_counter()
 
 # Resolve the connector for a tool. Defaults to the built-in mechanism mapping,
 # but a caller may inject a factory (e.g. to route a capability to a custom
@@ -45,6 +51,7 @@ class SubOutput:
     output: Any
     ok: bool
     error: str = ""
+    duration_ms: float = 0.0   # real wall-clock time the tool took (measured)
 
 
 @dataclass(frozen=True)
@@ -97,7 +104,9 @@ def orchestrate(
                           error=f"no tool can honor '{capability}'")
             )
             continue
+        start = _perf()
         result = factory(tool).connect(tool.connection, {})
+        duration_ms = (_perf() - start) * 1000.0
         sub_outputs.append(
             SubOutput(
                 capability=capability,
@@ -105,6 +114,7 @@ def orchestrate(
                 output=result.output,
                 ok=result.ok,
                 error=result.error,
+                duration_ms=round(duration_ms, 4),
             )
         )
         # Record the outcome on the tool's evidence trail so the next synthesis

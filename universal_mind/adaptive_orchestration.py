@@ -19,7 +19,6 @@ Deterministic and pure.
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -55,41 +54,41 @@ class AdaptiveOrchestrator:
         return self._records.setdefault(capability, CapabilityRecord())
 
     def run(self, capabilities: list[str], **kwargs: Any) -> Any:
-        """Run a synthesis, then record each capability's success + latency.
+        """Run a synthesis, then record each capability's real success + latency.
 
-        Returns the ``Synthesis`` from ``orchestrate`` unchanged; the learning is a
-        side effect recorded on ``self`` (not on any tool), so it is reversible by
-        simply discarding the orchestrator.
+        Latency now comes from the per-capability ``duration_ms`` measured by
+        ``orchestrate`` (not a single total shared across all capabilities), so the
+        learning is meaningful: a genuinely slow tool accumulates higher latency.
+        Returns the ``Synthesis`` unchanged; learning is a side effect on ``self``.
         """
-        start = time.perf_counter()
         syn = orchestrate(self.registry, capabilities, **kwargs)
-        elapsed = time.perf_counter() - start
 
         for cap in capabilities:
             rec = self._record(cap)
             rec.runs += 1
-            rec.total_latency += elapsed
-            # A capability counted a success iff a sub-output for it is ok.
             sub = next((s for s in syn.sub_outputs if s.capability == cap), None)
-            if sub is not None and sub.ok:
-                rec.successes += 1
+            if sub is not None:
+                rec.total_latency += sub.duration_ms  # real, per-tool wall clock
+                if sub.ok:
+                    rec.successes += 1
         return syn
 
     def optimized_order(self, capabilities: list[str]) -> list[str]:
-        """Order ``capabilities`` by learned preference (fast + reliable first).
+        """Order ``capabilities`` by learned preference (reliable, then fast first).
 
-        A never-run capability has infinite latency and rank last (no guessing).
-        A failed capability (success_rate 0) ranks after all successes. Ties break
-        by the original requested order for determinism.
+        A never-run capability has no record and rank last (no guessing). A failed
+        capability (success_rate 0) ranks after all successes — running a fast but
+        broken tool is still wasted work. Among successes, lower latency first.
+        Ties break by the original requested order for determinism.
         """
         def key(cap: str) -> tuple[float, float, int]:
             rec = self._records.get(cap)
             if rec is None or rec.runs == 0:
-                latency, success = (float("inf"), 0.0)
+                success, latency = (0.0, float("inf"))
             else:
-                latency, success = (rec.mean_latency, rec.success_rate)
-            # Lower latency first; then higher success; then original index.
-            return (latency, -success, capabilities.index(cap))
+                success, latency = (rec.success_rate, rec.mean_latency)
+            # Higher success first; then lower latency; then original index.
+            return (-success, latency, capabilities.index(cap))
 
         return sorted(capabilities, key=key)
 
