@@ -104,12 +104,11 @@ def test_database_suite_joins_the_synthesis_loop() -> None:
     reg.register(ToolEntry(name="db", capability="database",
                            connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                            absorbable=True))
-    rtr._REAL_CONNECTORS["database"] = DatabaseSuiteConnector  # one-line registration
-    try:
-        # The default operation is a SELECT; on a fresh db it returns zero rows
-        # (a real, honest result — not a failure).
-        syn = orchestrate(reg, ["database"], connector_factory=rtr.real_connector_factory)
-        assert syn.ok is True
-        assert syn.output["synthesized_from"]["database"] == []
-    finally:
-        del rtr._REAL_CONNECTORS["database"]
+    # "database" is an officially registered real capability — no mutation of the
+    # shared connector table (the mutate-then-delete pattern caused cross-test
+    # contamination that made the desktop app's capability list flake).
+    syn = orchestrate(reg, ["database"], connector_factory=rtr.real_connector_factory)
+    assert syn.ok is True
+    # The default operation is a SELECT; on a fresh db it returns zero rows
+    # (a real, honest result — not a failure).
+    assert syn.output["synthesized_from"]["database"] == []
