@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from universal_mind.chart_suite import ChartSuite, ChartSuiteConnector
 from universal_mind.pdf_suite import PdfSuite, PdfSuiteConnector
@@ -95,7 +96,7 @@ class TestExtendedPdf:
         img = tmp_path / "sample.png"
         Image.new("RGB", (60, 36), color=(50, 50, 200)).save(img)
         for op in PdfSuite.OPERATIONS:
-            params: dict = {"operation": op}
+            params: dict[str, Any] = {"operation": op}
             if op == "multi_page":
                 params["title"] = "T"
             if op == "with_image":

@@ -106,7 +106,7 @@ class DataSuite:
         normalized = (arr - np.min(arr)) / span
         return {"ok": True, "normalized": [float(v) for v in normalized], "error": ""}
 
-    def correlate(self, a: list[float], b: list[float]) -> dict[str, Any]:
+    def correlate(self, a: Sequence[float], b: Sequence[float]) -> dict[str, Any]:
         """Real Pearson correlation between two series."""
         x, y = self._array(a), self._array(b)
         if x.size != y.size or x.size == 0:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from universal_mind.data_suite import DataSuite, DataSuiteConnector
 
 
@@ -63,7 +64,7 @@ def test_full_surface_all_operations_real() -> None:
     x = [1, 2, 3, 4, 5]
     y = [2, 4, 6, 8, 10]
     matrix = [[4, 7], [2, 6]]
-    inputs: dict[str, dict] = {
+    inputs: dict[str, dict[str, Any]] = {
         "stats": {"data": x},
         "variance": {"data": x},
         "percentile": {"data": x, "q": 50},
