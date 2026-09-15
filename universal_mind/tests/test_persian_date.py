@@ -38,7 +38,7 @@ def test_resolve_temporal_words() -> None:
 
 def test_with_resolved_date_attaches_only_when_said() -> None:
     frozen = datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc)
-    resolved = with_resolved_date("گزارش", "گزارش امروز", now=frozen)
+    resolved: str = with_resolved_date("گزارش", "گزارش امروز", now=frozen) or ""
     assert "گزارش" in resolved and "امروز" not in resolved and "۱۴۰۵" in resolved
     assert with_resolved_date("گزارش", "گزارش ماه", now=frozen) == "گزارش"
     assert with_resolved_date(None, "گزارش امروز", now=frozen) is None
