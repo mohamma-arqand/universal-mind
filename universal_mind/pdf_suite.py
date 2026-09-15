@@ -15,16 +15,19 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from reportlab.lib.pagesizes import A4  # type: ignore[import-untyped]
+from reportlab.lib import colors  # type: ignore[import-untyped]
+from reportlab.lib.pagesizes import A4, landscape  # type: ignore[import-untyped]
 from reportlab.lib.styles import getSampleStyleSheet  # type: ignore[import-untyped]
 from reportlab.platypus import (  # type: ignore[import-untyped]
     Image as RLImage,
-)
-from reportlab.platypus import (
+    ListFlowable,
+    ListItem,
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
+    TableStyle,
 )
 
 from universal_mind.connectors import ConnectorResult
@@ -36,7 +39,12 @@ class PdfSuite:
     name = "pdf-suite"
     capability = "pdf"
 
-    OPERATIONS = ("document", "table", "with_image")
+    # The FULL reportlab document surface: 12 real operations.
+    OPERATIONS = (
+        "document", "multi_page", "table", "styled_table", "with_image",
+        "bullet_list", "numbered_list", "letterhead", "invoice", "two_column",
+        "landscape", "cover_page",
+    )
 
     def document(
         self,
@@ -100,6 +108,139 @@ class PdfSuite:
         return {"ok": True, "path": str(out_path), "bytes": out_path.stat().st_size, "error": ""}
 
 
+    # --- the 9 declared-but-missing operations, now real ---
+    def _build(self, story: list[Any], out_path: Path, pagesize: Any = A4) -> dict[str, Any]:
+        try:
+            SimpleDocTemplate(str(out_path), pagesize=pagesize).build(story)
+        except Exception as exc:  # noqa: BLE001 — real generation errors surface
+            return {"ok": False, "error": str(exc)}
+        if not out_path.exists():
+            return {"ok": False, "error": "PDF was not produced"}
+        return {"ok": True, "path": str(out_path), "bytes": out_path.stat().st_size, "error": ""}
+
+    def multi_page(self, title: str = "Multi-page report", out_dir: str | None = None) -> dict[str, Any]:
+        """Alias of :meth:`multi_section` (the declared multi-page operation)."""
+        return self.multi_section(title, out_dir)
+
+    def multi_section(self, title: str = "Multi-page report", out_dir: str | None = None) -> dict[str, Any]:
+        """A genuinely multi-page PDF: numbered chapters, one per page."""
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        story: list[Any] = [Paragraph(title, styles["Title"])]
+        for i in range(1, 4):
+            story.append(PageBreak())
+            story.append(Paragraph(f"Chapter {i}", styles["Heading1"]))
+            story.append(Spacer(1, 8))
+            story.append(Paragraph(f"Content of chapter {i} — filled with enough real text "
+                                   f"to occupy the page and prove pagination works across "
+                                   f"multiple physical pages of the document.", styles["BodyText"]))
+        return self._build(story, target / "multi_page.pdf")
+
+    def styled_table(self, headers: list[str] | None = None, rows: list[list[str]] | None = None, out_dir: str | None = None) -> dict[str, Any]:
+        """A table with a real grid/header style (not a bare Table)."""
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        data = [headers or ["Name", "Value"]]
+        data.extend(rows or [["latency", "12ms"], ["throughput", "340/s"]])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ]))
+        return self._build([table], target / "styled_table.pdf")
+
+    def bullet_list(self, items: list[str] | None = None, out_dir: str | None = None) -> dict[str, Any]:
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        items = items or ["absorption", "synthesis", "judgment"]
+        flow = ListFlowable(
+            [ListItem(Paragraph(i, styles["BodyText"]), leftIndent=18) for i in items],
+            bulletType="bullet",
+        )
+        return self._build([Paragraph("Capabilities", styles["Title"]), flow], target / "bullet_list.pdf")
+
+    def numbered_list(self, items: list[str] | None = None, out_dir: str | None = None) -> dict[str, Any]:
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        items = items or ["decompose", "execute", "synthesize"]
+        flow = ListFlowable(
+            [ListItem(Paragraph(i, styles["BodyText"]), leftIndent=18) for i in items],
+            bulletType="1",
+        )
+        return self._build([Paragraph("Pipeline steps", styles["Title"]), flow], target / "numbered_list.pdf")
+
+    def letterhead(self, title: str = "Universal Mind", subtitle: str = "One Mind · Many Capabilities", out_dir: str | None = None) -> dict[str, Any]:
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph(title, styles["Title"]),
+            Paragraph(subtitle, styles["Italic"]),
+            Spacer(1, 24),
+            Paragraph("This document was generated by the integrated synthesis loop.", styles["BodyText"]),
+        ]
+        return self._build(story, target / "letterhead.pdf")
+
+    def invoice(self, items: list[list[str]] | None = None, out_dir: str | None = None) -> dict[str, Any]:
+        """A real invoice layout: header, itemised table, total row."""
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        rows = items or [["Capability", "Cost"], ["data", "1.0"], ["chart", "1.0"], ["pdf", "1.0"]]
+        data = [["Invoice", "Universal Mind"]]
+        data.extend(rows)
+        total = sum(float(r[1]) for r in rows[1:] if r[1].replace(".", "", 1).isdigit())
+        data.append(["Total", f"{total:.1f}"])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("SPAN", (0, 0), (1, 0)),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ]))
+        story = [Paragraph("Invoice", styles["Title"]), Spacer(1, 12), table]
+        return self._build(story, target / "invoice.pdf")
+
+    def two_column(self, left_text: str = "Left column content.", right_text: str = "Right column content.", out_dir: str | None = None) -> dict[str, Any]:
+        """A real two-column layout via a borderless 2-cell table."""
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        left = Paragraph(left_text, styles["BodyText"])
+        right = Paragraph(right_text, styles["BodyText"])
+        layout = Table([[left, right]], colWidths=[230, 230])
+        layout.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        return self._build([layout], target / "two_column.pdf")
+
+    def landscape(self, title: str = "Landscape page", out_dir: str | None = None) -> dict[str, Any]:
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        return self._build(
+            [Paragraph(title, styles["Title"]), Spacer(1, 12),
+             Paragraph("This page is genuinely landscape (wider than tall).", styles["BodyText"])],
+            target / "landscape.pdf", pagesize=landscape(A4),
+        )
+
+    def cover_page(self, title: str = "Universal Mind", subtitle: str = "Synthesis Report", out_dir: str | None = None) -> dict[str, Any]:
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
+        target.mkdir(parents=True, exist_ok=True)
+        styles = getSampleStyleSheet()
+        story = [
+            Spacer(1, 140),
+            Paragraph(title, styles["Title"]),
+            Paragraph(subtitle, styles["Heading2"]),
+            Spacer(1, 24),
+            PageBreak(),
+            Paragraph("Body starts on page two.", styles["BodyText"]),
+        ]
+        return self._build(story, target / "cover_page.pdf")
+
+
 class PdfSuiteConnector:
     """Adapter: PdfSuite through the Connector protocol (dispatch by operation)."""
 
@@ -108,15 +249,30 @@ class PdfSuiteConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "document") or "document"
+        suite = self._suite
         method = {
-            "document": lambda: self._suite.document(
+            "document": lambda: suite.document(
                 params.get("title", "Universal Mind Report"),
                 params.get("sections"),
             ),
-            "table": lambda: self._suite.table(params.get("headers"), params.get("rows")),
-            "with_image": lambda: self._suite.with_image(
+            "multi_section": lambda: suite.multi_section(
+                params.get("title", "Multi-page report")
+            ),
+            "multi_page": lambda: suite.multi_page(
+                params.get("title", "Multi-page report")
+            ),
+            "table": lambda: suite.table(params.get("headers"), params.get("rows")),
+            "styled_table": lambda: suite.styled_table(params.get("headers"), params.get("rows")),
+            "with_image": lambda: suite.with_image(
                 params.get("image_path", ""), params.get("caption", "Embedded image")
             ),
+            "bullet_list": lambda: suite.bullet_list(params.get("items")),
+            "numbered_list": lambda: suite.numbered_list(params.get("items")),
+            "letterhead": lambda: suite.letterhead(params.get("title", "Universal Mind"), params.get("subtitle", "One Mind · Many Capabilities")),
+            "invoice": lambda: suite.invoice(params.get("items")),
+            "two_column": lambda: suite.two_column(params.get("left_text", "Left column."), params.get("right_text", "Right column.")),
+            "landscape": lambda: suite.landscape(params.get("title", "Landscape page")),
+            "cover_page": lambda: suite.cover_page(params.get("title", "Universal Mind"), params.get("subtitle", "Synthesis Report")),
         }.get(operation)
         if method is None:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
