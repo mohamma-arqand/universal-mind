@@ -188,6 +188,16 @@ def test_persian_unknown_command_honest(tk_root: tk.Tk) -> None:
     assert payload["error"]
 
 
+def test_persian_tab_shows_preview_of_real_chart(tk_root: tk.Tk) -> None:
+    """A Persian command producing a chart ends with that chart in the fa pane."""
+    app = MindDesktopApp(tk_root)
+    app._do_persian_work("نمودارشو ۱ و ۲ و ۳ بکش")
+    tk_root.update()
+    payload = json.loads(app._fa_result_text.get("1.0", tk.END))
+    assert payload["ok"] is True
+    assert app._fa_preview_photo is not None  # the real chart displayed in the fa pane
+
+
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:
     """_do_work runs the genuine engine (numpy stats) and produces a payload."""
     app = MindDesktopApp(tk_root)

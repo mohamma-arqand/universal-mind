@@ -16,6 +16,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from universal_mind.persian_date import with_resolved_date
+
 _DIGIT_MAP = {
     "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
     "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
@@ -136,12 +138,12 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if data:
             params["series"] = {"داده": data}
         if text:
-            params["title"] = text
+            params["title"] = with_resolved_date(text, command)
         return params
     if capability == "pdf":
         params = {"operation": "document"}
         if text:
-            params["title"] = text
+            params["title"] = with_resolved_date(text, command)
         return params
     if capability == "image":
         if path:
@@ -183,4 +185,5 @@ __all__ = [
     "extract_path",
     "extract_params",
     "resolve_folder",
+    "with_resolved_date",
 ]

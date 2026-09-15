@@ -147,6 +147,14 @@ class MindDesktopApp:
         fa_result.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
         self._fa_result_text = scrolledtext.ScrolledText(fa_result, font=("Consolas", 9))
         self._fa_result_text.pack(fill=tk.BOTH, expand=True)
+        fa_preview = ttk.LabelFrame(fa_body, text="پیشنمایش", padding=6)
+        fa_preview.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self._fa_preview_label = ttk.Label(
+            fa_preview, text="تصویر تولیدشده اینجا نمایش داده میشود",
+            anchor=tk.CENTER, foreground="#666",
+        )
+        self._fa_preview_label.pack(fill=tk.BOTH, expand=True)
+        self._fa_preview_photo: Any = None  # hold alive for Tk
 
         # --- Tab 3: chain (multi-capability, one click) ---
         chain_tab = ttk.Frame(self._notebook, padding=6)
@@ -358,27 +366,46 @@ class MindDesktopApp:
         )
         self._fa_result_text.delete("1.0", tk.END)
         self._fa_result_text.insert(tk.END, json.dumps(payload, indent=2, ensure_ascii=False))
+        # Show the produced image in the Persian tab's preview pane too.
+        self._show_fa_preview(_first_image_from(payload.get("result", {})))
 
     def _show_preview(self, image_path: str | None) -> None:
-        """Display a real produced image inside the window (resized to fit)."""
+        """Show the chain result image in the chain tab's preview pane."""
+        self._show_preview_in(
+            self._preview_label, lambda: setattr(self, "_preview_photo", None),
+            lambda photo: setattr(self, "_preview_photo", photo), image_path,
+            empty_text="این زنجیره تصویری تولید نکرد",
+        )
+
+    def _show_fa_preview(self, image_path: str | None) -> None:
+        """Show the Persian-command result image in the Persian tab's pane."""
+        self._show_preview_in(
+            self._fa_preview_label, lambda: setattr(self, "_fa_preview_photo", None),
+            lambda photo: setattr(self, "_fa_preview_photo", photo), image_path,
+            empty_text="این فرمان تصویری تولید نکرد",
+        )
+
+    def _show_preview_in(
+        self, label: ttk.Label, clear_photo: Any, set_photo: Any,
+        image_path: str | None, *, empty_text: str,
+    ) -> None:
+        """Display a real produced image inside a label (resized to fit)."""
         from PIL import Image, ImageTk
 
         if not image_path:
-            self._preview_label.configure(
-                text="این زنجیره تصویری تولید نکرد", foreground="#666"
-            )
-            self._preview_photo = None
+            label.configure(text=empty_text, foreground="#666", image="")
+            clear_photo()
             return
         try:
             with Image.open(image_path) as im:
                 im.thumbnail((420, 320))
                 photo = ImageTk.PhotoImage(im)
         except Exception as exc:  # noqa: BLE001 — a broken preview is not fatal
-            self._preview_label.configure(text=f"(پیشنمایش ناممکن: {exc})", foreground="#a00")
-            self._preview_photo = None
+            label.configure(text=f"(پیشنمایش ناممکن: {exc})", foreground="#a00", image="")
+            clear_photo()
             return
-        self._preview_photo = photo  # keep alive: Tk only renders referenced images
-        self._preview_label.configure(image=photo, text="")
+        set_photo(photo)  # keep alive: Tk only renders referenced images
+        label.configure(image=photo, text="")
 
 
 def _first_image_from(results: dict[str, Any]) -> str | None:
