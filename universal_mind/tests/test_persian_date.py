@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from universal_mind.persian_date import jalali_date, resolve_temporal, with_resolved_date
+from universal_mind.persian_date import (
+    jalali_date,
+    resolve_temporal,
+    with_resolved_date,
+)
 
 
 def test_today_is_a_real_jalali_date() -> None:

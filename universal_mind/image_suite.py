@@ -156,7 +156,7 @@ class ImageSuite:
         return {"ok": True, "path": str(out_path), "bytes": out_path.stat().st_size, "error": ""}
 
     # --- shared helper for all single-image transforms ---
-    def _transform(self, path: str, name: str, fn: "Any") -> dict[str, Any]:
+    def _transform(self, path: str, name: str, fn: Any) -> dict[str, Any]:
         """Run a real Pillow transform on a real file, saving to a temp artifact."""
         src = Path(path)
         if not src.exists():
@@ -184,22 +184,22 @@ class ImageSuite:
         return self._transform(path, "autocontrast", lambda im: ImageOps.autocontrast(im))
 
     def invert(self, path: str) -> dict[str, Any]:
-        def _invert(im: "Any") -> "Any":
+        def _invert(im: Any) -> Any:
             return ImageOps.invert(im.convert("RGB"))
         return self._transform(path, "invert", _invert)
 
     def posterize(self, path: str, bits: int = 4) -> dict[str, Any]:
-        def _posterize(im: "Any") -> "Any":
+        def _posterize(im: Any) -> Any:
             return ImageOps.posterize(im.convert("RGB"), bits)
         return self._transform(path, "posterize", _posterize)
 
     def equalize(self, path: str) -> dict[str, Any]:
-        def _equalize(im: "Any") -> "Any":
+        def _equalize(im: Any) -> Any:
             return ImageOps.equalize(im.convert("RGB"))
         return self._transform(path, "equalize", _equalize)
 
     def solarize(self, path: str, threshold: int = 128) -> dict[str, Any]:
-        def _solarize(im: "Any") -> "Any":
+        def _solarize(im: Any) -> Any:
             return ImageOps.solarize(im.convert("RGB"), threshold)
         return self._transform(path, "solarize", _solarize)
 
@@ -208,22 +208,22 @@ class ImageSuite:
 
     # --- ImageEnhance operations (real) ---
     def brightness(self, path: str, factor: float = 1.5) -> dict[str, Any]:
-        def _bright(im: "Any") -> "Any":
+        def _bright(im: Any) -> Any:
             return ImageEnhance.Brightness(im).enhance(factor)
         return self._transform(path, "brightness", _bright)
 
     def contrast(self, path: str, factor: float = 1.5) -> dict[str, Any]:
-        def _contrast(im: "Any") -> "Any":
+        def _contrast(im: Any) -> Any:
             return ImageEnhance.Contrast(im).enhance(factor)
         return self._transform(path, "contrast", _contrast)
 
     def color(self, path: str, factor: float = 1.5) -> dict[str, Any]:
-        def _color(im: "Any") -> "Any":
+        def _color(im: Any) -> Any:
             return ImageEnhance.Color(im).enhance(factor)
         return self._transform(path, "color", _color)
 
     def sharpness(self, path: str, factor: float = 2.0) -> dict[str, Any]:
-        def _sharp(im: "Any") -> "Any":
+        def _sharp(im: Any) -> Any:
             return ImageEnhance.Sharpness(im).enhance(factor)
         return self._transform(path, "sharpness", _sharp)
 
@@ -251,21 +251,21 @@ class ImageSuite:
 
     # --- draw / compose (real) ---
     def draw_text(self, path: str, text: str = "Universal Mind", color: str = "white") -> dict[str, Any]:
-        def _draw(im: "Any") -> "Any":
+        def _draw(im: Any) -> Any:
             drawable = ImageDraw.Draw(im)
             drawable.text((10, im.height - 30), text, fill=color)
             return im
         return self._transform(path, "text", _draw)
 
     def draw_rectangle(self, path: str, box: tuple[int, int, int, int] = (10, 10, 60, 40), color: str = "red") -> dict[str, Any]:
-        def _rect(im: "Any") -> "Any":
+        def _rect(im: Any) -> Any:
             drawable = ImageDraw.Draw(im)
             drawable.rectangle(list(box), fill=color)
             return im
         return self._transform(path, "rectangle", _rect)
 
     def watermark(self, path: str, text: str = "© Universal Mind") -> dict[str, Any]:
-        def _wm(im: "Any") -> "Any":
+        def _wm(im: Any) -> Any:
             drawable = ImageDraw.Draw(im)
             drawable.text((im.width - 140, im.height - 24), text, fill="white")
             return im
@@ -273,7 +273,7 @@ class ImageSuite:
 
     # --- modes / advanced (real) ---
     def quantize(self, path: str, colors: int = 16) -> dict[str, Any]:
-        def _quantize(im: "Any") -> "Any":
+        def _quantize(im: Any) -> Any:
             return im.convert("RGB").quantize(colors).convert("RGB")
         return self._transform(path, "quantized", _quantize)
 

@@ -99,9 +99,8 @@ def resolve_folder(command: str) -> str | None:
     The path is resolved against the actual user profile, so «از دسکتاپ» really
     means C:\\Users\\<user>\\Desktop on this machine — not a placeholder.
     """
-    from pathlib import Path
-
     import os
+    from pathlib import Path
 
     profile = os.environ.get("USERPROFILE")
     if not profile:
@@ -181,9 +180,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
 __all__ = [
     "extract_numbers",
     "extract_numbers_between",
-    "extract_text",
-    "extract_path",
     "extract_params",
+    "extract_path",
+    "extract_text",
     "resolve_folder",
     "with_resolved_date",
 ]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+
 from universal_mind.data_suite import DataSuite, DataSuiteConnector
 
 

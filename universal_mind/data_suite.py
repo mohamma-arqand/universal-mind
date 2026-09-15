@@ -118,72 +118,72 @@ class DataSuite:
 
 
     # --- descriptive (real numpy) ---
-    def variance(self, data: "Sequence[float]") -> dict[str, Any]:
+    def variance(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         return {"ok": True, "variance": float(np.var(arr)), "error": ""}
 
-    def percentile(self, data: "Sequence[float]", q: float = 50) -> dict[str, Any]:
+    def percentile(self, data: Sequence[float], q: float = 50) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         return {"ok": True, "percentile": float(np.percentile(arr, q)), "q": q, "error": ""}
 
-    def cumulative_sum(self, data: "Sequence[float]") -> dict[str, Any]:
+    def cumulative_sum(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         return {"ok": True, "cumulative": [float(v) for v in np.cumsum(arr)], "error": ""}
 
-    def differences(self, data: "Sequence[float]") -> dict[str, Any]:
+    def differences(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size < 2:
             return {"ok": False, "error": "need at least 2 points"}
         return {"ok": True, "differences": [float(v) for v in np.diff(arr)], "error": ""}
 
-    def unique_values(self, data: "Sequence[float]") -> dict[str, Any]:
+    def unique_values(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         return {"ok": True, "unique": [float(v) for v in np.unique(arr)], "error": ""}
 
-    def argmax(self, data: "Sequence[float]") -> dict[str, Any]:
+    def argmax(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         return {"ok": True, "argmax": int(np.argmax(arr)), "value": float(arr[np.argmax(arr)]), "error": ""}
 
-    def argmin(self, data: "Sequence[float]") -> dict[str, Any]:
+    def argmin(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         return {"ok": True, "argmin": int(np.argmin(arr)), "value": float(arr[np.argmin(arr)]), "error": ""}
 
-    def histogram_counts(self, data: "Sequence[float]", bins: int = 5) -> dict[str, Any]:
+    def histogram_counts(self, data: Sequence[float], bins: int = 5) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         counts, edges = np.histogram(arr, bins=bins)
         return {"ok": True, "counts": [int(c) for c in counts], "edges": [float(e) for e in edges], "error": ""}
 
-    def rounded(self, data: "Sequence[float]", decimals: int = 1) -> dict[str, Any]:
+    def rounded(self, data: Sequence[float], decimals: int = 1) -> dict[str, Any]:
         arr = self._array(data)
         return {"ok": True, "rounded": [float(v) for v in np.round(arr, decimals)], "error": ""}
 
     # --- linear algebra (real numpy) ---
-    def inverse(self, matrix: "list[list[float]]") -> dict[str, Any]:
+    def inverse(self, matrix: list[list[float]]) -> dict[str, Any]:
         try:
             inv = np.linalg.inv(self._array(matrix))
         except np.linalg.LinAlgError as exc:
             return {"ok": False, "error": f"singular matrix: {exc}"}
         return {"ok": True, "inverse": inv.tolist(), "error": ""}
 
-    def dot_product(self, a: "Sequence[float]", b: "Sequence[float]") -> dict[str, Any]:
+    def dot_product(self, a: Sequence[float], b: Sequence[float]) -> dict[str, Any]:
         x, y = self._array(a), self._array(b)
         if x.size != y.size:
             return {"ok": False, "error": "length mismatch"}
         return {"ok": True, "dot": float(np.dot(x, y)), "error": ""}
 
-    def svd_rank(self, matrix: "list[list[float]]") -> dict[str, Any]:
+    def svd_rank(self, matrix: list[list[float]]) -> dict[str, Any]:
         try:
             s = np.linalg.svd(self._array(matrix), compute_uv=False)
         except np.linalg.LinAlgError as exc:
@@ -192,27 +192,27 @@ class DataSuite:
         return {"ok": True, "singular_values": [float(v) for v in s], "rank": rank, "error": ""}
 
     # --- analysis (real numpy) ---
-    def covariance(self, a: "Sequence[float]", b: "Sequence[float]") -> dict[str, Any]:
+    def covariance(self, a: Sequence[float], b: Sequence[float]) -> dict[str, Any]:
         x, y = self._array(a), self._array(b)
         if x.size != y.size or x.size < 2:
             return {"ok": False, "error": "need equal-length series of 2+"}
         return {"ok": True, "covariance": float(np.cov(x, y)[0, 1]), "error": ""}
 
-    def polyfit(self, xs: "Sequence[float]", ys: "Sequence[float]", degree: int = 1) -> dict[str, Any]:
+    def polyfit(self, xs: Sequence[float], ys: Sequence[float], degree: int = 1) -> dict[str, Any]:
         x, y = self._array(xs), self._array(ys)
         if x.size != y.size or x.size <= degree:
             return {"ok": False, "error": "need more points than the polynomial degree"}
         coeffs = np.polyfit(x, y, degree)
         return {"ok": True, "coefficients": [float(c) for c in coeffs], "degree": degree, "error": ""}
 
-    def fourier(self, data: "Sequence[float]") -> dict[str, Any]:
+    def fourier(self, data: Sequence[float]) -> dict[str, Any]:
         arr = self._array(data)
         if arr.size == 0:
             return {"ok": False, "error": "empty series"}
         spectrum = np.fft.fft(arr)
         return {"ok": True, "magnitudes": [float(abs(v)) for v in spectrum], "error": ""}
 
-    def clip_range(self, data: "Sequence[float]", low: float = 0, high: float = 10) -> dict[str, Any]:
+    def clip_range(self, data: Sequence[float], low: float = 0, high: float = 10) -> dict[str, Any]:
         arr = self._array(data)
         return {"ok": True, "clipped": [float(v) for v in np.clip(arr, low, high)], "error": ""}
 

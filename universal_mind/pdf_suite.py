@@ -20,6 +20,8 @@ from reportlab.lib.pagesizes import A4, landscape  # type: ignore[import-untyped
 from reportlab.lib.styles import getSampleStyleSheet  # type: ignore[import-untyped]
 from reportlab.platypus import (  # type: ignore[import-untyped]
     Image as RLImage,
+)
+from reportlab.platypus import (
     ListFlowable,
     ListItem,
     PageBreak,
