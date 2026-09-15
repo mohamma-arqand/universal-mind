@@ -70,13 +70,47 @@ def extract_text(command: str) -> str | None:
 
 
 def extract_path(command: str) -> str | None:
-    """A real file path appearing in the command (C:\..., D:/..., or /unix)."""
+    r"""A real file path appearing in the command (C:\..., D:/..., or /unix)."""
     normalized = _normalize_digits(command)
     m = re.search(r"[A-Za-z]:[\\/][^\s«»\"']+", normalized)
     if m:
         return m.group(0)
     m = re.search(r"(?<!\w)/[a-zA-Z0-9_\-./]+", normalized)
     return m.group(0) if m else None
+
+
+_KNOWN_FOLDERS: dict[str, str] = {
+    "دسکتاپ": "Desktop",
+    "میز کار": "Desktop",
+    "دانلود": "Downloads",
+    "دانلودها": "Downloads",
+    "اسناد": "Documents",
+    "مستندات": "Documents",
+    "عکس ها": "Pictures",
+    "عکسها": "Pictures",
+}
+
+
+def resolve_folder(command: str) -> str | None:
+    """A Persian folder name («از دسکتاپ») → the real Windows folder path.
+
+    The path is resolved against the actual user profile, so «از دسکتاپ» really
+    means C:\\Users\\<user>\\Desktop on this machine — not a placeholder.
+    """
+    from pathlib import Path
+
+    import os
+
+    profile = os.environ.get("USERPROFILE")
+    if not profile:
+        return None
+    lowered = command.lower()
+    for fa, folder in _KNOWN_FOLDERS.items():
+        if fa in lowered:
+            real = Path(profile) / folder
+            if real.exists():
+                return str(real)
+    return None
 
 
 def extract_params(command: str, capability: str) -> dict[str, Any]:
@@ -112,6 +146,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     if capability == "image":
         if path:
             return {"operation": "info", "path": path}
+        folder = resolve_folder(command)
+        if folder:
+            return {"operation": "info", "path": folder, "folder": folder}
         return {"operation": "info"}
     if capability == "media":
         return {"operation": "generate"}
@@ -145,4 +182,5 @@ __all__ = [
     "extract_text",
     "extract_path",
     "extract_params",
+    "resolve_folder",
 ]

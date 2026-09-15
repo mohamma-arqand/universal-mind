@@ -35,8 +35,14 @@ class PersianRoute:
 # Persian vocabulary → capability. One phrase can trigger several capabilities
 # (e.g. «نمودار» → chart, «ذخیره» → database), and chains are built from what fires.
 _VOCAB: tuple[tuple[str, str], ...] = (
-    # data (numpy)
+    # data (numpy) — formal AND colloquial forms
     ("میانگین", "data"),
+    ("میانگینشو", "data"),
+    ("میانگینش", "data"),
+    ("میانگین بگیر", "data"),
+    ("میانگین بگیره", "data"),
+    ("حسابش کن", "data"),
+    ("حساب کن", "data"),
     ("میانگین ", "data"),
     ("انحراف", "data"),
     ("آمار", "data"),
@@ -46,9 +52,14 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("درصد", "data"),
     ("نرمال", "data"),
     ("ماتریس", "data"),
-    # chart (matplotlib)
+    # chart (matplotlib) — formal AND colloquial
     ("نمودار", "chart"),
+    ("نمودارشو", "chart"),
+    ("نمودارش", "chart"),
+    ("نمودار بکش", "chart"),
+    ("بکش", "chart"),
     ("رسم", "chart"),
+    ("رسمش کن", "chart"),
     ("خطی", "chart"),
     ("میله", "chart"),
     ("دایره", "chart"),
@@ -70,8 +81,10 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فیلتر تصویر", "image"),
     ("سیاه سفید", "image"),
     ("واترمارک", "image"),
-    # database (SQLite)
+    # database (SQLite) — formal AND colloquial
     ("ذخیره", "database"),
+    ("ذخیرهش کن", "database"),
+    ("ذخیره کن", "database"),
     ("دیتابیس", "database"),
     ("جدول", "database"),
     ("کوئری", "database"),

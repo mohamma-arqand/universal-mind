@@ -32,6 +32,42 @@ class TestStoreIsRealInsert:
         assert payload["result"]["database"]["inserted"] == 3
 
 
+class TestColloquialAndFolders:
+    def test_colloquial_forms_route_the_same(self) -> None:
+        """محاوره («میانگینشو»، «نمودارشو») routes exactly like formal Persian."""
+        from universal_mind.persian_router import route
+
+        assert route("میانگینشو حساب کن").capabilities == ("data",)
+        assert route("نمودارشو بکش").capabilities == ("chart",)
+        assert route("ذخیرهش کن").capabilities == ("database",)
+
+    def test_resolve_folder_maps_desktop_for_real(self) -> None:
+        """«از دسکتاپ» resolves to the REAL Windows Desktop folder on this machine."""
+        import os
+        from pathlib import Path
+
+        from universal_mind.persian_params import resolve_folder
+
+        result = resolve_folder("این عکس را از دسکتاپ سیاه سفید کن")
+        if os.environ.get("USERPROFILE") and (Path(os.environ["USERPROFILE"]) / "Desktop").exists():
+            assert result is not None
+            assert "Desktop" in result
+        else:
+            assert result is None  # honest: no profile / no folder
+
+    def test_image_params_get_real_folder(self) -> None:
+        """extract_params for image with «از دسکتاپ» carries the real folder path."""
+        import os
+        from pathlib import Path
+
+        params = extract_params("این عکس را از دسکتاپ سیاه سفید کن", "image")
+        profile = os.environ.get("USERPROFILE")
+        if profile and (Path(profile) / "Desktop").exists():
+            assert params.get("folder") and "Desktop" in params["folder"]
+        else:
+            assert "folder" not in params  # honest absence
+
+
 class TestNumbers:
     def test_persian_digits_extracted(self) -> None:
         assert extract_numbers("میانگین ۲ و ۴ و ۶ را حساب کن") == [2.0, 4.0, 6.0]
