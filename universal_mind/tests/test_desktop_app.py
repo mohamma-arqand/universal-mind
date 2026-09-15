@@ -108,6 +108,58 @@ def test_chain_work_is_real(tk_root: tk.Tk) -> None:
     assert payload["results"]["archive"]["bytes"] > 0
 
 
+def test_first_image_from_finds_the_chart(tmp_path_factory) -> None:
+    """A chain's outputs containing a chart/media PNG yield that path; text-only
+    results yield None (no fabricated preview)."""
+    from universal_mind.desktop_app import _first_image_from
+
+    tmp = tmp_path_factory.mktemp("preview")
+    from PIL import Image
+
+    chart = tmp / "line.png"
+    Image.new("RGB", (60, 40), color=(10, 80, 160)).save(chart)
+    results = {
+        "chart": {"path": str(chart), "bytes": chart.stat().st_size},
+        "data": {"mean": 5.0},
+    }
+    assert _first_image_from(results) == str(chart)
+    assert _first_image_from({"data": {"mean": 5.0}}) is None
+
+
+def test_show_preview_displays_the_real_image(tk_root, tmp_path_factory) -> None:
+    """_show_preview loads a real PNG into the label (the photo reference holds)."""
+    from PIL import Image
+
+    tmp = tmp_path_factory.mktemp("preview2")
+    img = tmp / "real.png"
+    Image.new("RGB", (200, 150), color=(200, 100, 20)).save(img)
+
+    app = MindDesktopApp(tk_root)
+    app._show_preview(str(img))
+    tk_root.update()
+    # The label now shows an image (photo ref held) and no placeholder text.
+    assert app._preview_photo is not None
+    assert app._preview_label.cget("text") == ""
+
+
+def test_show_preview_handles_no_image(tk_root) -> None:
+    app = MindDesktopApp(tk_root)
+    app._show_preview(None)
+    tk_root.update()
+    assert app._preview_photo is None
+    assert "تولید نکرد" in app._preview_label.cget("text")
+
+
+def test_chain_work_shows_preview_of_real_chart(tk_root: tk.Tk) -> None:
+    """A real chart chain ends with the produced chart visible in the window."""
+    app = MindDesktopApp(tk_root)
+    app._do_chain_work(["chart", "data"])
+    tk_root.update()
+    payload = json.loads(app._chain_result.get("1.0", tk.END))
+    assert payload["ok"] is True
+    assert app._preview_photo is not None  # the real chart is displayed
+
+
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:
     """_do_work runs the genuine engine (numpy stats) and produces a payload."""
     app = MindDesktopApp(tk_root)

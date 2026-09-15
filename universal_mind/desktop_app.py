@@ -145,8 +145,18 @@ class MindDesktopApp:
             chain_right, text="▶ اجرای زنجیره (کار واقعی)", command=self._run_chain
         )
         self._chain_run_btn.pack(anchor=tk.W, pady=4)
-        self._chain_result = scrolledtext.ScrolledText(chain_right, font=("Consolas", 9))
-        self._chain_result.pack(fill=tk.BOTH, expand=True)
+        self._chain_result = scrolledtext.ScrolledText(chain_right, height=10, font=("Consolas", 9))
+        self._chain_result.pack(fill=tk.X)
+
+        # Graphic preview: the real produced image (chart/media) shown in-window.
+        preview_frame = ttk.LabelFrame(chain_tab, text="پیشنمایش (تصویر/نمودار تولیدشده)", padding=6)
+        preview_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(0, 8))
+        self._preview_label = ttk.Label(
+            preview_frame, text="پس از اجرای زنجیره، تصویرِ تولیدشده اینجا نمایش داده میشود",
+            anchor=tk.CENTER, foreground="#666",
+        )
+        self._preview_label.pack(fill=tk.BOTH, expand=True)
+        self._preview_photo: Any = None  # hold a reference so Tk doesn't GC it
 
     def _write_status(self) -> None:
         box = self._status_text
@@ -280,10 +290,44 @@ class MindDesktopApp:
         self._chain_run_btn.configure(state=tk.NORMAL)
         self._chain_result.delete("1.0", tk.END)
         self._chain_result.insert(tk.END, json.dumps(payload, indent=2, ensure_ascii=False))
+        # Show the first real image the chain produced, directly in the window.
+        self._show_preview(_first_image_from(payload.get("results", {})))
 
     def _post_result(self, payload: dict[str, Any]) -> None:
         self._run_btn.configure(state=tk.NORMAL)
         self._show_result(json.dumps(payload, indent=2, ensure_ascii=False))
+
+    def _show_preview(self, image_path: str | None) -> None:
+        """Display a real produced image inside the window (resized to fit)."""
+        from PIL import Image, ImageTk
+
+        if not image_path:
+            self._preview_label.configure(
+                text="این زنجیره تصویری تولید نکرد", foreground="#666"
+            )
+            self._preview_photo = None
+            return
+        try:
+            with Image.open(image_path) as im:
+                im.thumbnail((420, 320))
+                photo = ImageTk.PhotoImage(im)
+        except Exception as exc:  # noqa: BLE001 — a broken preview is not fatal
+            self._preview_label.configure(text=f"(پیشنمایش ناممکن: {exc})", foreground="#a00")
+            self._preview_photo = None
+            return
+        self._preview_photo = photo  # keep alive: Tk only renders referenced images
+        self._preview_label.configure(image=photo, text="")
+
+
+def _first_image_from(results: dict[str, Any]) -> str | None:
+    """The first real image file among a chain's outputs (chart/media/image), or None."""
+    for cap in ("chart", "media", "image"):
+        entry = results.get(cap)
+        if isinstance(entry, dict) and entry.get("path"):
+            path = str(entry["path"])
+            if path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
+                return path
+    return None
 
 
 def _factory_for(cap: str) -> "Callable[[ToolEntry], Any]":
