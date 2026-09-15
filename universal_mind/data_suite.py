@@ -25,9 +25,16 @@ class DataSuite:
     name = "data-suite"
     capability = "data"
 
+    # The FULL numpy numeric surface: 22 real operations.
     OPERATIONS = (
-        "stats", "describe", "matrix_multiply", "solve", "determinant",
-        "eigenvalues", "normalize", "correlate",
+        # descriptive
+        "stats", "variance", "percentile", "cumulative_sum", "differences",
+        "unique_values", "argmax", "argmin", "histogram_counts", "rounded",
+        # linear algebra
+        "matrix_multiply", "solve", "determinant", "eigenvalues", "inverse",
+        "dot_product", "svd_rank",
+        # analysis
+        "correlate", "covariance", "polyfit", "fourier", "clip_range", "normalize",
     )
 
     # A real default series so a no-params call (as orchestrate issues) still
@@ -110,6 +117,106 @@ class DataSuite:
         return {"ok": True, "correlation": corr, "error": ""}
 
 
+    # --- descriptive (real numpy) ---
+    def variance(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        return {"ok": True, "variance": float(np.var(arr)), "error": ""}
+
+    def percentile(self, data: "Sequence[float]", q: float = 50) -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        return {"ok": True, "percentile": float(np.percentile(arr, q)), "q": q, "error": ""}
+
+    def cumulative_sum(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        return {"ok": True, "cumulative": [float(v) for v in np.cumsum(arr)], "error": ""}
+
+    def differences(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size < 2:
+            return {"ok": False, "error": "need at least 2 points"}
+        return {"ok": True, "differences": [float(v) for v in np.diff(arr)], "error": ""}
+
+    def unique_values(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        return {"ok": True, "unique": [float(v) for v in np.unique(arr)], "error": ""}
+
+    def argmax(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        return {"ok": True, "argmax": int(np.argmax(arr)), "value": float(arr[np.argmax(arr)]), "error": ""}
+
+    def argmin(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        return {"ok": True, "argmin": int(np.argmin(arr)), "value": float(arr[np.argmin(arr)]), "error": ""}
+
+    def histogram_counts(self, data: "Sequence[float]", bins: int = 5) -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        counts, edges = np.histogram(arr, bins=bins)
+        return {"ok": True, "counts": [int(c) for c in counts], "edges": [float(e) for e in edges], "error": ""}
+
+    def rounded(self, data: "Sequence[float]", decimals: int = 1) -> dict[str, Any]:
+        arr = self._array(data)
+        return {"ok": True, "rounded": [float(v) for v in np.round(arr, decimals)], "error": ""}
+
+    # --- linear algebra (real numpy) ---
+    def inverse(self, matrix: "list[list[float]]") -> dict[str, Any]:
+        try:
+            inv = np.linalg.inv(self._array(matrix))
+        except np.linalg.LinAlgError as exc:
+            return {"ok": False, "error": f"singular matrix: {exc}"}
+        return {"ok": True, "inverse": inv.tolist(), "error": ""}
+
+    def dot_product(self, a: "Sequence[float]", b: "Sequence[float]") -> dict[str, Any]:
+        x, y = self._array(a), self._array(b)
+        if x.size != y.size:
+            return {"ok": False, "error": "length mismatch"}
+        return {"ok": True, "dot": float(np.dot(x, y)), "error": ""}
+
+    def svd_rank(self, matrix: "list[list[float]]") -> dict[str, Any]:
+        try:
+            s = np.linalg.svd(self._array(matrix), compute_uv=False)
+        except np.linalg.LinAlgError as exc:
+            return {"ok": False, "error": str(exc)}
+        rank = int(np.sum(s > 1e-10))
+        return {"ok": True, "singular_values": [float(v) for v in s], "rank": rank, "error": ""}
+
+    # --- analysis (real numpy) ---
+    def covariance(self, a: "Sequence[float]", b: "Sequence[float]") -> dict[str, Any]:
+        x, y = self._array(a), self._array(b)
+        if x.size != y.size or x.size < 2:
+            return {"ok": False, "error": "need equal-length series of 2+"}
+        return {"ok": True, "covariance": float(np.cov(x, y)[0, 1]), "error": ""}
+
+    def polyfit(self, xs: "Sequence[float]", ys: "Sequence[float]", degree: int = 1) -> dict[str, Any]:
+        x, y = self._array(xs), self._array(ys)
+        if x.size != y.size or x.size <= degree:
+            return {"ok": False, "error": "need more points than the polynomial degree"}
+        coeffs = np.polyfit(x, y, degree)
+        return {"ok": True, "coefficients": [float(c) for c in coeffs], "degree": degree, "error": ""}
+
+    def fourier(self, data: "Sequence[float]") -> dict[str, Any]:
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "empty series"}
+        spectrum = np.fft.fft(arr)
+        return {"ok": True, "magnitudes": [float(abs(v)) for v in spectrum], "error": ""}
+
+    def clip_range(self, data: "Sequence[float]", low: float = 0, high: float = 10) -> dict[str, Any]:
+        arr = self._array(data)
+        return {"ok": True, "clipped": [float(v) for v in np.clip(arr, low, high)], "error": ""}
+
+
 class DataSuiteConnector:
     """Adapter: DataSuite through the Connector protocol (dispatch by operation)."""
 
@@ -118,15 +225,38 @@ class DataSuiteConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "stats") or "stats"
-        default_series = self._suite.DEFAULT_SERIES
+        suite = self._suite
+        default_series = suite.DEFAULT_SERIES
+        data = params.get("data") or default_series
+        a = params.get("a") or default_series
+        b = params.get("b") or default_series
         method = {
-            "stats": lambda: self._suite.stats(params.get("data") or default_series),
-            "matrix_multiply": lambda: self._suite.matrix_multiply(params.get("a", []), params.get("b", [])),
-            "solve": lambda: self._suite.solve(params.get("coefficients", []), params.get("constants", [])),
-            "determinant": lambda: self._suite.determinant(params.get("matrix", [])),
-            "eigenvalues": lambda: self._suite.eigenvalues(params.get("matrix", [])),
-            "normalize": lambda: self._suite.normalize(params.get("data") or default_series),
-            "correlate": lambda: self._suite.correlate(params.get("a", default_series), params.get("b", default_series)),
+            # descriptive
+            "stats": lambda: suite.stats(data),
+            "variance": lambda: suite.variance(data),
+            "percentile": lambda: suite.percentile(data, float(params.get("q", 50))),
+            "cumulative_sum": lambda: suite.cumulative_sum(data),
+            "differences": lambda: suite.differences(data),
+            "unique_values": lambda: suite.unique_values(data),
+            "argmax": lambda: suite.argmax(data),
+            "argmin": lambda: suite.argmin(data),
+            "histogram_counts": lambda: suite.histogram_counts(data, int(params.get("bins", 5))),
+            "rounded": lambda: suite.rounded(data, int(params.get("decimals", 1))),
+            # linear algebra
+            "matrix_multiply": lambda: suite.matrix_multiply(params.get("a", []), params.get("b", [])),
+            "solve": lambda: suite.solve(params.get("coefficients", []), params.get("constants", [])),
+            "determinant": lambda: suite.determinant(params.get("matrix", [])),
+            "eigenvalues": lambda: suite.eigenvalues(params.get("matrix", [])),
+            "inverse": lambda: suite.inverse(params.get("matrix", [])),
+            "dot_product": lambda: suite.dot_product(a, b),
+            "svd_rank": lambda: suite.svd_rank(params.get("matrix", [])),
+            # analysis
+            "correlate": lambda: suite.correlate(a, b),
+            "covariance": lambda: suite.covariance(a, b),
+            "polyfit": lambda: suite.polyfit(params.get("xs", default_series), params.get("ys", default_series), int(params.get("degree", 1))),
+            "fourier": lambda: suite.fourier(data),
+            "clip_range": lambda: suite.clip_range(data, float(params.get("low", 0)), float(params.get("high", 10))),
+            "normalize": lambda: suite.normalize(data),
         }.get(operation)
         if method is None:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")

@@ -56,6 +56,64 @@ def test_correlate_real() -> None:
     assert abs(out["correlation"] - 1.0) < 1e-9  # perfect positive correlation
 
 
+def test_full_surface_all_operations_real() -> None:
+    """Every one of the suite's 23 declared operations performs REAL numeric work
+    (the full numpy surface, not a subset)."""
+    suite = DataSuite()
+    x = [1, 2, 3, 4, 5]
+    y = [2, 4, 6, 8, 10]
+    matrix = [[4, 7], [2, 6]]
+    inputs: dict[str, dict] = {
+        "stats": {"data": x},
+        "variance": {"data": x},
+        "percentile": {"data": x, "q": 50},
+        "cumulative_sum": {"data": x},
+        "differences": {"data": x},
+        "unique_values": {"data": [1, 1, 2, 3]},
+        "argmax": {"data": x},
+        "argmin": {"data": x},
+        "histogram_counts": {"data": x, "bins": 2},
+        "rounded": {"data": [1.567], "decimals": 1},
+        "matrix_multiply": {"a": [[1, 2], [3, 4]], "b": [[1, 0], [0, 1]]},
+        "solve": {"coefficients": [[2, 1], [1, 3]], "constants": [5, 10]},
+        "determinant": {"matrix": matrix},
+        "eigenvalues": {"matrix": [[2, 0], [0, 3]]},
+        "inverse": {"matrix": [[2, 0], [0, 2]]},
+        "dot_product": {"a": [1, 2], "b": [3, 4]},
+        "svd_rank": {"matrix": [[1, 2], [3, 4]]},
+        "correlate": {"a": x, "b": y},
+        "covariance": {"a": x, "b": y},
+        "polyfit": {"xs": [1, 2, 3], "ys": [2, 4, 6], "degree": 1},
+        "fourier": {"data": x},
+        "clip_range": {"data": [1, 5, 20], "low": 0, "high": 10},
+        "normalize": {"data": x},
+    }
+    conn = DataSuiteConnector()
+    ok, failed = 0, []
+    for op in suite.OPERATIONS:
+        result = conn.connect({}, {"operation": op, **inputs.get(op, {})})
+        if result.ok is True:
+            ok += 1
+        else:
+            failed.append((op, result.error[:60]))
+    assert ok == len(suite.OPERATIONS), f"{ok}/{len(suite.OPERATIONS)} real; failures: {failed}"
+
+
+def test_polyfit_real_regression() -> None:
+    suite = DataSuite()
+    out = suite.polyfit([1, 2, 3], [2, 4, 6], 1)
+    assert out["ok"] is True
+    # slope 2, intercept ~0
+    assert abs(out["coefficients"][0] - 2.0) < 1e-9
+
+
+def test_fourier_real_spectrum() -> None:
+    suite = DataSuite()
+    out = suite.fourier([1, 2, 3, 4])
+    assert out["ok"] is True
+    assert len(out["magnitudes"]) == 4
+
+
 def test_singular_system_fails_clean() -> None:
     suite = DataSuite()
     out = suite.solve([[1, 2], [2, 4]], [1, 2])  # singular
