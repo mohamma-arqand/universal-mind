@@ -155,6 +155,7 @@ def route_and_run(
     returns ok=False with the honest reason — never a fabricated chain.
     """
     from universal_mind.orchestration import orchestrate
+    from universal_mind.persian_params import extract_params
     from universal_mind.real_tool_registry import (
         real_connector_factory,
     )
@@ -188,13 +189,24 @@ def route_and_run(
             )
         )
 
-    syn = orchestrate(reg, caps, connector_factory=real_connector_factory)
+    # Real parameters extracted FROM the command itself: «میانگین ۲ و ۴» must
+    # compute [2, 4], not a default series. A capability receives only the params
+    # its contract accepts (the dispatch constrains what it is given).
+    capability_params = params or {cap: extract_params(command, cap) for cap in caps}
+
+    syn = orchestrate(
+        reg,
+        caps,
+        connector_factory=real_connector_factory,
+        capability_params=capability_params,
+    )
     return {
         "ok": syn.ok,
         "command": command,
         "route": caps,
         "matched_words": list(route_result.matched_words),
         "unknown": list(route_result.unknown),
+        "extracted_params": capability_params,
         "result": syn.output["synthesized_from"],
         "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},

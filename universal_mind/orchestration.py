@@ -80,6 +80,7 @@ def orchestrate(
     *,
     composer: Composer | None = None,
     connector_factory: ConnectorFactory | None = None,
+    capability_params: dict[str, dict[str, Any]] | None = None,
 ) -> Synthesis:
     """Reach a tool for each needed capability and fuse their outputs into one D.
 
@@ -92,12 +93,16 @@ def orchestrate(
     bundle so D carries exactly which tool satisfied which capability (auditable).
     ``connector_factory`` overrides the mechanism-derived connector (e.g. to route
     a capability to a custom connector such as ``MediaToolConnector``).
+    ``capability_params`` feeds each capability the parameters the caller (or the
+    Persian router) specified: {"data": {"operation": "stats", "data": [2, 4]}} —
+    so «میانگین ۲ و ۴» computes [2, 4], not a default series.
     """
     fuse = composer if composer is not None else _default_composer
     factory = connector_factory if connector_factory is not None else _default_connector
     sub_outputs: list[SubOutput] = []
     for capability in capabilities:
         tool = registry.best_for(capability)
+        call_params = (capability_params or {}).get(capability, {})
         if tool is None:
             sub_outputs.append(
                 SubOutput(capability=capability, tool_name="", output=None, ok=False,
@@ -105,7 +110,7 @@ def orchestrate(
             )
             continue
         start = _perf()
-        result = factory(tool).connect(tool.connection, {})
+        result = factory(tool).connect(tool.connection, call_params)
         duration_ms = (_perf() - start) * 1000.0
         sub_outputs.append(
             SubOutput(
