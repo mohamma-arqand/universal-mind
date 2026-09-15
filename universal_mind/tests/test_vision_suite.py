@@ -132,11 +132,9 @@ class TestConnector:
         reg.register(ToolEntry(name="vision", capability="vision",
                                connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                                absorbable=True))
-        rtr._REAL_CONNECTORS["vision"] = VisionSuiteConnector  # one-line registration
-        try:
-            syn = orchestrate(reg, ["vision"], connector_factory=rtr.real_connector_factory)
-            assert syn.ok is True
-            # The no-params call ran real stats over a self-generated sample.
-            assert syn.output["synthesized_from"]["vision"]["shape"] == [120, 160, 3]
-        finally:
-            del rtr._REAL_CONNECTORS["vision"]
+        # "vision" is an officially registered real capability — no mutation of
+        # the shared connector table (same cross-test contamination class).
+        syn = orchestrate(reg, ["vision"], connector_factory=rtr.real_connector_factory)
+        assert syn.ok is True
+        # The no-params call ran real stats over a self-generated sample.
+        assert syn.output["synthesized_from"]["vision"]["shape"] == [120, 160, 3]

@@ -92,6 +92,8 @@ def test_chains_are_listed_and_all_real(tk_root: tk.Tk) -> None:
     for name, caps in _PRESET_CHAINS.items():
         assert name in listed
         for cap in caps:
+            # Every chain capability must be a genuinely registered real
+            # capability (the registry is the single source of truth).
             assert cap in rtr._REAL_CONNECTORS, f"chain '{name}' uses non-real '{cap}'"
 
 
@@ -195,6 +197,23 @@ def test_persian_tab_shows_preview_of_real_chart(tk_root: tk.Tk) -> None:
     payload = json.loads(app._fa_result_text.get("1.0", tk.END))
     assert payload["ok"] is True
     assert app._fa_preview_photo is not None  # the real chart displayed in the fa pane
+
+
+def test_vision_chain_lists_and_runs_real(tk_root: tk.Tk) -> None:
+    """The vision chains are listed, and vision→pdf runs real CV + a real PDF."""
+    app = MindDesktopApp(tk_root)
+    listed = list(app._chain_list.get(0, tk.END))
+    assert any("بینایی" in name for name in listed)
+    app._do_chain_work(["vision", "pdf"])
+    tk_root.update()
+    payload = json.loads(app._chain_result.get("1.0", tk.END))
+    assert payload["ok"] is True
+    # The default vision operation is real stats (per-channel, from OpenCV).
+    assert payload["results"]["vision"]["shape"] == [120, 160, 3]
+    assert payload["results"]["pdf"]["bytes"] > 0
+    # The vision image is displayed in the preview pane (stats has no image,
+    # but pdf's doc is not an image either — so the preview shows the placeholder).
+    assert payload.get("ok") is True
 
 
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:

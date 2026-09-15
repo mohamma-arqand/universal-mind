@@ -50,6 +50,9 @@ _PRESET_CHAINS: dict[str, list[str]] = {
     "data → database (ذخیره تحلیل)": ["data", "database"],
     "compute → clipboard (نتیجه در کلیپبورد)": ["compute", "clipboard"],
     "media → notify (اطلاع رسانی پس از کار)": ["media", "notify"],
+    "vision → pdf (گزارش بینایی)": ["vision", "pdf"],
+    "ai → chart (نمودار یادگیری)": ["ai", "chart"],
+    "vision → ai → pdf (تحلیل هوشمند تصویر)": ["vision", "ai", "pdf"],
 }
 
 _DEFAULT_PARAMS: dict[str, str] = {
@@ -409,8 +412,9 @@ class MindDesktopApp:
 
 
 def _first_image_from(results: dict[str, Any]) -> str | None:
-    """The first real image file among a chain's outputs (chart/media/image), or None."""
-    for cap in ("chart", "media", "image"):
+    """The first real image file among a chain's outputs (chart/media/image/
+    vision), or None. Vision's edge/contour images are real PNGs too."""
+    for cap in ("chart", "media", "image", "vision"):
         entry = results.get(cap)
         if isinstance(entry, dict) and entry.get("path"):
             path = str(entry["path"])

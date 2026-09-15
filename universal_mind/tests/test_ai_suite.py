@@ -131,11 +131,10 @@ class TestConnector:
         reg.register(ToolEntry(name="ai", capability="ai",
                                connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused"),
                                absorbable=True))
-        rtr._REAL_CONNECTORS["ai"] = AISuiteConnector  # one-line registration
-        try:
-            syn = orchestrate(reg, ["ai"], connector_factory=rtr.real_connector_factory)
-            assert syn.ok is True
-            # The no-params call runs a real regression over the default data.
-            assert "coefficients" in syn.output["synthesized_from"]["ai"]
-        finally:
-            del rtr._REAL_CONNECTORS["ai"]
+        # "ai" is an officially registered real capability — no mutation of the
+        # shared connector table (the mutate-then-delete pattern caused real
+        # cross-test contamination before).
+        syn = orchestrate(reg, ["ai"], connector_factory=rtr.real_connector_factory)
+        assert syn.ok is True
+        # The no-params call runs a real regression over the default data.
+        assert "coefficients" in syn.output["synthesized_from"]["ai"]
