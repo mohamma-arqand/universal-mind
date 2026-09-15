@@ -17,16 +17,17 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from universal_mind.connectors import ConnectorResult
-
 import numpy as np
-from scipy import signal, optimize as _scipy_optimize  # type: ignore[import-untyped]
+from scipy import optimize as _scipy_optimize
+from scipy import signal  # type: ignore[import-untyped]
 from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+from universal_mind.connectors import ConnectorResult
 
 
 class AISuite:
@@ -91,7 +92,7 @@ class AISuite:
         return {
             "ok": True,
             "accuracy": float(accuracy_score(y_te, predictions)),
-            "test_samples": int(len(y_te)),
+            "test_samples": len(y_te),
             "classes": [int(c) for c in model.classes_],
             "error": "",
         }
@@ -184,8 +185,8 @@ class AISuiteConnector:
 
     # A real default dataset so a no-params call (as orchestrate issues) still
     # TRAINS a genuine model instead of failing on empty data.
-    DEFAULT_XS: list[list[float]] = [[i] for i in range(10)]
-    DEFAULT_YS: list[float] = [2 * i + 1 for i in range(10)]
+    DEFAULT_XS: tuple[tuple[float, ...], ...] = tuple((float(i),) for i in range(10))
+    DEFAULT_YS: tuple[float, ...] = tuple(2.0 * i + 1.0 for i in range(10))
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "regression") or "regression"

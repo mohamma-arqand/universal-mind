@@ -17,10 +17,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from universal_mind.connectors import ConnectorResult
-
 import cv2
 import numpy as np
+
+from universal_mind.connectors import ConnectorResult
 
 
 class VisionSuite:
@@ -120,7 +120,7 @@ class VisionSuite:
             return saved
         return {
             "ok": True, "path": saved["path"], "bytes": saved["bytes"],
-            "contour_count": int(len(found)),
+            "contour_count": len(found),
             "largest_areas": areas,
             "error": "",
         }
@@ -221,7 +221,7 @@ class VisionSuiteConnector:
         target = Path(tempfile.mkdtemp(prefix="um-vision-"))
         image = np.zeros((120, 160, 3), dtype=np.uint8)
         image[30:90, 40:120] = (200, 120, 40)
-        ok, encoded = cv2.imencode(".png", image)
+        _ok, encoded = cv2.imencode(".png", image)
         sample = target / "sample.png"
         encoded.tofile(str(sample))
         return str(sample)
