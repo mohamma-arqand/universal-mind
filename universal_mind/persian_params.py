@@ -127,6 +127,14 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     if capability == "notify":
         return {"operation": "notify", "title": text or "Universal Mind", "body": command}
     if capability == "database":
+        # «ذخیره کن» + extracted numbers -> a REAL insert (not an empty query):
+        # the operator said store, so the numbers go into a real table.
+        if "ذخیره" in command and data:
+            return {
+                "operation": "insert_many",
+                "table": "extracted_data",
+                "rows": [{"value": str(n)} for n in data],
+            }
         return {"operation": "query"}
     return {}
 

@@ -11,6 +11,27 @@ from universal_mind.persian_params import (
 )
 
 
+class TestStoreIsRealInsert:
+    def test_store_command_produces_insert_many(self) -> None:
+        """«ذخیره کن» + numbers -> a real insert_many, NOT an empty query."""
+        params = extract_params("میانگین ۱۰ و ۲۰ و ۳۰ را ذخیره کن", "database")
+        assert params["operation"] == "insert_many"
+        assert params["rows"] == [{"value": "10.0"}, {"value": "20.0"}, {"value": "30.0"}]
+
+    def test_query_without_store_stays_query(self) -> None:
+        """Without «ذخیره», database stays a read-only query (never an insert)."""
+        params = extract_params("از دیتابیس کوئری بگیر", "database")
+        assert params["operation"] == "query"
+
+    def test_store_route_and_run_inserts_for_real(self) -> None:
+        """End-to-end: the Persian store command really inserts into SQLite."""
+        from universal_mind.persian_router import route_and_run
+
+        payload = route_and_run("میانگین ۱۰ و ۲۰ و ۳۰ را حساب کن و در دیتابیس ذخیره کن")
+        assert payload["ok"] is True
+        assert payload["result"]["database"]["inserted"] == 3
+
+
 class TestNumbers:
     def test_persian_digits_extracted(self) -> None:
         assert extract_numbers("میانگین ۲ و ۴ و ۶ را حساب کن") == [2.0, 4.0, 6.0]
