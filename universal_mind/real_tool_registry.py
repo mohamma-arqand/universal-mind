@@ -11,6 +11,7 @@ capability, gets the connector that produces that real effect.
 
 from __future__ import annotations
 
+from universal_mind.ai_suite import AISuiteConnector
 from universal_mind.archive_adapter import ArchiveToolConnector
 from universal_mind.chart_suite import ChartSuiteConnector
 from universal_mind.clipboard_adapter import ClipboardToolConnector
@@ -37,6 +38,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "chart": ChartSuiteConnector,      # full matplotlib surface (line/bar/pie/hist/scatter)
     "data": DataSuiteConnector,        # full numpy surface (stats/solve/eigen/normalize/correlate)
     "database": DatabaseSuiteConnector,  # full sqlite3 surface (DDL/inserts/queries/tables)
+    "ai": AISuiteConnector,            # real ML + signal (sklearn train/fit + scipy fft/peaks)
 }
 
 
