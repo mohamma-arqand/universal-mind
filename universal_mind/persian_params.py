@@ -140,9 +140,15 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             params["title"] = with_resolved_date(text, command)
         return params
     if capability == "pdf":
-        params = {"operation": "document"}
-        if text:
-            params["title"] = with_resolved_date(text, command)
+        # A Persian command deserves a Persian RTL document (not a Latin-only one):
+        # the title and paragraphs are real Persian text, rendered RTL.
+        params = {"operation": "persian_rtl"}
+        title = with_resolved_date(text or "گزارش ذهن یکپارچه", command)
+        params["title"] = title
+        params["paragraphs"] = [
+            "گزارش تولیدشده توسط حلقهی سنتز ذهن یکپارچه.",
+            f"فرمان دریافتشده: {command}",
+        ]
         return params
     if capability == "image":
         if path:
@@ -166,12 +172,15 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "notify", "title": text or "Universal Mind", "body": command}
     if capability == "database":
         # «ذخیره کن» + extracted numbers -> a REAL insert (not an empty query):
-        # the operator said store, so the numbers go into a real table.
+        # the operator said store, so the numbers go into a real table — and the
+        # PERSISTENT database (~/.universal-mind/mind.db), because data the
+        # operator chose to store must survive the session, not die with it.
         if "ذخیره" in command and data:
             return {
                 "operation": "insert_many",
                 "table": "extracted_data",
                 "rows": [{"value": str(n)} for n in data],
+                "persistent": True,
             }
         return {"operation": "query"}
     return {}

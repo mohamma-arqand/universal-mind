@@ -45,7 +45,7 @@ class PdfSuite:
     OPERATIONS = (
         "document", "multi_page", "table", "styled_table", "with_image",
         "bullet_list", "numbered_list", "letterhead", "invoice", "two_column",
-        "landscape", "cover_page",
+        "landscape", "cover_page", "persian_rtl",
     )
 
     def document(
@@ -243,6 +243,43 @@ class PdfSuite:
         return self._build(story, target / "cover_page.pdf")
 
 
+    def persian_rtl(
+        self,
+        title: str = "گزارش ذهن یکپارچه",
+        paragraphs: list[str] | None = None,
+        out_dir: str | None = None,
+    ) -> dict[str, Any]:
+        """A real Persian document with RTL alignment and a real embedded Persian font.
+
+        reportlab's base fonts have no Persian glyphs, so the TTF that ships with
+        the OS (Tahoma) is registered for real text shaping. Paragraphs use
+        wordWrap='RTL' + alignment=TA_RIGHT — a genuinely right-to-left document.
+        """
+        from reportlab.lib.enums import TA_RIGHT  # type: ignore[import-untyped]
+        from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
+        from reportlab.pdfbase.ttfonts import TTFont  # type: ignore[import-untyped]
+
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-fa-"))
+        target.mkdir(parents=True, exist_ok=True)
+        out_path = target / "persian_rtl.pdf"
+        styles = getSampleStyleSheet()
+        # Register a real OS Persian-capable font (Tahoma ships with Windows).
+        for candidate in (r"C:\Windows\Fonts\tahoma.ttf", r"C:\Windows\Fonts\arial.ttf"):
+            if Path(candidate).exists():
+                pdfmetrics.registerFont(TTFont("PersianFont", candidate))
+                break
+        else:
+            return {"ok": False, "error": "no Persian-capable font found on this system"}
+        fa_style = styles["BodyText"].clone("PersianBody", fontName="PersianFont", alignment=TA_RIGHT, wordWrap="RTL")
+        fa_title = styles["Title"].clone("PersianTitle", fontName="PersianFont", alignment=TA_RIGHT, wordWrap="RTL")
+        story: list[Any] = [Paragraph(title, fa_title)]
+        for paragraph in paragraphs or ["این سند توسط حلقهی سنتز ذهن یکپارچه ساخته شده است.",
+                                        "متن فارسی واقعی با راستچین کامل."]:
+            story.append(Spacer(1, 12))
+            story.append(Paragraph(paragraph, fa_style))
+        return self._build(story, out_path)
+
+
 class PdfSuiteConnector:
     """Adapter: PdfSuite through the Connector protocol (dispatch by operation)."""
 
@@ -275,6 +312,9 @@ class PdfSuiteConnector:
             "two_column": lambda: suite.two_column(params.get("left_text", "Left column."), params.get("right_text", "Right column.")),
             "landscape": lambda: suite.landscape(params.get("title", "Landscape page")),
             "cover_page": lambda: suite.cover_page(params.get("title", "Universal Mind"), params.get("subtitle", "Synthesis Report")),
+            "persian_rtl": lambda: suite.persian_rtl(
+                params.get("title", "گزارش ذهن یکپارچه"), params.get("paragraphs")
+            ),
         }.get(operation)
         if method is None:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")

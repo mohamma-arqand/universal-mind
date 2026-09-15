@@ -129,8 +129,9 @@ class TestExtractParams:
         assert params["title"] == "فروش فصلی"
 
     def test_pdf_with_title(self) -> None:
+        """A Persian command now produces a Persian RTL document (not Latin-only)."""
         params = extract_params("یک گزارش «پیشنهاد نهایی» بساز", "pdf")
-        assert params["operation"] == "document"
+        assert params["operation"] == "persian_rtl"
         assert params["title"] == "پیشنهاد نهایی"
 
     def test_compute_builds_a_real_expression(self) -> None:

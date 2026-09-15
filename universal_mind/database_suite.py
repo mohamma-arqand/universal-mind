@@ -27,10 +27,29 @@ class DatabaseSuite:
 
     OPERATIONS = ("execute", "query", "insert_many", "tables")
 
-    def __init__(self, db_path: str | None = None) -> None:
-        target = Path(db_path) if db_path else Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
+    DEFAULT_DB_DIR = Path.home() / ".universal-mind"
+
+    def __init__(self, db_path: str | None = None, *, persistent: bool = False) -> None:
+        """A real SQLite database.
+
+        ``persistent=True`` binds the suite to a FIXED on-disk database
+        (``~/.universal-mind/mind.db``) that survives across sessions — the
+        operator's accumulated data is kept, not discarded with the temp dir.
+        The default remains a throwaway temp db (tests/isolation stay safe).
+        """
+        if db_path:
+            target = Path(db_path)
+        elif persistent:
+            target = self.DEFAULT_DB_DIR / "mind.db"
+        else:
+            target = Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
         target.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(target)
+
+    @property
+    def db_path(self) -> str:
+        """The real on-disk path of this database (auditable)."""
+        return self._path
 
     def _conn(self) -> sqlite3.Connection:
         return sqlite3.connect(self._path)
@@ -99,6 +118,11 @@ class DatabaseSuiteConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "query") or "query"
+        # A params["persistent"]=True insert rebinds this call to the FIXED
+        # on-disk database (~/.universal-mind/mind.db) so the stored data
+        # survives the session — the operator said store; it must last.
+        if params.get("persistent") and operation == "insert_many":
+            self._suite = DatabaseSuite(persistent=True)
         # A missing SQL defaults to a real, harmless catalog query, so a no-params
         # call (as orchestrate issues) still performs genuine database work.
         default_sql = "SELECT name, type FROM sqlite_master WHERE type='table'"
@@ -117,6 +141,8 @@ class DatabaseSuiteConnector:
         output: Any = result.get("rows") if operation == "query" else {
             k: v for k, v in result.items() if k not in ("ok", "error")
         }
+        if operation == "insert_many":
+            output["db_path"] = self._suite.db_path  # auditable: where the data lives
         return ConnectorResult(ok=True, output=output)
 
 

@@ -89,6 +89,44 @@ def test_unknown_operation_fails_clean() -> None:
     assert "unknown operation" in result.error
 
 
+class TestPersistence:
+    def test_persistent_db_survives_a_fresh_suite(self) -> None:
+        """persistent=True binds to a FIXED file: a brand-new suite (a new
+        session) still sees the data — real survival, not temp-dir death."""
+        import os
+        from pathlib import Path
+
+
+        db_dir = Path.home() / ".universal-mind"
+        db_file = db_dir / "mind.db"
+        marker_table = f"persist_marker_{os.getpid()}"
+        a = DatabaseSuite(persistent=True)
+        assert Path(a.db_path) == db_file
+        assert a.execute(f"CREATE TABLE IF NOT EXISTS {marker_table} (v TEXT)")["ok"]
+        assert a.insert_many(marker_table, [{"v": "survives"}])["ok"]
+        # A completely fresh suite instance (the next session) sees the marker.
+        b = DatabaseSuite(persistent=True)
+        q = b.query(f"SELECT COUNT(*) AS n FROM {marker_table}")
+        assert q["ok"] is True
+        assert q["rows"][0]["n"] >= 1
+        # Cleanup the marker so repeated runs stay clean.
+        b.execute(f"DROP TABLE {marker_table}")
+
+    def test_connector_persistent_insert_reports_db_path(self) -> None:
+        """A persistent insert reports WHERE the data lives (auditable)."""
+        import uuid
+
+        conn = DatabaseSuiteConnector(DatabaseSuite(persistent=True))
+        table = f"audit_{uuid.uuid4().hex[:8]}"
+        out = conn.connect({}, {
+            "operation": "insert_many", "table": table,
+            "rows": [{"v": "1"}], "persistent": True,
+        })
+        assert out.ok is True
+        assert ".universal-mind" in str(out.output.get("db_path"))
+        conn.connect({}, {"operation": "execute", "sql": f"DROP TABLE {table}"})
+
+
 def test_database_suite_joins_the_synthesis_loop() -> None:
     """The whole SQL program participates in the multi-tool synthesis loop."""
     import universal_mind.real_tool_registry as rtr

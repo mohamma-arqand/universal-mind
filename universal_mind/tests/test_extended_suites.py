@@ -104,6 +104,25 @@ class TestExtendedPdf:
             result = conn.connect({}, params)
             assert result.ok is True, f"{op}: {result.error}"
 
+    def test_persian_rtl_real_font_embedded(self) -> None:
+        """A Persian RTL document with a real OS Persian font embedded."""
+        out = PdfSuite().persian_rtl()
+        assert out["ok"] is True
+        data = Path(out["path"]).read_bytes()
+        assert data[:4] == b"%PDF"
+        assert b"Tahoma" in data  # the real Persian-capable font is embedded
+
+    def test_persian_rtl_via_persian_command(self) -> None:
+        """«گزارش ... را بساز» produces the Persian RTL document for real."""
+        from universal_mind.persian_router import route_and_run
+
+        payload = route_and_run('گزارش «گزارش امروز» را بساز')
+        assert payload["ok"] is True
+        pdf = payload["result"]["pdf"]
+        assert Path(pdf["path"]).read_bytes()[:4] == b"%PDF"
+        # The Persian font is really embedded in the produced file.
+        assert b"Tahoma" in Path(pdf["path"]).read_bytes()
+
     def test_unknown_operation_fails_clean(self) -> None:
         conn = PdfSuiteConnector()
         result = conn.connect({}, {"operation": "nonexistent"})
