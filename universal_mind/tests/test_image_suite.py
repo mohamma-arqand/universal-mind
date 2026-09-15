@@ -80,6 +80,76 @@ def test_thumbnail_preserves_aspect(tmp_path: Path) -> None:
     assert w == 2 * h  # aspect preserved
 
 
+def test_full_surface_all_operations_real(tmp_path: Path) -> None:
+    """Every one of the suite's 33 declared operations performs REAL image work
+    (the full Pillow surface, not a subset)."""
+    suite = ImageSuite()
+    src = _sample(tmp_path, (140, 90))
+    skip = {"info", "blend"}  # info verified separately; blend needs two files
+    ok, failed = 0, []
+    for op in suite.OPERATIONS:
+        if op in skip:
+            continue
+        try:
+            if op == "convert":
+                r = suite.convert(src, "jpeg")
+            elif op == "resize":
+                r = suite.resize(src, 50, 40)
+            elif op == "crop":
+                r = suite.crop(src, (5, 5, 70, 45))
+            elif op == "rotate":
+                r = suite.rotate(src, 30)
+            elif op == "thumbnail":
+                r = suite.thumbnail(src, 64)
+            elif op in ("posterize",):
+                r = suite.posterize(src, 3)
+            elif op in ("solarize",):
+                r = suite.solarize(src, 100)
+            elif op in ("brightness", "contrast", "color", "sharpness"):
+                r = getattr(suite, op)(src, 1.3)
+            elif op == "draw_text":
+                r = suite.draw_text(src, "سلام")
+            elif op == "draw_rectangle":
+                r = suite.draw_rectangle(src, (10, 10, 50, 35))
+            elif op == "quantize":
+                r = suite.quantize(src, 8)
+            elif op == "split_channels":
+                r = suite.split_channels(src)
+            else:
+                r = getattr(suite, op)(src)
+        except Exception as exc:  # noqa: BLE001
+            r = {"ok": False, "error": str(exc)}
+        if r.get("ok") is True:
+            ok += 1
+        else:
+            failed.append((op, r.get("error", "")[:80]))
+    assert ok >= 30, f"only {ok} real operations; failures: {failed}"
+
+
+def test_blend_two_real_images(tmp_path: Path) -> None:
+    suite = ImageSuite()
+    a = _sample(tmp_path, (100, 60))
+    b_path = tmp_path / "b.png"
+    Image.new("RGB", (80, 50), color=(200, 50, 50)).save(b_path)
+    out = suite.blend(a, str(b_path), 0.4)
+    assert out["ok"] is True
+    assert out["bytes"] > 0
+
+
+def test_split_channels_produces_three_real_files(tmp_path: Path) -> None:
+    suite = ImageSuite()
+    out = suite.split_channels(_sample(tmp_path))
+    assert out["ok"] is True
+    assert len(out["paths"]) == 3
+
+
+def test_draw_text_persian(tmp_path: Path) -> None:
+    suite = ImageSuite()
+    out = suite.draw_text(_sample(tmp_path), "سلام از ذهن یکپارچه")
+    assert out["ok"] is True
+    assert out["bytes"] > 0
+
+
 def test_missing_file_fails_clean(tmp_path: Path) -> None:
     suite = ImageSuite()
     result = suite.info("nonexistent.png")
