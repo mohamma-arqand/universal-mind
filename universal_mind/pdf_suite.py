@@ -15,10 +15,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from reportlab.lib import colors  # type: ignore[import-untyped]
-from reportlab.lib.pagesizes import A4, landscape  # type: ignore[import-untyped]
-from reportlab.lib.styles import getSampleStyleSheet  # type: ignore[import-untyped]
-from reportlab.platypus import (  # type: ignore[import-untyped]
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import (
     Image as RLImage,
 )
 from reportlab.platypus import (
@@ -255,9 +255,9 @@ class PdfSuite:
         the OS (Tahoma) is registered for real text shaping. Paragraphs use
         wordWrap='RTL' + alignment=TA_RIGHT — a genuinely right-to-left document.
         """
-        from reportlab.lib.enums import TA_RIGHT  # type: ignore[import-untyped]
-        from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
-        from reportlab.pdfbase.ttfonts import TTFont  # type: ignore[import-untyped]
+        from reportlab.lib.enums import TA_RIGHT
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
 
         target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-fa-"))
         target.mkdir(parents=True, exist_ok=True)

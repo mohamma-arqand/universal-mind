@@ -18,8 +18,6 @@ from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
-from scipy import optimize as _scipy_optimize
-from scipy import signal  # type: ignore[import-untyped]
 from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LinearRegression, LogisticRegression
@@ -130,10 +128,13 @@ class AISuite:
 
     def find_peaks(self, data: Sequence[float]) -> dict[str, Any]:
         """Real scipy peak detection over the signal."""
+        # Lazy scipy import: keeps the module import clean for every env.
+        from scipy import signal as _signal
+
         arr = self._array(data)
         if arr.size < 3:
             return {"ok": False, "error": "need >= 3 samples"}
-        peaks, properties = signal.find_peaks(arr, prominence=0.5)
+        peaks, properties = _signal.find_peaks(arr, prominence=0.5)
         return {
             "ok": True,
             "peak_indices": [int(p) for p in peaks],
@@ -144,14 +145,16 @@ class AISuite:
 
     def filter_signal(self, data: Sequence[float], kind: str = "smooth") -> dict[str, Any]:
         """Real scipy filtering: median / butterworth lowpass."""
+        from scipy import signal as _signal
+
         arr = self._array(data)
         if arr.size < 5:
             return {"ok": False, "error": "need >= 5 samples"}
         if kind == "median":
-            filtered = signal.medfilt(arr, kernel_size=3)
+            filtered = _signal.medfilt(arr, kernel_size=3)
         elif kind == "lowpass":
-            b, a = signal.butter(3, 0.2)
-            filtered = signal.filtfilt(b, a, arr)
+            b, a = _signal.butter(3, 0.2)
+            filtered = _signal.filtfilt(b, a, arr)
         else:
             return {"ok": False, "error": f"unknown filter kind: {kind!r}"}
         return {
@@ -162,6 +165,8 @@ class AISuite:
 
     def optimize(self, quadratic_a: float = 1.0, quadratic_b: float = 0.0, quadratic_c: float = 0.0) -> dict[str, Any]:
         """Real scipy minimization of a quadratic ax² + bx + c."""
+        from scipy import optimize as _scipy_optimize  # lazy: env-clean module import
+
         if quadratic_a == 0:
             return {"ok": False, "error": "quadratic_a must be non-zero"}
 
