@@ -160,6 +160,34 @@ def test_chain_work_shows_preview_of_real_chart(tk_root: tk.Tk) -> None:
     assert app._preview_photo is not None  # the real chart is displayed
 
 
+def test_persian_tab_present_and_routed(tk_root: tk.Tk) -> None:
+    """The Persian tab exists, and _do_persian_work runs the real chain."""
+    app = MindDesktopApp(tk_root)
+    # tkinter stdlib stubs are untyped (tab/index carry no annotations).
+    tab_count: int = app._notebook.index(tk.END)  # type: ignore[no-untyped-call]
+    tabs = [app._notebook.tab(i, "text") for i in range(tab_count)]  # type: ignore[no-untyped-call]
+    assert "فرمان فارسی" in tabs
+    # Set a Persian command and run it for real.
+    for w in app._fa_entry.master.winfo_children():
+        pass  # the entry already holds the default command
+    app._do_persian_work("محاسبه کن و نمودار بکش")
+    tk_root.update()
+    payload = json.loads(app._fa_result_text.get("1.0", tk.END))
+    assert payload["ok"] is True
+    assert set(payload["route"]) == {"data", "chart"}
+    route_text = app._fa_route_text.get("1.0", tk.END)
+    assert "data → chart" in route_text
+
+
+def test_persian_unknown_command_honest(tk_root: tk.Tk) -> None:
+    app = MindDesktopApp(tk_root)
+    app._do_persian_work("پرواز کن به ماه")
+    tk_root.update()
+    payload = json.loads(app._fa_result_text.get("1.0", tk.END))
+    assert payload["ok"] is False
+    assert payload["error"]
+
+
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:
     """_do_work runs the genuine engine (numpy stats) and produces a payload."""
     app = MindDesktopApp(tk_root)

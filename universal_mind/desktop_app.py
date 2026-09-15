@@ -15,10 +15,9 @@ from __future__ import annotations
 import json
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import messagebox, scrolledtext, ttk
 from typing import Any
-
-from collections.abc import Callable
 
 from universal_mind.orchestration import orchestrate
 from universal_mind.real_tool_registry import _REAL_CONNECTORS
@@ -126,7 +125,30 @@ class MindDesktopApp:
         self._status_text.pack(fill=tk.Y, expand=True)
         self._write_status()
 
-        # --- Tab 2: chain (multi-capability, one click) ---
+        # --- Tab 2: Persian command (فارسی بگو، سیستم اجرا کند) ---
+        fa_tab = ttk.Frame(self._notebook, padding=6)
+        self._notebook.add(fa_tab, text="فرمان فارسی")
+
+        fa_top = ttk.LabelFrame(fa_tab, text="فرمان فارسی", padding=6)
+        fa_top.pack(fill=tk.X)
+        self._fa_entry = ttk.Entry(fa_top, font=("Segoe UI", 11))
+        self._fa_entry.pack(fill=tk.X, side=tk.LEFT, expand=True)
+        self._fa_entry.insert(tk.END, "محاسبه کن، نمودار بکش و ذخیره کن")
+        self._fa_run_btn = ttk.Button(fa_top, text="▶ اجرا", command=self._run_persian)
+        self._fa_run_btn.pack(side=tk.LEFT, padx=6)
+
+        fa_body = ttk.Frame(fa_tab, padding=(0, 6))
+        fa_body.pack(fill=tk.BOTH, expand=True)
+        fa_left = ttk.LabelFrame(fa_body, text="مسیر و کلمات", padding=6)
+        fa_left.pack(side=tk.LEFT, fill=tk.Y)
+        self._fa_route_text = scrolledtext.ScrolledText(fa_left, width=38, height=20, font=("Segoe UI", 9))
+        self._fa_route_text.pack(fill=tk.Y, expand=True)
+        fa_result = ttk.LabelFrame(fa_body, text="نتیجه (کار واقعی)", padding=6)
+        fa_result.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
+        self._fa_result_text = scrolledtext.ScrolledText(fa_result, font=("Consolas", 9))
+        self._fa_result_text.pack(fill=tk.BOTH, expand=True)
+
+        # --- Tab 3: chain (multi-capability, one click) ---
         chain_tab = ttk.Frame(self._notebook, padding=6)
         self._notebook.add(chain_tab, text="زنجیره")
 
@@ -297,6 +319,46 @@ class MindDesktopApp:
         self._run_btn.configure(state=tk.NORMAL)
         self._show_result(json.dumps(payload, indent=2, ensure_ascii=False))
 
+    # ------------------------------------------------------------- persian
+    def _run_persian(self) -> None:
+        command = self._fa_entry.get().strip()
+        if not command:
+            messagebox.showinfo("Universal Mind", "یک فرمان فارسی بنویس")
+            return
+        self._fa_run_btn.configure(state=tk.DISABLED)
+        self._fa_route_text.delete("1.0", tk.END)
+        self._fa_route_text.insert(tk.END, "در حال تحلیل فرمان…")
+        self._fa_result_text.delete("1.0", tk.END)
+        thread = threading.Thread(target=self._do_persian_work, args=(command,), daemon=True)
+        thread.start()
+
+    def _do_persian_work(self, command: str) -> None:
+        """Route the Persian command and run the real chain (unified engine)."""
+        try:
+            from universal_mind.persian_router import route_and_run
+
+            payload = route_and_run(command)
+            payload.pop("_registry", None)  # internal: never serialize the registry
+        except Exception as exc:  # noqa: BLE001 — a crashed engine is a real error
+            payload = {"ok": False, "command": command, "error": str(exc)}
+        self._root.after(0, self._post_persian, payload)
+
+    def _post_persian(self, payload: dict[str, Any]) -> None:
+        self._fa_run_btn.configure(state=tk.NORMAL)
+        # Route pane: human-readable Persian summary.
+        self._fa_route_text.delete("1.0", tk.END)
+        route_caps = payload.get("route", [])
+        self._fa_route_text.insert(
+            tk.END,
+            f"فرمان: {payload.get('command', '')}\n\n"
+            f"مسیر اجرا: {' → '.join(route_caps) if route_caps else '—'}\n"
+            f"کلمات شناختهشده: {', '.join(payload.get('matched_words', [])) or '—'}\n"
+            f"کلمات ناشناخته: {', '.join(payload.get('unknown', [])) or '—'}\n"
+            f"وضعیت: {'✓ موفق' if payload.get('ok') else '✗ ناموفق'}",
+        )
+        self._fa_result_text.delete("1.0", tk.END)
+        self._fa_result_text.insert(tk.END, json.dumps(payload, indent=2, ensure_ascii=False))
+
     def _show_preview(self, image_path: str | None) -> None:
         """Display a real produced image inside the window (resized to fit)."""
         from PIL import Image, ImageTk
@@ -330,7 +392,7 @@ def _first_image_from(results: dict[str, Any]) -> str | None:
     return None
 
 
-def _factory_for(cap: str) -> "Callable[[ToolEntry], Any]":
+def _factory_for(cap: str) -> Callable[[ToolEntry], Any]:
     """Return a connector factory that resolves `cap` to its real connector."""
     from universal_mind.real_tool_registry import real_connector_factory
 
@@ -343,7 +405,7 @@ def _factory_for(cap: str) -> "Callable[[ToolEntry], Any]":
     return factory
 
 
-def _multi_factory(caps: list[str]) -> "Callable[[ToolEntry], Any]":
+def _multi_factory(caps: list[str]) -> Callable[[ToolEntry], Any]:
     """A connector factory routing EACH requested capability to its real connector
     (so a chain like media→archive drives two different real programs in one run)."""
     from universal_mind.real_tool_registry import real_connector_factory
