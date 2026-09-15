@@ -24,6 +24,7 @@ from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.pdf_suite import PdfSuiteConnector
 from universal_mind.tool_registry import ToolEntry
+from universal_mind.vision_suite import VisionSuiteConnector
 
 # capability -> connector constructor (no-arg), kept in one place.
 # The *_Suite entries are integrated PROGRAMS (whole toolboxes), not single ops.
@@ -39,6 +40,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "data": DataSuiteConnector,        # full numpy surface (stats/solve/eigen/normalize/correlate)
     "database": DatabaseSuiteConnector,  # full sqlite3 surface (DDL/inserts/queries/tables)
     "ai": AISuiteConnector,            # real ML + signal (sklearn train/fit + scipy fft/peaks)
+    "vision": VisionSuiteConnector,    # real computer vision (OpenCV: edges/contours/threshold)
 }
 
 
