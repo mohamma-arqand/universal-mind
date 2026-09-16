@@ -208,6 +208,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
     run.add_argument("--list", action="store_true", help="list every registered capability with its real operations")
 
+    sub.add_parser("install-tick", help="نصب tick در Task Scheduler ویندوز — پلتفرم هر ساعت خودش را بیدار میکند")
+    sub.add_parser("uninstall-tick", help="حذف tick از Task Scheduler")
+
     sch = sub.add_parser("schedule", help="زمانبندی: «هر روز ساعت ۸ گزارش کامل بده» را ثبت میکند")
     sch.add_argument("command", nargs="+", help="the Persian sentence WITH the schedule clause (quote it)")
     sub.add_parser("schedule-list", help="لیست زمانبندیهای ثبتشده")
@@ -241,6 +244,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_dashboard(args)
     if args.verb == "cycle":
         return _cmd_cycle(args)
+    if args.verb == "install-tick":
+        return _cmd_install_tick(args)
+    if args.verb == "uninstall-tick":
+        return _cmd_uninstall_tick(args)
     if args.verb == "schedule":
         return _cmd_schedule(args)
     if args.verb == "schedule-list":
@@ -382,6 +389,24 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
     }
     print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
     return 0
+
+
+def _cmd_install_tick(args: argparse.Namespace) -> int:
+    """Register the hourly tick in Windows Task Scheduler (read back)."""
+    from universal_mind.task_install import install
+
+    result = install()
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def _cmd_uninstall_tick(args: argparse.Namespace) -> int:
+    """Remove the tick task (idempotent)."""
+    from universal_mind.task_install import uninstall
+
+    result = uninstall()
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
 
 
 def _cmd_schedule(args: argparse.Namespace) -> int:

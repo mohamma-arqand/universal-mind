@@ -1,9 +1,17 @@
-"""Tests: the scheduler — the platform runs itself on the operator's clock."""
+"""Tests: the scheduler — the platform runs itself on the operator's clock.
+
+Every store-touching test runs against an ISOLATED temp db (the operator's
+real schedule table is never polluted — a lesson this very suite taught when
+68 test schedules ended up in the live table).
+"""
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from datetime import datetime, timedelta
+from unittest.mock import patch as mock_patch
 
+import universal_mind.scheduler as sched_mod
 from universal_mind.scheduler import (
     Schedule,
     _next_due,
@@ -14,6 +22,14 @@ from universal_mind.scheduler import (
     register,
     run_due,
 )
+
+
+def _isolated() -> AbstractContextManager[object]:
+    """Route every store call to ONE fresh temp DatabaseSuite."""
+    from universal_mind.database_suite import DatabaseSuite
+
+    suite = DatabaseSuite()
+    return mock_patch.object(sched_mod, "_store", lambda: suite)
 
 
 class TestParseSchedule:
@@ -38,15 +54,17 @@ class TestParseSchedule:
 
 class TestRegisterAndDue:
     def test_register_strips_the_schedule_clause(self) -> None:
-        result = register("هر ۱۵ دقیقه میانگین ۱ و ۲ را حساب کن")
-        assert result["ok"] is True
-        assert result["command"] == "میانگین ۱ و ۲ را حساب کن"  # action only
-        assert result["every_minutes"] == 15
+        with _isolated():
+            result = register("هر ۱۵ دقیقه میانگین ۱ و ۲ را حساب کن")
+            assert result["ok"] is True
+            assert result["command"] == "میانگین ۱ و ۲ را حساب کن"  # action only
+            assert result["every_minutes"] == 15
 
     def test_bad_syntax_gets_the_honest_template(self) -> None:
-        result = register("یکی یه وقتایی گزارش بده")
-        assert result["ok"] is False
-        assert "قالب درست" in result["error"]
+        with _isolated():
+            result = register("یکی یه وقتی گزارش بده")
+            assert result["ok"] is False
+            assert "قالب درست" in result["error"]
 
     def test_never_run_is_due_immediately(self) -> None:
         sched = Schedule(1, "cmd", 30, -1, last_run="", active=True)
@@ -80,43 +98,38 @@ class TestRunDue:
         """A fresh never-run schedule really fires and records last_run."""
         import uuid
 
-        suffix = uuid.uuid4().hex[:6]
-        action = f"میانگین ۳ و ۷ {suffix}"
-        result = register(f"هر ۱۵ دقیقه {action} را حساب کن")
-        assert result["ok"] is True
-        # the fresh registration is never-run → due immediately
-        fresh = [s for s in list_schedules() if suffix in s.command and s.last_run == ""]
-        assert fresh, "the new schedule must exist un-fired"
-        fired = run_due(max_runs=5)
-        assert fired["count"] >= 1
-        after = {s.schedule_id: s.last_run for s in list_schedules()}
-        assert any(after.get(s.schedule_id) for s in fresh)  # it really fired
+        with _isolated():
+            suffix = uuid.uuid4().hex[:6]
+            action = f"میانگین ۳ و ۷ {suffix}"
+            result = register(f"هر ۱۵ دقیقه {action} را حساب کن")
+            assert result["ok"] is True
+            fresh = [s for s in list_schedules() if suffix in s.command and s.last_run == ""]
+            assert fresh, "the new schedule must exist un-fired"
+            fired = run_due(max_runs=5)
+            assert fired["count"] >= 1
+            after = {s.schedule_id: s.last_run for s in list_schedules()}
+            assert any(after.get(s.schedule_id) for s in fresh)  # it really fired
 
     def test_second_run_after_marking_is_not_due(self) -> None:
-        """Immediately after firing, the schedule is NOT due again (interval)."""
-        due_now = due_schedules()
-        for s in due_now:
-            mark_run(s.schedule_id)
-        # interval schedules need their interval to pass; daily ones need a day
-        still_due = [
-            s for s in due_schedules()
-            if s.every_minutes > 1  # ignore pathological one-minute schedules
-        ]
-        assert still_due == []
+        """Immediately after firing, the schedule is NOT due again."""
+        with _isolated():
+            register("هر ۱۵ دقیقه میانگین ۳ و ۷ را حساب کن")
+            for s in due_schedules():
+                mark_run(s.schedule_id)
+            still_due = [
+                s for s in due_schedules()
+                if s.every_minutes > 1  # ignore pathological one-minute schedules
+            ]
+            assert still_due == []
 
 
 class TestSchedulerCLI:
     def test_cli_register_and_list_and_run(self, capsys: object) -> None:
-        """The CLI triad works end to end (isolated temp store — the CLI must
-        not fire the operator's real schedules as a side effect of testing)."""
-        from unittest.mock import patch as mock_patch
-
+        """The CLI triad works end to end (isolated store — the CLI must not
+        fire the operator's real schedules as a side effect of testing)."""
         from universal_mind.cli import main
-        from universal_mind.database_suite import DatabaseSuite
-        import universal_mind.scheduler as sched_mod
 
-        suite = DatabaseSuite()
-        with mock_patch.object(sched_mod, "_store", lambda: suite):
+        with _isolated():
             rc = main(["schedule", "هر ۹۹ دقیقه میانگین ۵ و ۹ را حساب کن"])
             assert rc == 0
             rc = main(["schedule-list"])

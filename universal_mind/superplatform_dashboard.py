@@ -63,11 +63,26 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 
     daily = _daily_runs(db)
 
+    # The proactive layer: the operator's real schedules (what runs itself).
+    try:
+        from universal_mind.scheduler import list_schedules
+
+        schedules = list_schedules()
+    except Exception:  # noqa: BLE001 — a view, never fatal
+        schedules = []
+
     cap_rows = "".join(
         f"<tr><td>{_CAP_FA.get(cap, cap)}</td><td>{_persian_digits(str(count))}</td>"
         f"<td>{_persian_digits(str(round(stats.per_capability_success.get(cap, 0.0) * 100)))}٪</td></tr>"
         for cap, count in stats.top_capabilities
     )
+    schedule_rows = "".join(
+        f"<tr><td>{s.command}</td>"
+        f"<td>{_persian_digits(str(s.every_minutes))} دقیقه</td>"
+        f"<td>{'فعال' if s.active else 'غیرفعال'}</td>"
+        f"<td>{_persian_digits(s.last_run[:16]) or '—'}</td></tr>"
+        for s in schedules
+    ) or "<tr><td colspan='4'>هنوز زمانبندیای ثبت نشده</td></tr>"
     chain_rows = "".join(
         f"<tr><td dir='ltr'>{chain}</td><td>{_persian_digits(str(count))}</td></tr>"
         for chain, count in stats.top_chains
@@ -133,6 +148,11 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
     <h2>پرکاربردترین زنجیرهها</h2>
     <table><tr><th>زنجیره</th><th>اجرا</th></tr>{chain_rows}</table>
   </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>⏰ زمانبندیها — چه چیزی خودش اجرا میشود</h2>
+  <table><tr><th>فرمان</th><th>فاصله</th><th>وضعیت</th><th>آخرین اجرا</th></tr>{schedule_rows}</table>
 </div>
 
 <div class="card" style="margin-top:16px">
