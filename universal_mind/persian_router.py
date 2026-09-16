@@ -282,7 +282,20 @@ def route_and_run(
     # Real parameters extracted FROM the command itself: «میانگین ۲ و ۴» must
     # compute [2, 4], not a default series. A capability receives only the params
     # its contract accepts (the dispatch constrains what it is given).
-    capability_params = params or {cap: extract_params(command, cap) for cap in caps}
+    extracted = params or {cap: extract_params(command, cap) for cap in caps}
+
+    # The dependency planner: reorder by REAL needs (a consumer after its
+    # producer, even when said backwards) and choose the operation that uses
+    # what the chain produces. Explicit sentence params always win.
+    from universal_mind.dependency_planner import plan_chain, plan_params as _plan_params
+
+    plan = plan_chain(caps, extracted)
+    caps = [step.capability for step in plan.steps]  # the dependency-respecting order
+    planned_params = _plan_params(plan)
+    capability_params = {
+        cap: {**planned_params.get(cap, {}), **extracted.get(cap, {})}
+        for cap in caps
+    }
 
     # A chain of 2+ capabilities flows by default: one program's real output
     # becomes the next program's input (chart → pdf embeds the real chart).
@@ -293,6 +306,21 @@ def route_and_run(
         capability_params=capability_params,
         flow=len(caps) > 1,
     )
+    # ---- The quality gate: judgment must change behavior, not just grade it.
+    # When ARETĒ grades the planned run weak (below the bar), the platform
+    # self-repairs: it runs the honest rival order and ships the best REAL
+    # verdict. Every attempt stays in the ledger; nothing is fabricated.
+    # (A forced_route call IS a gate candidate — the gate runs one level only.)
+    if forced_route is None:
+        from universal_mind.quality_gate import run_with_quality_gate
+
+        def _run_candidate(candidate: tuple[str, ...]) -> dict[str, Any]:
+            return route_and_run(command, registry=None, params=None, forced_route=list(candidate))
+
+        gate = run_with_quality_gate(command, tuple(caps), _run_candidate)
+        if gate.repaired:
+            # The shipped attempt replaces the weak one; the operator sees the truth.
+            return {**gate.shipped.payload, "gate_reasoning": gate.reasoning, "attempts": len(gate.attempts)}
     # The payload the ARETĒ judge reads (the same shape route_and_run returns).
     run_payload_preview = {
         "ok": syn.ok,

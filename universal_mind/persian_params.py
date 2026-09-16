@@ -141,6 +141,19 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             params["title"] = with_resolved_date(text, command)
         return params
     if capability == "pdf":
+        # Operation words: the sentence can name a SPECIFIC document kind.
+        _PDF_OP_WORDS: tuple[tuple[str, str], ...] = (
+            ("فاکتور", "invoice"), ("قبض", "invoice"),
+            ("نامه", "letterhead"), ("سربرگ", "letterhead"),
+            ("جدول", "styled_table"), ("لیست", "bullet_list"),
+            ("جلد", "cover_page"), ("کاور", "cover_page"),
+        )
+        for word, op in _PDF_OP_WORDS:
+            if word in command:
+                params = {"operation": op}
+                if text:
+                    params["title"] = with_resolved_date(text, command)
+                return params
         # A Persian command deserves a Persian RTL document (not a Latin-only one):
         # the title and paragraphs are real Persian text, rendered RTL.
         # When the flow has a real image to embed (chart → pdf), the orchestration

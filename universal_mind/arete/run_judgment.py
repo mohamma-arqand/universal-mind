@@ -41,9 +41,25 @@ def run_virtue_scores(run: dict[str, Any]) -> dict[str, float]:
     if not route:
         return {"wisdom": 0.0, "courage": 0.0, "temperance": 0.0, "justice": 0.0}
 
+    # A run that reports itself failed cannot be virtuous, whatever partial
+    # results it carries: the honest overall verdict anchors all four virtues.
+    overall_failed = run.get("ok") is False
+
     # WISDOM — every requested capability produced a real, non-empty result.
-    served = [cap for cap in route if cap in results and results[cap] is not None]
+    # An honest error for a capability is evidence it did NOT produce: a run
+    # with any error entry cannot carry full wisdom (whatever else it built).
+    served = [
+        cap
+        for cap in route
+        if cap in results
+        and results[cap] is not None
+        and not (isinstance(results[cap], dict) and results[cap].get("ok") is False)
+    ]
     wisdom = len(served) / len(route)
+    if errors:
+        wisdom = min(wisdom, 0.5)  # any honest error caps wisdom at half
+    if overall_failed and not served:
+        wisdom = 0.0
 
     # COURAGE — the output carries inspectable evidence: an artifact pointer
     # (path/bytes) OR a concrete metric value (a number IS its own evidence —
@@ -55,6 +71,8 @@ def run_virtue_scores(run: dict[str, Any]) -> dict[str, float]:
         res = results.get(cap)
         checks += 1
         if isinstance(res, dict):
+            if res.get("ok") is False:
+                continue  # an explicit failure is evidence of nothing
             if any(k in res for k in ("path", "bytes", "ok")) or any(
                 isinstance(v, (int, float)) and not isinstance(v, bool) for v in res.values()
             ):

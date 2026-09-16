@@ -90,6 +90,7 @@ PROBES = [
     "probe_media_pipeline.py",
     "probe_persian_loop.py",
     "probe_arete_run_judgment.py",
+    "probe_planning_gate.py",
 ]
 
 
