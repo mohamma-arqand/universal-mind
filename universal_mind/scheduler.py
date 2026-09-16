@@ -241,6 +241,36 @@ def due_schedules(now: datetime | None = None) -> list[Schedule]:
     return due
 
 
+def _contest_for(command: str, primary: dict[str, Any]) -> str:
+    """Race the primary run against its honest rival; return the outcome.
+
+    The contest is read-only for the operator (the primary result already
+    shipped); its value is the LESSON — which order won, recorded so the
+    advisor's next advice is sharper. Single-capability routes report
+    'no contest' honestly.
+    """
+    try:
+        from universal_mind.contested_execution import run_contested
+        from universal_mind.persian_router import route_and_run as _run
+
+        route = tuple(primary.get("route", []))
+        if len(route) < 2:
+            return "بدون مسابقه — مسیر تک‌مرحله‌ای بود"
+
+        def _run_candidate(candidate: tuple[str, ...]) -> dict[str, Any]:
+            return _run(command, forced_route=list(candidate))
+
+        verdict = run_contested(command, route, _run_candidate)
+        if not verdict.contested:
+            return "بدون مسابقه — رقیب صادقانه‌ای نبود"
+        winner = verdict.winner.route if verdict.winner else route
+        if winner == route:
+            return f"مسابقه: مسیر توصیه‌شده برنده شد ({verdict.reasoning[:60]})"
+        return f"مسابقه: رقیب برنده شد — درس ثبت شد ({verdict.reasoning[:60]})"
+    except Exception as exc:  # noqa: BLE001 — the contest is a lens, never a blocker
+        return f"مسابقه ناموفق: {str(exc)[:60]}"
+
+
 def mark_run(schedule_id: int, when: datetime | None = None) -> None:
     """Record a REAL firing (the schedule's honest last_run)."""
     db = _store()
@@ -249,21 +279,31 @@ def mark_run(schedule_id: int, when: datetime | None = None) -> None:
     db.execute(f"UPDATE schedules SET last_run = '{stamp}' WHERE id = {schedule_id}")
 
 
-def run_due(max_runs: int = 5) -> dict[str, Any]:
-    """Fire every due schedule through the REAL engine; return what ran."""
+def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
+    """Fire every due schedule through the REAL engine; return what ran.
+
+    With ``contest=True`` (the default) every multi-step scheduled run also
+    races its honest rival order — ARETĒ judges both, the best verdict ships,
+    and the contest outcome is recorded: while the operator is away the
+    platform not only runs, it EXPLORES, and the winning order sharpens the
+    advisor's next advice.
+    """
     from universal_mind.persian_router import route_and_run
 
     fired: list[dict[str, Any]] = []
     for schedule in due_schedules()[:max_runs]:
         try:
-            payload = route_and_run(schedule.command)
-            mark_run(schedule.schedule_id)
-            fired.append({
+            payload: dict[str, Any] = route_and_run(schedule.command)
+            entry: dict[str, Any] = {
                 "schedule_id": schedule.schedule_id,
                 "command": schedule.command,
                 "ok": payload.get("ok") is True,
                 "route": payload.get("route", []),
-            })
+            }
+            if contest and len(entry["route"]) >= 2:
+                entry["contest"] = _contest_for(schedule.command, payload)
+            mark_run(schedule.schedule_id)
+            fired.append(entry)
         except Exception as exc:  # noqa: BLE001 — one bad task never stops the rest
             fired.append({
                 "schedule_id": schedule.schedule_id,

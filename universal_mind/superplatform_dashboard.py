@@ -65,11 +65,13 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 
     # The proactive layer: the operator's real schedules (what runs itself).
     try:
-        from universal_mind.scheduler import list_schedules
+        from universal_mind.scheduler import list_schedules, list_watchers
 
         schedules = list_schedules()
+        watchers = list_watchers()
     except Exception:  # noqa: BLE001 — a view, never fatal
         schedules = []
+        watchers = []
 
     cap_rows = "".join(
         f"<tr><td>{_CAP_FA.get(cap, cap)}</td><td>{_persian_digits(str(count))}</td>"
@@ -83,6 +85,12 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
         f"<td>{_persian_digits(s.last_run[:16]) or '—'}</td></tr>"
         for s in schedules
     ) or "<tr><td colspan='4'>هنوز زمانبندیای ثبت نشده</td></tr>"
+    watcher_rows = "".join(
+        f"<tr><td dir='ltr'>{w['folder']}</td>"
+        f"<td>{w['action']}</td>"
+        f"<td>{'فعال' if w['active'] else 'غیرفعال'}</td></tr>"
+        for w in watchers
+    ) or "<tr><td colspan='3'>پوشهای تحت نظر نیست</td></tr>"
     chain_rows = "".join(
         f"<tr><td dir='ltr'>{chain}</td><td>{_persian_digits(str(count))}</td></tr>"
         for chain, count in stats.top_chains
@@ -153,6 +161,8 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 <div class="card" style="margin-top:16px">
   <h2>⏰ زمانبندیها — چه چیزی خودش اجرا میشود</h2>
   <table><tr><th>فرمان</th><th>فاصله</th><th>وضعیت</th><th>آخرین اجرا</th></tr>{schedule_rows}</table>
+  <h2 style="margin-top:14px">📁 پوشههای تحت نظر (رویداد فایل)</h2>
+  <table><tr><th>پوشه</th><th>فرمان</th><th>وضعیت</th></tr>{watcher_rows}</table>
 </div>
 
 <div class="card" style="margin-top:16px">

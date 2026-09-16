@@ -93,6 +93,7 @@ PROBES = [
     "probe_planning_gate.py",
     "probe_perception_loop.py",
     "probe_full_report.py",
+    "probe_autonomous_loop.py",
 ]
 
 

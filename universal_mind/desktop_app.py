@@ -153,6 +153,9 @@ class MindDesktopApp:
         ttk.Button(
             sched_tab, text="▶ اجرای سررسیدها", command=self._run_schedules,
         ).pack(anchor=tk.W, pady=6)
+        ttk.Button(
+            sched_tab, text="📁 پوشهها را اسکن کن (فایلهای جدید)", command=self._scan_watchers,
+        ).pack(anchor=tk.W, pady=(0, 6))
         self._sched_text = scrolledtext.ScrolledText(
             sched_tab, font=("Segoe UI", 12), wrap=tk.WORD
         )
@@ -285,6 +288,30 @@ class MindDesktopApp:
                 tk.END,
                 f"• [{state}] {s.command}\n  سررسید بعدی: {when} | آخرین اجرا: {s.last_run[:16] or '—'}\n\n",
             )
+        # The folder watchers — the file-event perception channel.
+        from universal_mind.scheduler import list_watchers
+
+        watchers = list_watchers()
+        if watchers:
+            self._sched_text.insert(tk.END, "── پوشههای تحت نظر ───\n")
+            for w in watchers:
+                state = "فعال" if w["active"] else "غیرفعال"
+                self._sched_text.insert(
+                    tk.END,
+                    f"• [{state}] {w['folder']}\n  فرمان: {w['action']}\n\n",
+                )
+
+    def _scan_watchers(self) -> None:
+        """Sweep every active folder watcher; report what genuinely fired."""
+        from universal_mind.scheduler import scan_watchers
+
+        result = scan_watchers()
+        self._refresh_schedules()
+        count = result.get("count", 0)
+        messagebox.showinfo(
+            "Universal Mind",
+            f"{count} فایلِ جدید پردازش شد" if count else "فایل جدیدی نبود",
+        )
 
     def _register_schedule(self) -> None:
         """Register the sentence in the entry as a real persisted schedule."""
