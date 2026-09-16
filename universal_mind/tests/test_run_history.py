@@ -121,6 +121,36 @@ class TestChainAdvisor:
         finally:
             store.delete(saved.chain_id)
 
+    def test_advisor_prefers_the_more_excellent_chain(self) -> None:
+        """Two chains with equal overlap: the one with the higher ARETĒ mean
+        excellence wins — quality beats raw frequency."""
+        marker = "میانگین"
+        history = _isolated_history()
+        # chain A: 3 wins, mediocre excellence (0.5 each)
+        for i in range(3):
+            history.record(f"{marker} و نمودار {i}", ["data", "chart"], True, excellence=0.5)
+        # chain B: 1 win, perfect excellence
+        history.record(f"{marker} و نمودار بهترین", ["data", "chart", "pdf"], True, excellence=1.0)
+        advice = ChainAdvisor(history).advise(f"{marker} و نمودار عالی")
+        assert advice is not None
+        assert advice.route == ("data", "chart", "pdf")
+        assert advice.mean_excellence == 1.0
+
+    def test_advisor_reports_its_learned_excellence(self) -> None:
+        history = _isolated_history()
+        history.record("میانگین و نمودار", ["data", "chart"], True, excellence=0.75)
+        history.record("میانگین و نمودار دوباره", ["data", "chart"], True, excellence=1.0)
+        advice = ChainAdvisor(history).advise("میانگین و نمودار بساز")
+        assert advice is not None
+        assert abs(advice.mean_excellence - 0.875) < 1e-9  # (0.75 + 1.0) / 2
+
+    def test_legacy_rows_without_excellence_are_tolerated(self) -> None:
+        history = _isolated_history()
+        history.record("میانگین و نمودار", ["data"], True)  # no excellence
+        advice = ChainAdvisor(history).advise("میانگین و نمودار بساز")
+        assert advice is not None
+        assert advice.mean_excellence == 0.0  # honest: nothing judged yet
+
     def test_end_to_end_route_and_run_records_history(self) -> None:
         """route_and_run writes the real run to the persistent history."""
         from universal_mind.persian_router import route_and_run

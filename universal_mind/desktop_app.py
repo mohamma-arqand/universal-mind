@@ -470,8 +470,16 @@ class MindDesktopApp:
             )
         else:
             chain_fa = " → ".join(_CAP_FA.get(c, c) for c in suggestion.route)
+            quality = (
+                f"کیفیت داوری {suggestion.mean_excellence:.0%}"
+                if suggestion.mean_excellence > 0.0
+                else "بدون داوری هنوز"
+            )
             self._fa_advice_label.configure(
-                text=f"💡 پیشنهاد: {chain_fa} (در {suggestion.succeeded_runs} اجرای موفق قبلی)",
+                text=(
+                    f"💡 پیشنهاد: {chain_fa} "
+                    f"({suggestion.succeeded_runs} اجرای موفق، {quality})"
+                ),
                 foreground="#2a7",
             )
 

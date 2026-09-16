@@ -175,7 +175,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Universal Mind seed-core orchestration (deployment face).",
     )
     parser.add_argument("-V", "--version", action="version", version=f"universal-mind {__version__}")
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="verb", required=True)
 
     health = sub.add_parser("health", help="exercise the stack and print JSON status")
     health.add_argument("--compact", action="store_true", help="single-line JSON output")
@@ -208,25 +208,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
     run.add_argument("--list", action="store_true", help="list every registered capability with its real operations")
 
+    fa = sub.add_parser("fa", help="اجرای فرمان فارسی (Persian command → real chain, Persian report)")
+    fa.add_argument("command", help="the Persian command (quote it)")
+    fa.add_argument("--json", action="store_true", help="print the raw JSON payload instead of the Persian report")
+
+    fac = sub.add_parser("fa-contest", help="دو زنجیره رقابت میکنند و ARETĒ برنده را انتخاب میکند")
+    fac.add_argument("command", help="the Persian command (quote it)")
+
     args = parser.parse_args(argv)
 
-    if args.command == "health":
+    if args.verb == "health":
         return _cmd_health(args)
-    if args.command == "demo":
+    if args.verb == "demo":
         return _cmd_demo(args)
-    if args.command == "interactive":
+    if args.verb == "interactive":
         return _cmd_interactive(args)
-    if args.command == "chat":
+    if args.verb == "chat":
         return _cmd_chat(args)
-    if args.command == "replay":
+    if args.verb == "replay":
         return _cmd_replay(args)
-    if args.command == "evolve":
+    if args.verb == "evolve":
         return _cmd_evolve(args)
-    if args.command == "dashboard":
+    if args.verb == "dashboard":
         return _cmd_dashboard(args)
-    if args.command == "cycle":
+    if args.verb == "cycle":
         return _cmd_cycle(args)
-    if args.command == "run":
+    if args.verb == "fa":
+        return _cmd_fa(args)
+    if args.verb == "fa-contest":
+        return _cmd_fa_contest(args)
+    if args.verb == "run":
         return _cmd_run(args)
     return 2
 
@@ -354,6 +365,50 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
         "evolution_summary": report.summary,
     }
     print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
+    return 0
+
+
+def _cmd_fa(args: argparse.Namespace) -> int:
+    """Run a Persian command through the real engine; print the Persian report."""
+    import json as _json
+
+    from universal_mind.persian_report import persian_report
+    from universal_mind.persian_router import route_and_run
+
+    payload = route_and_run(args.command)
+    if args.json:
+        payload.pop("_registry", None)
+        print(_json.dumps(payload, indent=2, ensure_ascii=False, default=str))
+        return 0 if payload.get("ok") else 1
+    print(persian_report(payload))
+    return 0 if payload.get("ok") else 1
+
+
+def _cmd_fa_contest(args: argparse.Namespace) -> int:
+    """Two candidate chains race on a real command; ARETĒ picks the winner."""
+    from universal_mind.contested_execution import run_contested
+    from universal_mind.persian_router import route_and_run
+    from universal_mind.persian_report import persian_report
+
+    route_payload = route_and_run(args.command)
+    route = tuple(route_payload.get("route", []))
+    if not route:
+        print("هیچ قابلیتی شناخته نشد")
+        return 1
+
+    def _run(candidate: tuple[str, ...]) -> dict[str, object]:
+        return route_and_run(args.command, forced_route=list(candidate))
+
+    verdict = run_contested(args.command, route, _run)
+    if not verdict.contested:
+        print("(تنها یک نامزد — مسابقهای در کار نیست)")
+        print(persian_report(verdict.winner.payload if verdict.winner else {}))
+        return 0
+    print(f"🏆 مسابقه: {' vs '.join(' → '.join(e.route) for e in verdict.all_entries)}")
+    print(verdict.reasoning)
+    if verdict.winner is not None:
+        print()
+        print(persian_report(verdict.winner.payload))
     return 0
 
 

@@ -23,12 +23,13 @@ from universal_mind.persian_router import _VOCAB
 
 @dataclass(frozen=True)
 class RunRecord:
-    """One recorded run: the command, its route, and whether it succeeded."""
+    """One recorded run: the command, its route, success, and ARETĒ excellence."""
 
     record_id: int
     command: str
     route: tuple[str, ...]
     succeeded: bool
+    excellence: float = 0.0  # ARETĒ's verdict (0.0 for legacy rows without one)
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class ChainAdvice:
     similar_command: str
     similarity: int           # count of shared vocabulary words
     succeeded_runs: int      # how many times this chain succeeded there
+    mean_excellence: float = 0.0  # ARETĒ's mean over this chain's wins
 
 
 class RunHistory:
@@ -75,20 +77,28 @@ class RunHistory:
     def successful_runs(self) -> list[RunRecord]:
         """Every successful run, oldest first."""
         q = self._db.query(
-            "SELECT id, command, route, succeeded FROM run_history "
+            "SELECT id, command, route, succeeded, excellence FROM run_history "
             "WHERE succeeded = 1 ORDER BY id"
         )
         if not q["ok"]:
             return []
-        return [
-            RunRecord(
-                record_id=int(row["id"]),
-                command=str(row["command"]),
-                route=tuple(str(row["route"]).split(",")),
-                succeeded=bool(int(row["succeeded"])),
+        records: list[RunRecord] = []
+        for row in q["rows"]:
+            raw = row["excellence"]
+            try:
+                excellence = float(raw) if raw not in (None, "") else 0.0
+            except (TypeError, ValueError):
+                excellence = 0.0
+            records.append(
+                RunRecord(
+                    record_id=int(row["id"]),
+                    command=str(row["command"]),
+                    route=tuple(str(row["route"]).split(",")),
+                    succeeded=bool(int(row["succeeded"])),
+                    excellence=excellence,
+                )
             )
-            for row in q["rows"]
-        ]
+        return records
 
 
 def _capability_words(command: str) -> set[str]:
@@ -114,8 +124,8 @@ class ChainAdvisor:
         words = _capability_words(command)
         if not words:
             return None
-        # route -> (best overlap, success count, representative command)
-        candidates: dict[tuple[str, ...], tuple[int, int, str]] = {}
+        # route -> (best overlap, success count, representative command, excellence sum)
+        candidates: dict[tuple[str, ...], tuple[int, int, str, float]] = {}
         for record in self._history.successful_runs():
             overlap = len(words & _capability_words(record.command))
             if overlap == 0:
@@ -123,12 +133,13 @@ class ChainAdvisor:
             route = record.route
             prev = candidates.get(route)
             if prev is None:
-                candidates[route] = (overlap, 1, record.command)
+                candidates[route] = (overlap, 1, record.command, record.excellence)
             else:
                 candidates[route] = (
                     max(prev[0], overlap),
                     prev[1] + 1,
                     record.command if overlap >= prev[0] else prev[2],
+                    prev[3] + record.excellence,
                 )
         # Saved chains are explicit operator trust: each becomes a candidate
         # with its own overlap (a saved chain counts as one recorded win).
@@ -142,23 +153,27 @@ class ChainAdvisor:
                 route = tuple(chain.capabilities)
                 prev = candidates.get(route)
                 if prev is None:
-                    candidates[route] = (overlap, 1, chain.name)
+                    candidates[route] = (overlap, 1, chain.name, 0.0)
                 elif overlap > prev[0]:
-                    candidates[route] = (overlap, prev[1] + 1, chain.name)
+                    candidates[route] = (overlap, prev[1] + 1, chain.name, prev[3])
         except Exception:  # noqa: BLE001 — the store is a bonus source, never fatal
             pass
 
         if not candidates:
             return None
-        # Rank: overlap first, then success count (the learned winning record).
-        route, (overlap, wins, command) = max(
-            candidates.items(), key=lambda item: (item[1][0], item[1][1])
+        # Rank: overlap first, then the chain's MEAN EXCELLENCE (ARETĒ's verdict
+        # over its wins — excellence is the quality signal the advisor learns),
+        # then raw win count as the tie-break.
+        route, (overlap, wins, command, excellence_sum) = max(
+            candidates.items(),
+            key=lambda item: (item[1][0], item[1][3] / item[1][1], item[1][1]),
         )
         return ChainAdvice(
             route=route,
             similar_command=command,
             similarity=overlap,
             succeeded_runs=wins,
+            mean_excellence=round(excellence_sum / wins, 4),
         )
 
 

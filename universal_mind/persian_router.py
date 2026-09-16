@@ -230,12 +230,17 @@ def route_and_run(
     registry: ToolRegistry | None = None,
     *,
     params: dict[str, Any] | None = None,
+    forced_route: list[str] | None = None,
 ) -> dict[str, Any]:
     """Route a Persian command AND execute the resulting chain for real.
 
     Returns a JSON-ready payload: the route (capabilities, matched words) plus the
     real per-capability results from orchestrate. A command that matches nothing
     returns ok=False with the honest reason — never a fabricated chain.
+
+    ``forced_route`` overrides the vocabulary-derived route (used by contested
+    execution to run a specific candidate chain through the SAME real engine —
+    the contest must compare like with like, not two different engines).
     """
     from universal_mind.orchestration import orchestrate
     from universal_mind.persian_params import extract_params
@@ -252,7 +257,7 @@ def route_and_run(
     )
 
     route_result = route(command)
-    if not route_result.ok:
+    if not route_result.ok and forced_route is None:
         return {
             "ok": False,
             "command": command,
@@ -260,7 +265,9 @@ def route_and_run(
             "unknown": list(route_result.unknown),
         }
 
-    caps = list(route_result.capabilities)
+    # A forced route (contested execution) runs its OWN candidate chain; the
+    # vocabulary route is still computed so matched_words stays honest.
+    caps = list(forced_route) if forced_route else list(route_result.capabilities)
     reg = registry if registry is not None else _Registry()
     for cap in caps:
         reg.register(
