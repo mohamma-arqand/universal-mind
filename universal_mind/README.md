@@ -221,7 +221,11 @@ numbers-in-sentence as parameters, Jalali dates, folder resolution, saved chains
 by name, fluent Persian reports, and a chain advisor that learns from the
 operator's own run history).
 
-- **1052+ tests** green, **43+ probes** green (incl. the live Persian-loop probe), **mypy 0**, **ruff clean**.
+- **1174+ tests** green, **49 probes** green, **mypy 0**, **ruff clean**.
+- The live architecture map for the whole super-platform (engine, 13 capabilities,
+  9 synthesis flows, self-scheduling, 5 delivery faces, 3 learning layers,
+  the honesty laws) is `ARCHITECTURE_SUPERPLATFORM.md` — kept current with
+  every major commit.
 - Closed end-to-end: `make test` + `make probe` (self-verifying receipt), and the
   full release gate `python scripts/verify.py` (or `make verify`) prints READY
   only when everything is green.
