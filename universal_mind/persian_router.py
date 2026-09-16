@@ -121,6 +121,9 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("سیگنال", "ai"),
     ("پیشبینی", "ai"),
     ("پیش بینی", "ai"),
+    # saved chains — «زنجیرهی X را اجرا کن» runs the operator's saved chain
+    ("زنجیره", "chain"),
+    ("زنجیرهی", "chain"),
     # compute (node)
     ("جاوااسکریپت", "compute"),
     ("جاوا اسکریپت", "compute"),
@@ -143,6 +146,32 @@ _PRIORITY: tuple[str, ...] = (
     "data", "compute", "image", "media", "vision", "ai",
     "chart", "pdf", "database", "archive", "clipboard", "notify",
 )
+# "chain" is a dispatch word, never an executable capability: when other words
+# also fire, the chain pseudo-capability is dropped so the real ones run.
+_NON_EXECUTABLE = {"chain"}
+
+
+def _resolve_saved_chain(command: str) -> tuple[str, ...] | None:
+    """Find the operator's saved chain whose name appears in the command.
+
+    «زنجیرهی گزارش هفتگی را اجرا کن» matches a saved chain named «گزارش هفتگی».
+    Returns the chain's capabilities, or None when no saved chain name matches —
+    never a guessed chain.
+    """
+    try:
+        from universal_mind.chains_store import ChainsStore
+    except Exception:  # noqa: BLE001 — a missing store never breaks routing
+        return None
+    try:
+        saved = ChainsStore().load()
+    except Exception:  # noqa: BLE001
+        return None
+    lowered = command.lower()
+    # Longest name first, so a longer saved name wins over a shorter prefix.
+    for chain in sorted(saved, key=lambda c: -len(c.name)):
+        if chain.name in lowered:
+            return chain.capabilities
+    return None
 
 
 def route(command: str) -> PersianRoute:
@@ -154,13 +183,30 @@ def route(command: str) -> PersianRoute:
         if word in lowered:
             matched.setdefault(capability, []).append(word)
 
+    if "chain" in matched and not any(c for c in matched if c != "chain"):
+        # A pure chain command («زنجیرهی X را اجرا کن») — the route is resolved
+        # from the operator's SAVED chains, not from the capability vocabulary.
+        saved = _resolve_saved_chain(command)
+        if saved is not None:
+            return PersianRoute(
+                command=command,
+                capabilities=saved,
+                matched_words=("زنجیره",),
+                unknown=(),
+            )
+        return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
+
     if not matched:
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
 
     # Order capabilities by the natural data-flow priority; ties keep first-seen.
+    executable = [c for c in matched.keys() if c not in _NON_EXECUTABLE]
+    if not executable:
+        # A pure «زنجیره...» command (handled above) or nothing executable.
+        return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
     caps = sorted(
-        matched.keys(),
-        key=lambda c: (_PRIORITY.index(c) if c in _PRIORITY else len(_PRIORITY), list(matched).index(c)),
+        executable,
+        key=lambda c: (_PRIORITY.index(c) if c in _PRIORITY else len(_PRIORITY), executable.index(c)),
     )
     words = tuple(w for c in caps for w in matched[c])
 

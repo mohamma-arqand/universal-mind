@@ -103,6 +103,55 @@ class TestVisionAndAIRoutes:
         assert result.capabilities.index("vision") < result.capabilities.index("pdf")
 
 
+class TestSavedChainByPersianCommand:
+    """«زنجیرهی X را اجرا کن» runs the operator's saved chain X for real."""
+
+    def test_saved_chain_name_resolves_to_its_capabilities(self) -> None:
+        import uuid
+
+        from universal_mind.chains_store import ChainsStore
+
+        store = ChainsStore()
+        name = f"زنجیره فارسی {uuid.uuid4().hex[:6]}"
+        saved = store.save(name, ["data", "chart"])
+        try:
+            result = route(f"زنجیرهی {name} را اجرا کن")
+            assert result.ok is True
+            assert result.capabilities == ("data", "chart")
+        finally:
+            store.delete(saved.chain_id)
+
+    def test_unknown_chain_name_is_honest(self) -> None:
+        result = route("زنجیرهی ناموجود ۱۲۳ را اجرا کن")
+        assert result.ok is False  # no saved chain matches — no guess
+
+    def test_chain_word_does_not_pollute_normal_commands(self) -> None:
+        """«زنجیره» in a mixed command never injects a fake capability."""
+        result = route("میانگین ۲ و ۴ را حساب کن")
+        assert "chain" not in result.capabilities
+        assert result.capabilities == ("data",)
+
+    def test_end_to_end_saved_chain_runs_for_real(self) -> None:
+        import string
+        import uuid
+
+        from universal_mind.chains_store import ChainsStore
+
+        letters = string.ascii_lowercase
+        suffix = "".join(letters[b % 26] for b in uuid.uuid4().bytes[:6])
+        store = ChainsStore()
+        name = f"اجرای واقعی {suffix}"  # letters only: no digits to pollute stats
+        saved = store.save(name, ["data", "archive"])
+        try:
+            payload = route_and_run(f"زنجیرهی {name} را اجرا کن")
+            assert payload["ok"] is True
+            assert set(payload["route"]) == {"data", "archive"}
+            assert payload["result"]["data"]["mean"] == 5.0  # real stats
+            assert payload["result"]["archive"]["bytes"] > 0  # real gzip
+        finally:
+            store.delete(saved.chain_id)
+
+
 class TestOrderPriority:
     """Data-flow ordering: producers first, sinks last."""
 
