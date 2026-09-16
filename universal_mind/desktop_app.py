@@ -148,8 +148,14 @@ class MindDesktopApp:
         self._fa_route_text.pack(fill=tk.Y, expand=True)
         fa_result = ttk.LabelFrame(fa_body, text="نتیجه (کار واقعی)", padding=6)
         fa_result.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
-        self._fa_result_text = scrolledtext.ScrolledText(fa_result, font=("Consolas", 9))
-        self._fa_result_text.pack(fill=tk.BOTH, expand=True)
+        self._fa_result_text = scrolledtext.ScrolledText(fa_result, height=8, font=("Consolas", 9))
+        self._fa_result_text.pack(fill=tk.X)
+        fa_report = ttk.LabelFrame(fa_result, text="گزارش فارسی", padding=6)
+        fa_report.pack(fill=tk.BOTH, expand=True)
+        self._fa_report_text = scrolledtext.ScrolledText(
+            fa_report, font=("Segoe UI", 11), wrap=tk.WORD
+        )
+        self._fa_report_text.pack(fill=tk.BOTH, expand=True)
         fa_preview = ttk.LabelFrame(fa_body, text="پیشنمایش", padding=6)
         fa_preview.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self._fa_preview_label = ttk.Label(
@@ -445,6 +451,11 @@ class MindDesktopApp:
         )
         self._fa_result_text.delete("1.0", tk.END)
         self._fa_result_text.insert(tk.END, json.dumps(payload, indent=2, ensure_ascii=False))
+        # The fluent Persian report — what the operator actually reads.
+        from universal_mind.persian_report import persian_report
+
+        self._fa_report_text.delete("1.0", tk.END)
+        self._fa_report_text.insert(tk.END, persian_report(payload))
         # Show the produced image in the Persian tab's preview pane too.
         self._show_fa_preview(_first_image_from(payload.get("result", {})))
 
