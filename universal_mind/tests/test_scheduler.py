@@ -77,15 +77,20 @@ class TestRegisterAndDue:
 
 class TestRunDue:
     def test_run_due_fires_and_advances_the_clock(self) -> None:
-        """A due schedule really runs through the engine and records last_run."""
-        result = register("هر ۱۵ دقیقه میانگین ۳ و ۷ را حساب کن")
+        """A fresh never-run schedule really fires and records last_run."""
+        import uuid
+
+        suffix = uuid.uuid4().hex[:6]
+        action = f"میانگین ۳ و ۷ {suffix}"
+        result = register(f"هر ۱۵ دقیقه {action} را حساب کن")
         assert result["ok"] is True
-        before = {s.schedule_id: s.last_run for s in list_schedules()}
-        fired = run_due(max_runs=2)
+        # the fresh registration is never-run → due immediately
+        fresh = [s for s in list_schedules() if suffix in s.command and s.last_run == ""]
+        assert fresh, "the new schedule must exist un-fired"
+        fired = run_due(max_runs=5)
         assert fired["count"] >= 1
         after = {s.schedule_id: s.last_run for s in list_schedules()}
-        # at least one schedule advanced from '' to a real timestamp
-        assert any(after[sid] and not before.get(sid) for sid in after)
+        assert any(after.get(s.schedule_id) for s in fresh)  # it really fired
 
     def test_second_run_after_marking_is_not_due(self) -> None:
         """Immediately after firing, the schedule is NOT due again (interval)."""
@@ -102,15 +107,22 @@ class TestRunDue:
 
 class TestSchedulerCLI:
     def test_cli_register_and_list_and_run(self, capsys: object) -> None:
-        """The CLI triad works end to end against the real persistent store."""
-        from universal_mind.cli import main
+        """The CLI triad works end to end (isolated temp store — the CLI must
+        not fire the operator's real schedules as a side effect of testing)."""
+        from unittest.mock import patch as mock_patch
 
-        rc = main(["schedule", "هر ۹۹ دقیقه میانگین ۵ و ۹ را حساب کن"])
-        assert rc == 0
-        rc = main(["schedule-list"])
-        assert rc == 0
-        rc = main(["schedule-run"])
-        assert rc == 0  # fires whatever is due (possibly nothing new)
+        from universal_mind.cli import main
+        from universal_mind.database_suite import DatabaseSuite
+        import universal_mind.scheduler as sched_mod
+
+        suite = DatabaseSuite()
+        with mock_patch.object(sched_mod, "_store", lambda: suite):
+            rc = main(["schedule", "هر ۹۹ دقیقه میانگین ۵ و ۹ را حساب کن"])
+            assert rc == 0
+            rc = main(["schedule-list"])
+            assert rc == 0
+            rc = main(["schedule-run"])
+            assert rc == 0
 
     def test_cli_bad_schedule_fails_with_template(self, capsys: object) -> None:
         from universal_mind.cli import main
