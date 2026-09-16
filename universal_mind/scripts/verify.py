@@ -89,6 +89,7 @@ PROBES = [
     "probe_real_media.py",
     "probe_media_pipeline.py",
     "probe_persian_loop.py",
+    "probe_arete_run_judgment.py",
 ]
 
 

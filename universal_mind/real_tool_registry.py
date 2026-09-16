@@ -23,7 +23,10 @@ from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.pdf_suite import PdfSuiteConnector
-from universal_mind.tool_registry import ToolEntry
+from universal_mind.tool_registry import (
+    ToolEntry,
+    ToolRegistry,
+)
 from universal_mind.vision_suite import VisionSuiteConnector
 
 # capability -> connector constructor (no-arg), kept in one place.
@@ -44,6 +47,36 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
 }
 
 
+def real_tool_registry() -> ToolRegistry:
+    """The registry of every REAL capability the platform ships.
+
+    One entry per integrated program/effect, all absorbable, so the Persian
+    layer, the desktop app, the CLI, and the probes all share ONE source of
+    truth about what the platform can actually do.
+    """
+    from universal_mind.tool_registry import (
+        ConnectionMechanism,
+        ToolConnectionSpec,
+        ToolEntry,
+        ToolRegistry,
+    )
+
+    reg = ToolRegistry()
+    for capability in sorted(_REAL_CONNECTORS):
+        reg.register(
+            ToolEntry(
+                name=f"real::{capability}",
+                capability=capability,
+                connection=ToolConnectionSpec(
+                    mechanism=ConnectionMechanism.SUBPROCESS,
+                    command=f"python -m universal_mind.cli run {capability}",
+                ),
+                absorbable=True,
+            )
+        )
+    return reg
+
+
 def real_connector_factory(tool: ToolEntry) -> Connector:
     """Return the real-tool connector for a tool's capability.
 
@@ -59,4 +92,4 @@ def real_connector_factory(tool: ToolEntry) -> Connector:
     return connector_for(tool.connection_mechanism)
 
 
-__all__ = ["real_connector_factory"]
+__all__ = ["real_connector_factory", "real_tool_registry"]

@@ -65,6 +65,22 @@ class TestAnalytics:
         # Persian digits are rendered (no raw ASCII numbers in the report).
         assert "1" not in report or "۱" in report
 
+    def test_mean_excellence_computed_over_judged_runs(self) -> None:
+        history = _isolated_history()
+        history.record("a", ["data"], True, excellence=1.0)
+        history.record("b", ["data"], True, excellence=0.5)
+        history.record("c", ["data"], False, excellence=0.0)
+        stats = analyze_history(history)
+        # mean over SUCCESSFUL judged runs only: (1.0 + 0.5) / 2
+        assert abs(stats.mean_excellence - 0.75) < 1e-9
+
+    def test_old_rows_without_excellence_are_tolerated(self) -> None:
+        history = _isolated_history()
+        history.record("legacy", ["data"], True)  # no excellence (old shape)
+        stats = analyze_history(history)
+        assert stats.mean_excellence == 0.0  # honest: nothing judged yet
+        assert stats.total_runs == 1
+
     def test_end_to_end_real_history_has_content(self) -> None:
         """The operator's REAL persistent history (non-empty from real runs)."""
         stats = analyze_history()  # the real persistent db

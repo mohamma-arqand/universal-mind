@@ -49,15 +49,27 @@ class RunHistory:
         self._db.execute(
             "CREATE TABLE IF NOT EXISTS run_history "
             "(id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
-            "succeeded INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            "succeeded INTEGER, excellence REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
         )
+        # Migrate an existing persistent DB in place (add excellence if missing).
+        try:
+            cols = self._db.query(
+                "SELECT name FROM pragma_table_info('run_history')"
+            )
+            if cols.get("ok") and "excellence" not in {str(c["name"]) for c in cols.get("rows", [])}:
+                self._db.execute("ALTER TABLE run_history ADD COLUMN excellence REAL")
+        except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
+            import sys
 
-    def record(self, command: str, route: list[str], succeeded: bool) -> None:
-        """Append one real run to the history."""
+            print(f"[history] مهاجرت ستون excellence ناموفق بود: {exc}", file=sys.stderr)
+
+    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None) -> None:
+        """Append one real run to the history (with its ARETĒ excellence)."""
         self._db.insert_many(
             "run_history",
             [{"command": command, "route": ",".join(route),
-              "succeeded": "1" if succeeded else "0"}],
+              "succeeded": "1" if succeeded else "0",
+              "excellence": "" if excellence is None else f"{excellence:.4f}"}],
         )
 
     def successful_runs(self) -> list[RunRecord]:

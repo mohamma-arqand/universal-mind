@@ -101,6 +101,9 @@ class TestExtendedPdf:
                 params["title"] = "T"
             if op == "with_image":
                 params["image_path"] = str(img)
+            if op == "persian_report":
+                # the flow operation: needs a REAL image to embed (honest refusal otherwise)
+                params["image_path"] = str(img)
             result = conn.connect({}, params)
             assert result.ok is True, f"{op}: {result.error}"
 

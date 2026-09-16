@@ -277,17 +277,43 @@ def route_and_run(
     # its contract accepts (the dispatch constrains what it is given).
     capability_params = params or {cap: extract_params(command, cap) for cap in caps}
 
+    # A chain of 2+ capabilities flows by default: one program's real output
+    # becomes the next program's input (chart → pdf embeds the real chart).
     syn = orchestrate(
         reg,
         caps,
         connector_factory=real_connector_factory,
         capability_params=capability_params,
+        flow=len(caps) > 1,
     )
+    # The payload the ARETĒ judge reads (the same shape route_and_run returns).
+    run_payload_preview = {
+        "ok": syn.ok,
+        "command": command,
+        "route": caps,
+        "result": syn.output["synthesized_from"] if isinstance(syn.output, dict) else {},
+        "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
+        "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
+    }
+
+    # Virtue-judge THIS run with ARETĒ (the same arbitrator that judges
+    # specialist disputes now judges the platform's own real work).
+    judgment: dict[str, Any] = {}
+    try:
+        from universal_mind.arete.run_judgment import judge_run
+
+        judgment = judge_run(run_payload_preview)
+    except Exception as exc:  # noqa: BLE001 — judgment is a lens, never a blocker
+        import sys
+
+        print(f"[arete] داوری اجرا ناموفق بود: {exc}", file=sys.stderr)
+
     # Record the real run to the persistent history (the advisor learns from it).
     try:
         from universal_mind.run_history import RunHistory
 
-        RunHistory().record(command, caps, syn.ok)
+        RunHistory().record(command, caps, syn.ok,
+                            excellence=judgment.get("excellence"))
     except Exception as exc:  # noqa: BLE001 — a failed history write never breaks the run
         import sys
 
@@ -300,6 +326,8 @@ def route_and_run(
         "unknown": list(route_result.unknown),
         "extracted_params": capability_params,
         "result": syn.output["synthesized_from"],
+        "flows": syn.output.get("flows", []) if isinstance(syn.output, dict) else [],
+        "judgment": judgment,
         "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
         "_registry": reg,  # kept internal: the caller may reuse the registry

@@ -74,6 +74,49 @@ def _default_composer(sub_outputs: list[SubOutput]) -> Any:
     }
 
 
+# ---------------------------------------------------------------------------
+# Dataflow synthesis: one program's real output becomes the next program's input.
+#
+# The flow table is explicit and honest: image-producing capabilities (chart,
+# media, image, vision) feed pdf's with_image; the flow only fills a GAP — it
+# never overrides parameters the caller (e.g. the Persian layer) already chose.
+# ---------------------------------------------------------------------------
+
+_IMAGE_PRODUCERS: tuple[str, ...] = ("chart", "media", "image", "vision")
+_IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
+
+
+def _flow_params(
+    consumer: str,
+    params: dict[str, Any],
+    last_producer: str | None,
+    last_output: Any,
+) -> tuple[dict[str, Any], str | None]:
+    """Enrich the consumer's params with the previous producer's real output.
+
+    Returns (enriched_params, flow_description) — flow_description is None when
+    nothing flowed (the common, honest case).
+    """
+    if last_producer is None or not isinstance(last_output, dict):
+        return params, None
+    path = last_output.get("path")
+    if not isinstance(path, str) or not path.lower().endswith(_IMAGE_EXTENSIONS):
+        return params, None
+    # The one sanctioned UPGRADE: a Persian report gets the just-made image
+    # embedded (persian_rtl → persian_report). Any other explicit intent wins.
+    if params.get("operation") and params["operation"] != "persian_rtl":
+        return params, None
+    if consumer == "pdf":
+        enriched = {
+            **params,
+            "operation": "persian_report",
+            "image_path": path,
+            "caption": params.get("title") or f"{last_producer} output",
+        }
+        return enriched, f"{last_producer} → pdf (گزارش فارسی با نمودار درونش)"
+    return params, None
+
+
 def orchestrate(
     registry: ToolRegistry,
     capabilities: list[str],
@@ -81,6 +124,7 @@ def orchestrate(
     composer: Composer | None = None,
     connector_factory: ConnectorFactory | None = None,
     capability_params: dict[str, dict[str, Any]] | None = None,
+    flow: bool = False,
 ) -> Synthesis:
     """Reach a tool for each needed capability and fuse their outputs into one D.
 
@@ -100,14 +144,22 @@ def orchestrate(
     fuse = composer if composer is not None else _default_composer
     factory = connector_factory if connector_factory is not None else _default_connector
     sub_outputs: list[SubOutput] = []
+    flows: list[str] = []
+    last_producer: str | None = None
+    last_output: Any = None
     for capability in capabilities:
         tool = registry.best_for(capability)
-        call_params = (capability_params or {}).get(capability, {})
+        call_params = dict((capability_params or {}).get(capability, {}))
+        if flow:
+            call_params, flow_desc = _flow_params(capability, call_params, last_producer, last_output)
+            if flow_desc:
+                flows.append(flow_desc)
         if tool is None:
             sub_outputs.append(
                 SubOutput(capability=capability, tool_name="", output=None, ok=False,
                           error=f"no tool can honor '{capability}'")
             )
+            last_producer, last_output = None, None
             continue
         start = _perf()
         result = factory(tool).connect(tool.connection, call_params)
@@ -122,11 +174,18 @@ def orchestrate(
                 duration_ms=round(duration_ms, 4),
             )
         )
+        # Track the last SUCCESSFUL producer so the next consumer can feed on it.
+        if result.ok and result.output is not None:
+            last_producer, last_output = capability, result.output
+        else:
+            last_producer, last_output = None, None
         # Record the outcome on the tool's evidence trail so the next synthesis
         # ranks tools by what actually worked (feeds Phase E).
         tool.evidence.append({"succeeded": result.ok, "score": 1.0 if result.ok else 0.0, "note": capability})
 
     fused = fuse(sub_outputs)
+    if isinstance(fused, dict) and flows:
+        fused = {**fused, "flows": flows}  # auditable: exactly what flowed
     all_ok = all(s.ok for s in sub_outputs)
     return Synthesis(output=fused, sub_outputs=tuple(sub_outputs), ok=all_ok)
 

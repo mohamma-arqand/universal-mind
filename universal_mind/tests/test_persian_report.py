@@ -5,6 +5,27 @@ from __future__ import annotations
 from universal_mind.persian_report import persian_report
 
 
+class TestFlowNarration:
+    """When data flowed (chart → pdf), the report narrates it."""
+
+    def test_report_narrates_the_flow(self) -> None:
+        from universal_mind.persian_router import route_and_run
+
+        payload = route_and_run("نمودار خطی بساز و گزارشش کن")
+        assert payload["flows"], "the flow must be active for chart→pdf"
+        report = persian_report(payload)
+        assert "🔗" in report
+        assert "نمودار درونش" in report or "گزارش فارسی" in report
+
+    def test_report_without_flow_has_no_flow_line(self) -> None:
+        from universal_mind.persian_router import route_and_run
+
+        payload = route_and_run("میانگین ۱ و ۲ را حساب کن")
+        assert payload["flows"] == []
+        report = persian_report(payload)
+        assert "🔗" not in report
+
+
 class TestRealRunsRendered:
     def test_stats_chart_store_chain(self) -> None:
         """The full stats→chart→store chain renders as fluent Persian."""

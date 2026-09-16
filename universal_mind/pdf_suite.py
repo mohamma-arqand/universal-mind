@@ -45,7 +45,7 @@ class PdfSuite:
     OPERATIONS = (
         "document", "multi_page", "table", "styled_table", "with_image",
         "bullet_list", "numbered_list", "letterhead", "invoice", "two_column",
-        "landscape", "cover_page", "persian_rtl",
+        "landscape", "cover_page", "persian_rtl", "persian_report",
     )
 
     def document(
@@ -243,6 +243,50 @@ class PdfSuite:
         return self._build(story, target / "cover_page.pdf")
 
 
+    def persian_report(
+        self,
+        image_path: str = "",
+        title: str = "گزارش ذهن یکپارچه",
+        paragraphs: list[str] | None = None,
+        out_dir: str | None = None,
+    ) -> dict[str, Any]:
+        """A Persian RTL report that embeds a REAL produced image (the flow target).
+
+        The fusion of the Persian layer and the dataflow: the report is RTL with
+        a real Persian font AND carries the actual artifact the previous program
+        produced (the chart, the image, ...). No image → honest failure, never a
+        text-only silent substitute.
+        """
+        if not image_path or not Path(image_path).exists():
+            return {"ok": False, "error": "نموداری برای درج نیست — ابتدا نمودار بساز"}
+
+        from reportlab.lib.enums import TA_RIGHT
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.platypus import Image as RLImage
+
+        target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-fa-report-"))
+        target.mkdir(parents=True, exist_ok=True)
+        out_path = target / "persian_report.pdf"
+        styles = getSampleStyleSheet()
+        for candidate in (r"C:\Windows\Fonts\tahoma.ttf", r"C:\Windows\Fonts\arial.ttf"):
+            if Path(candidate).exists():
+                pdfmetrics.registerFont(TTFont("PersianFont", candidate))
+                break
+        else:
+            return {"ok": False, "error": "no Persian-capable font found on this system"}
+        fa_style = styles["BodyText"].clone("PersianBody", fontName="PersianFont", alignment=TA_RIGHT, wordWrap="RTL")
+        fa_title = styles["Title"].clone("PersianTitle", fontName="PersianFont", alignment=TA_RIGHT, wordWrap="RTL")
+        story: list[Any] = [Paragraph(title, fa_title)]
+        for paragraph in paragraphs or ["گزارش تولیدشده توسط حلقهی سنتز ذهن یکپارچه."]:
+            story.append(Spacer(1, 12))
+            story.append(Paragraph(paragraph, fa_style))
+        story.append(Spacer(1, 18))
+        story.append(RLImage(image_path, width=380, height=240))
+        story.append(Spacer(1, 6))
+        story.append(Paragraph("نمودار تولیدشده در همین اجرا", fa_style))
+        return self._build(story, out_path)
+
     def persian_rtl(
         self,
         title: str = "گزارش ذهن یکپارچه",
@@ -312,6 +356,10 @@ class PdfSuiteConnector:
             "two_column": lambda: suite.two_column(params.get("left_text", "Left column."), params.get("right_text", "Right column.")),
             "landscape": lambda: suite.landscape(params.get("title", "Landscape page")),
             "cover_page": lambda: suite.cover_page(params.get("title", "Universal Mind"), params.get("subtitle", "Synthesis Report")),
+            "persian_report": lambda: suite.persian_report(
+                params.get("image_path", ""), params.get("title", "گزارش ذهن یکپارچه"),
+                params.get("paragraphs"),
+            ),
             "persian_rtl": lambda: suite.persian_rtl(
                 params.get("title", "گزارش ذهن یکپارچه"), params.get("paragraphs")
             ),

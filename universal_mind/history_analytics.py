@@ -26,6 +26,7 @@ class HistoryAnalytics:
     top_chains: tuple[tuple[str, int], ...]        # ("data → chart", count)
     top_capabilities: tuple[tuple[str, int], ...]  # ("data", count)
     per_capability_success: dict[str, float] = field(default_factory=dict)
+    mean_excellence: float = 0.0  # ARETĒ's average excellence over judged runs
 
 
 def _fa_num(value: float) -> str:
@@ -71,6 +72,15 @@ def analyze_history(history: RunHistory | None = None) -> HistoryAnalytics:
         cap: (cap_ok[cap] / cap_total[cap])
         for cap in cap_total
     }
+    # ARETĒ's mean excellence over the runs it judged (old rows have NULL).
+    try:
+        exc = hist._db.query(
+            "SELECT AVG(excellence) AS m FROM run_history "
+            "WHERE excellence IS NOT NULL AND succeeded = 1"
+        )
+        mean_excellence = float(exc["rows"][0]["m"]) if exc.get("ok") and exc["rows"] and exc["rows"][0]["m"] is not None else 0.0
+    except Exception:  # noqa: BLE001 — analytics over a missing column is 0, not fatal
+        mean_excellence = 0.0
     return HistoryAnalytics(
         total_runs=total,
         successful_runs=successful,
@@ -79,6 +89,7 @@ def analyze_history(history: RunHistory | None = None) -> HistoryAnalytics:
         top_chains=tuple(chain_counter.most_common(5)),
         top_capabilities=tuple(cap_counter.most_common(10)),
         per_capability_success=per_cap,
+        mean_excellence=round(mean_excellence, 4),
     )
 
 
@@ -94,6 +105,8 @@ def analytics_report(stats: HistoryAnalytics) -> str:
         f" | ناموفق: {_fa_num(stats.failed_runs)}"
         f" | نرخ موفقیت: {_fa_num(round(stats.success_rate * 100, 1))}٪"
     ]
+    if stats.mean_excellence > 0.0:
+        lines[0] += f" | میانگین داوری ARETĒ: {_fa_num(round(stats.mean_excellence * 100, 1))}٪"
     if stats.top_chains:
         lines.append("\n🔗 پرکاربردترین زنجیرهها:")
         for chain, count in stats.top_chains[:3]:

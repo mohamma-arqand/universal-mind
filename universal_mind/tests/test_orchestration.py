@@ -78,6 +78,74 @@ def test_best_tool_is_chosen_by_evidence() -> None:
     assert syn.output["synthesized_from"]["transcode"] == "proven_out"
 
 
+def _real_registry() -> ToolRegistry:
+    """The REAL registered capabilities (the shipped super-platform surface)."""
+    from universal_mind.real_tool_registry import real_tool_registry
+
+    return real_tool_registry()
+
+
+class TestDataflowSynthesis:
+    """flow=True: one program's real output becomes the next program's input."""
+
+    def test_chart_feeds_pdf_for_real(self) -> None:
+        """chart → pdf: the PDF genuinely embeds the chart that was just made."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(_real_registry(), ["chart", "pdf"],
+                          connector_factory=real_connector_factory, flow=True)
+        assert syn.ok is True
+        # The flow is recorded honestly in the bundle.
+        assert syn.output["flows"] == ["chart → pdf (گزارش فارسی با نمودار درونش)"]
+        # And the PDF really is an image-bearing PDF (bytes grew by the image).
+        assert syn.output["synthesized_from"]["pdf"]["bytes"] > 1000
+
+    def test_explicit_params_win_over_flow(self) -> None:
+        """The caller's explicit operation is never overridden by inference."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "pdf"],
+            connector_factory=real_connector_factory, flow=True,
+            capability_params={"pdf": {"operation": "document", "title": "گزارش"}},
+        )
+        assert syn.ok is True
+        assert syn.output.get("flows", []) == []  # no flow: explicit intent wins
+
+    def test_flow_off_by_default(self) -> None:
+        """Without flow=True, programs stay independent (backward compatible)."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(_real_registry(), ["chart", "pdf"],
+                          connector_factory=real_connector_factory)
+        assert syn.ok is True
+        assert "flows" not in syn.output
+
+    def test_persian_rtl_is_upgraded_to_report_when_image_flows(self) -> None:
+        """The ONE sanctioned upgrade: a Persian rtl report embeds the just-made
+        chart; any other explicit operation is untouched."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "pdf"],
+            connector_factory=real_connector_factory, flow=True,
+            capability_params={"pdf": {"operation": "persian_rtl", "title": "گزارش"}},
+        )
+        assert syn.ok is True
+        assert syn.output["flows"] == ["chart → pdf (گزارش فارسی با نمودار درونش)"]
+        # bigger than a text-only RTL pdf because the chart image is inside.
+        assert syn.output["synthesized_from"]["pdf"]["bytes"] > 20000
+
+    def test_failed_producer_never_flows(self) -> None:
+        """A failed producer's (non-)output never becomes the next input."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(_registry(), ["nonexistent", "pdf"],
+                          connector_factory=real_connector_factory, flow=True)
+        assert syn.ok is False
+        assert syn.output.get("flows", []) == []
+
+
 def test_orchestration_records_evidence_on_tools() -> None:
     reg = _registry()
     orchestrate(reg, ["transcode", "send_email"])

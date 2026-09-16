@@ -13,6 +13,13 @@ from __future__ import annotations
 from typing import Any
 
 # Persian labels for the capability names (single source for rendering).
+_VIRTUE_FA: dict[str, str] = {
+    "wisdom": "حکمت",
+    "courage": "شهامت",
+    "temperance": "اعتدال",
+    "justice": "عدالت",
+}
+
 _CAP_FA: dict[str, str] = {
     "data": "تحلیل داده",
     "ai": "یادگیری ماشین",
@@ -159,6 +166,26 @@ def persian_report(payload: dict[str, Any]) -> str:
     lines: list[str] = []
     chain_fa = " ← ".join(_CAP_FA.get(c, c) for c in route)
     lines.append(f"✅ اجرا انجام شد: {chain_fa}")
+
+    # The dataflow — when one program's output became the next program's input,
+    # the report SAYS SO (the fusion is the whole point, it must be visible).
+    flows: list[str] = list(payload.get("flows", []) or [])
+    if flows:
+        for flow in flows:
+            lines.append(f"🔗 {flow}")
+
+    # ARETĒ's judgment of this very run — the virtues computed from its own data.
+    judgment: dict[str, Any] = payload.get("judgment") or {}
+    if judgment and not judgment.get("disqualified", False):
+        scores = judgment.get("scores", {})
+        shown = ", ".join(
+            f"{_VIRTUE_FA.get(name, name)} {_fa_num(score)}"
+            for name, score in scores.items()
+        )
+        lines.append(f"🏛 داوری ARETĒ: {shown}")
+    elif judgment:
+        reason = str(judgment.get("disqualify_reason", ""))
+        lines.append(f"🏛 داوری ARETĒ: رد شد ({reason})")
 
     for cap in route:
         if cap in errors:

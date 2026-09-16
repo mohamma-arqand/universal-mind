@@ -253,7 +253,7 @@ class MindDesktopApp:
             return
         try:
             subprocess.run(["explorer.exe", "/select,", path], check=False, timeout=10)
-        except (OSError, subprocess.SubprocessError) as exc:  # noqa: BLE001 — bonus, never fatal
+        except (OSError, subprocess.SubprocessError) as exc:
             messagebox.showinfo("Universal Mind", f"باز کردن پوشه ناموفق بود: {exc}")
 
     def _write_status(self) -> None:

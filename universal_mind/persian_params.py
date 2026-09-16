@@ -143,6 +143,8 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     if capability == "pdf":
         # A Persian command deserves a Persian RTL document (not a Latin-only one):
         # the title and paragraphs are real Persian text, rendered RTL.
+        # When the flow has a real image to embed (chart → pdf), the orchestration
+        # layer upgrades persian_rtl → persian_report (image inside the report).
         params = {"operation": "persian_rtl"}
         title = with_resolved_date(text or "گزارش ذهن یکپارچه", command)
         params["title"] = title
