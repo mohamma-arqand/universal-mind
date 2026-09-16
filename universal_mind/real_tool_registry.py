@@ -22,6 +22,7 @@ from universal_mind.database_suite import DatabaseSuiteConnector
 from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
+from universal_mind.speech_tool import SpeechToolConnector
 from universal_mind.pdf_suite import PdfSuiteConnector
 from universal_mind.tool_registry import (
     ToolEntry,
@@ -37,6 +38,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "compute": ComputeToolConnector,
     "notify": NotifyToolConnector,
     "clipboard": ClipboardToolConnector,
+    "speech": SpeechToolConnector,         # real Windows SAPI voice (fa-preferred, honest)
     "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)
     "pdf": PdfSuiteConnector,          # full reportlab surface (documents/tables/images)
     "chart": ChartSuiteConnector,      # full matplotlib surface (line/bar/pie/hist/scatter)

@@ -105,6 +105,12 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("ساختارش را بخوان", "vision"),
     ("ساختار تصویر", "vision"),
     ("ساختارش", "vision"),
+    # speech (SAPI) — the platform speaks its results aloud
+    ("بگو", "speech"),
+    ("بلند بخوان", "speech"),
+    ("بخوان بلند", "speech"),
+    ("با صدا", "speech"),
+    ("صدا کن", "speech"),
     # گزارش کامل: the EVERYTHING chain — numbers → chart → report → archive
     ("گزارش کامل", "data"),
     ("گزارش کامل", "chart"),

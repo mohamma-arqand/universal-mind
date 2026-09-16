@@ -242,6 +242,24 @@ def _flow_params(
         }
         return enriched, f"{len(produced_paths)} فایلِ این اجرا → archive (بایگانی یکجا)"
 
+    # SPEECH flow — the chain's summary spoken ALOUD through the real SAPI
+    # voice (fa-preferred, honest when no Persian voice is installed).
+    # Explicit text always wins; the command echo is treated as empty.
+    if consumer == "speech":
+        if not params.get("text") or params.get("text") == command:
+            summary = _artifact_summary(last_output)
+            if summary:
+                spoken_text = (
+                    f"{summary}. میانگین برابر {_fmt_num(last_output.get('mean'))}"
+                    if isinstance(last_output, dict) and isinstance(last_output.get("mean"), (int, float))
+                    else summary
+                )
+                return (
+                    {**params, "operation": "speak", "text": spoken_text},
+                    f"{last_producer} → speech ({summary})",
+                )
+        return params, None
+
     # NOTIFY flow — the chain's final artifact summarized as a real Windows
     # toast. The perception loop closes: the platform not only MAKES, it SAYS
     # what it made. Explicit title/body in the params always win.
@@ -274,6 +292,14 @@ def _artifact_summary(output: Any) -> str:
     stats = output.get("stats")
     if isinstance(stats, dict) and stats:
         return "آمار محاسبه شد"
+    # A flat computed result (data's mean/std/... directly) is real work too.
+    flat = {
+        k: v
+        for k, v in output.items()
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "ok"
+    }
+    if flat:
+        return f"{_fmt_num(len(flat))} شاخص محاسبه شد"
     return ""
 
 

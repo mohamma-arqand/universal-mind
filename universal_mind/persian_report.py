@@ -33,6 +33,7 @@ _CAP_FA: dict[str, str] = {
     "database": "دیتابیس",
     "notify": "اطلاعرسانی",
     "clipboard": "کلیپبورد",
+    "speech": "گفتار",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -153,6 +154,11 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "pdf":
         return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+    if cap == "speech" and isinstance(result, dict):
+        if result.get("spoken"):
+            voice = result.get("voice", "")
+            return f"با صدای واقعی گفته شد (صدا: {voice})."
+        return None  # failures render via the honest error line
     if cap == "database" and isinstance(result, list):
         # The read-back: real stored rows narrated as Persian memory.
         if not result:
