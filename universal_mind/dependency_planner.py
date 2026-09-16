@@ -37,7 +37,12 @@ _SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf",)  # a report can tabulate real numbers
-_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "database", "clipboard")  # run last, consume anything
+_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "clipboard")  # run last, consume anything
+# database is a CONDITIONAL sink: it runs last when WRITING (a computing
+# producer feeds it), but it runs BEFORE pdf when READING — «چی ذخیره کردی؟
+# و گزارشش کن» is database(read) → pdf(report). The planner distinguishes by
+# the chain's shape: no computing producer in the chain ⇒ database is a reader.
+_READABLE_SINKS: tuple[str, ...] = ("database",)
 
 # pdf consumes BOTH image and stats: it must wait for whichever producer is in
 # the chain (chart for the image flow, data for the stats-table flow).
@@ -88,14 +93,27 @@ def _capability_order(caps: list[str]) -> list[str]:
                 blockers = [p for p in _SERIES_PRODUCERS if p in remaining]
             elif cap in _STATS_CONSUMERS:
                 # pdf/tabulate consumers wait on BOTH the stats producers and
-                # the image producers (either flow can feed the report).
+                # the image producers (either flow can feed the report) — AND
+                # on a READING database (a memory-read chain feeds pdf rows).
                 blockers = [
                     p
-                    for p in (*_SERIES_PRODUCERS, *_IMAGE_PRODUCERS)
+                    for p in (
+                        *_SERIES_PRODUCERS,
+                        *_IMAGE_PRODUCERS,
+                        *_READABLE_SINKS,
+                    )
                     if p in remaining
                 ]
             elif cap in _SINK_CONSUMERS:
                 blockers = [p for p in remaining if p != cap]
+            elif (
+                cap in _READABLE_SINKS
+                and not any(p in remaining for p in _SERIES_PRODUCERS)
+                and any(p in remaining for p in _IMAGE_CONSUMERS)
+            ):
+                # a READING database feeds the report: it waits only on other
+                # readers, but must run BEFORE the pdf that consumes its rows.
+                blockers = []  # free to run now — before the pdf below
             elif cap in _IMAGE_CONSUMERS:
                 blockers = [p for p in _IMAGE_PRODUCERS if p in remaining]
             if not blockers:

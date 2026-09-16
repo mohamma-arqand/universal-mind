@@ -123,6 +123,38 @@ class TestRunDue:
             assert still_due == []
 
 
+class TestTickVisibility:
+    def test_a_firing_tick_sends_a_real_toast(self) -> None:
+        """Autonomous work is VISIBLE: a tick that fired something sends a
+        Windows toast with the honest count."""
+        from unittest.mock import patch as mock_patch
+
+        from universal_mind.real_notify import NotifyTool
+
+        with _isolated():
+            register("هر ۱۵ دقیقه میانگین ۹ و ۱ را حساب کن")
+            with mock_patch.object(NotifyTool, "notify", return_value={"ok": True}) as toast:
+                result = run_due()
+            assert result["count"] >= 1
+            toast.assert_called_once()
+            title = toast.call_args.kwargs.get("title", "")
+            body = toast.call_args.kwargs.get("body", "")
+            assert "اجرای خودکار" in title
+            assert "کار" in body  # the honest count, in Persian
+
+    def test_an_idle_tick_stays_silent(self) -> None:
+        """Nothing due → no toast (silence is the honest state)."""
+        from unittest.mock import patch as mock_patch
+
+        from universal_mind.real_notify import NotifyTool
+
+        with _isolated():
+            with mock_patch.object(NotifyTool, "notify") as toast:
+                result = run_due()
+            assert result["count"] == 0
+            toast.assert_not_called()
+
+
 class TestSchedulerCLI:
     def test_cli_register_and_list_and_run(self, capsys: object) -> None:
         """The CLI triad works end to end (isolated store — the CLI must not

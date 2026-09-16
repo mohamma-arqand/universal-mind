@@ -215,7 +215,33 @@ def run_due(max_runs: int = 5) -> dict[str, Any]:
                 "error": str(exc),
             })
             mark_run(schedule.schedule_id)  # even failures advance the clock
+
+    # The proactive loop is VISIBLE: when the tick did autonomous work, a real
+    # Windows toast says what ran (a tick that fired nothing stays silent —
+    # silence is the honest state for 'nothing was due').
+    if fired:
+        ok_count = sum(1 for f in fired if f.get("ok"))
+        body = (
+            f"{_fa_num(len(fired))} کارِ زمان‌بندی‌شده اجرا شد"
+            + (f" ({_fa_num(ok_count)} موفق)" if ok_count != len(fired) else "")
+        )
+        try:
+            from universal_mind.real_notify import NotifyTool
+
+            NotifyTool().notify(title="ذهن یکپارچه — اجرای خودکار", body=body)
+        except Exception:  # noqa: BLE001 — the toast is a bonus, never fatal
+            pass
+
     return {"ok": True, "fired": fired, "count": len(fired), "error": ""}
+
+
+def _fa_num(value: int | float) -> str:
+    """Persian digits for the toast (the operator's language everywhere)."""
+    if isinstance(value, int) or (isinstance(value, float) and value == int(value)):
+        text = str(int(value))
+    else:
+        text = f"{value:.4f}".rstrip("0").rstrip(".")
+    return text.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
 
 
 __all__ = [

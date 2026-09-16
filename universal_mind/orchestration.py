@@ -102,13 +102,14 @@ def _flow_params(
     - IMAGE flow: chart/media/image/vision → pdf/image (the artifact is embedded);
     - STATS flow: data → pdf (the computed statistics become a real table row).
     """
-    if last_producer is None or not isinstance(last_output, dict):
-        return params, None
+    if last_producer is None or not isinstance(last_output, (dict, list)):
+        return params, None  # non-structured outputs cannot flow
 
     # IMAGE flow — the previous program produced a real image file; only an
     # image consumer (pdf/image) can embed it. Other consumers (clipboard/
-    # archive/notify) fall through to their own flows below.
-    path = last_output.get("path")
+    # archive/notify) fall through to their own flows below. A LIST output
+    # (a database read-back) has no image — it flows to the memory flow below.
+    path = last_output.get("path") if isinstance(last_output, dict) else None
     if (
         isinstance(path, str)
         and path.lower().endswith(_IMAGE_EXTENSIONS)
@@ -132,13 +133,17 @@ def _flow_params(
     # renders them as a real table (the numbers ARE the content). Both shapes
     # are honored: the suite's raw flat result (mean/std/... directly) and the
     # wrapped shape ({"stats": {...}}).
-    stats = last_output.get("stats")
+    stats = last_output.get("stats") if isinstance(last_output, dict) else None
     if not isinstance(stats, dict) or not stats:
-        flat = {
-            k: v
-            for k, v in last_output.items()
-            if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "ok"
-        }
+        flat = (
+            {
+                k: v
+                for k, v in last_output.items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "ok"
+            }
+            if isinstance(last_output, dict)
+            else {}
+        )
         if flat:
             stats = flat
     # A vision read-back carries its own stats wrapper (shape/means/std of the
@@ -242,6 +247,22 @@ def _flow_params(
         }
         return enriched, f"{len(produced_paths)} فایلِ این اجرا → archive (بایگانی یکجا)"
 
+    # MEMORY→REPORT flow — a database read-back (a LIST of real stored rows)
+    # becomes a genuine table inside the Persian report: the platform renders
+    # ITS OWN MEMORY. Only fires when the producer's output IS a row list.
+    if consumer == "pdf" and isinstance(last_output, list) and last_output:
+        if params.get("operation") and params["operation"] not in ("persian_rtl", "persian_report"):
+            return params, None  # explicit intent wins
+        sample = last_output[0]
+        if isinstance(sample, dict):
+            headers = list(sample.keys())
+            rows = [[_fmt_num(v) if isinstance(v, (int, float)) else str(v)
+                     for v in r.values()] for r in last_output[:15]]
+            return (
+                {**params, "operation": "persian_report",
+                 "image_path": "", "stats_headers": headers, "stats_rows": rows},
+                f"حافظه → گزارش ({len(rows)} ردیفِ واقعی از دیتابیس درون گزارش)",
+            )
     # SPEECH flow — the chain's summary spoken ALOUD through the real SAPI
     # voice (fa-preferred, honest when no Persian voice is installed).
     # Explicit text always wins; the command echo is treated as empty.

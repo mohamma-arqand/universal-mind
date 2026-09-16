@@ -22,17 +22,40 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
-def tick() -> dict[str, object]:
-    """One honest tick: fire everything due through the real engine."""
+def tick(*, notify_summary: bool = True) -> dict[str, object]:
+    """One honest tick: fire everything due, then SAY what ran.
+
+    With ``notify_summary`` the tick closes its own perception loop: a real
+    Windows toast reports how many scheduled tasks fired and how they went —
+    the operator learns the platform worked while away, without opening it.
+    """
     from universal_mind.scheduler import run_due
 
     stamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     result = run_due()
     fired = result.get("fired", [])
-    print(f"[{stamp}] tick: {result.get('count', 0)} schedule(s) fired")
+    count = result.get("count", 0)
+    print(f"[{stamp}] tick: {count} schedule(s) fired")
     for entry in fired:
         status = "OK" if entry.get("ok") else f"FAILED ({entry.get('error', '')[:60]})"
         print(f"  - {entry.get('command', '')[:60]} → {status}")
+
+    if notify_summary and count:
+        ok_count = sum(1 for f in fired if f.get("ok"))
+        failed = count - ok_count
+        # Persian digits, honest wording — successes first, failures named.
+        fa = str(count).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+        fa_ok = str(ok_count).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+        body = f"{fa} کارِ زمان‌بندی‌شده اجرا شد ({fa_ok} موفق)"
+        if failed:
+            fa_failed = str(failed).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+            body += f"، {fa_failed} ناموفق"
+        try:
+            from universal_mind.real_notify import NotifyTool
+
+            NotifyTool().notify(title="ذهن یکپارچه — اجرای خودکار", body=body)
+        except Exception as exc:  # noqa: BLE001 — the toast is a bonus, never fatal
+            print(f"(toast failed: {exc})")
     return dict(result)
 
 
