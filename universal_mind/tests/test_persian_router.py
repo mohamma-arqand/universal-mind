@@ -152,6 +152,22 @@ class TestSavedChainByPersianCommand:
             store.delete(saved.chain_id)
 
 
+class TestVisionIntentDisambiguation:
+    """«تحلیل تصویر» is ANALYZE (vision) — the bare «تصویر» (image-production)
+    must not fire in the same sentence and pollute the route."""
+
+    def test_analysis_phrase_does_not_route_image_production(self) -> None:
+        payload = route_and_run("نمودار خطی بساز و تحلیل تصویرش کن")
+        assert payload["route"] == ["chart", "vision"]  # no 'image' producer
+        assert payload["ok"] is True
+
+    def test_pure_production_still_routes_image(self) -> None:
+        """Without the analysis phrase, «تصویر» keeps its production meaning."""
+        from universal_mind.persian_router import route as _route
+
+        assert "image" in _route("یک تصویر بساز").capabilities
+
+
 class TestPlannerIntegration:
     """The router + planner together: needs beat word order."""
 

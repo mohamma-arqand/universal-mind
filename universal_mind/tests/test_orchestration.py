@@ -231,6 +231,35 @@ class TestDataflowSynthesis:
         db_out = syn.output["synthesized_from"]["database"]
         assert db_out["inserted"] == 6  # the six computed metrics, not the 3 raw numbers
 
+    def test_vision_flow_analyzes_the_chains_own_image(self) -> None:
+        """chart → vision: real OpenCV statistics on the image the chain made —
+        the platform SEES its own output (make → look → understand)."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "vision"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و تحلیل تصویرش کن",
+        )
+        assert syn.ok is True
+        assert any("→ بینایی" in f for f in syn.output["flows"])
+        vision_out = syn.output["synthesized_from"]["vision"]
+        # real pixel statistics came back (shape + per-channel means + std)
+        assert "shape" in vision_out and "std" in vision_out
+
+    def test_explicit_vision_operation_wins(self) -> None:
+        """«لبهها را پیدا کن» — the operator named contours; it stands."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "vision"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و لبهها را پیدا کن",
+            capability_params={"vision": {"operation": "contours"}},
+        )
+        assert syn.ok is True
+        assert not any("→ بینایی" in f for f in syn.output.get("flows", []))
+
     def test_failed_producer_never_flows(self) -> None:
         """A failed producer's (non-)output never becomes the next input."""
         from universal_mind.real_tool_registry import real_connector_factory

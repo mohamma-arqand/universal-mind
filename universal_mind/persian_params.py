@@ -201,19 +201,29 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "notify", "title": text or "Universal Mind", "body": command}
     if capability == "vision":
         # «تحلیل تصویر» -> real OpenCV work on the operator's real file/folder.
-        params = {"operation": "contours"}
+        # With NO explicit target in the sentence, the operation stays OPEN so
+        # the flow layer can choose the honest default: analyze the image the
+        # chain itself just made (make → look → understand). With a target
+        # named, the operator's intent stands.
+        vision_params: dict[str, Any] = {}
         folder = resolve_folder(command)
+        # Named analyses in the sentence are explicit intent (they win over the
+        # flow's default stats): «تشخیص لبه» → edges, «کنتور» → contours.
+        if "لبه" in command or "تشخیص لبه" in command:
+            vision_params["operation"] = "edges"
+        elif "کنتور" in command or "کانتور" in command:
+            vision_params["operation"] = "contours"
         if path:
-            params["path"] = path
+            vision_params["path"] = path
         elif folder:
             # Analyze the first real image in the resolved folder (if any).
             import os
 
             for entry in sorted(os.listdir(folder)):
                 if entry.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
-                    params["path"] = str(Path(folder) / entry)
+                    vision_params = {"operation": "contours", "path": str(Path(folder) / entry)}
                     break
-        return params
+        return vision_params  # empty = OPEN: the flow layer picks the chain's own image
     if capability == "ai":
         # «خوشهبندی»/«یادگیری» -> real ML over the numbers in the command.
         if "خوشه" in command and numbers:

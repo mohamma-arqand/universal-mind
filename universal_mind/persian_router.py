@@ -198,6 +198,15 @@ def route(command: str) -> PersianRoute:
             )
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
 
+    # Intent disambiguation: «تحلیل تصویر...» means ANALYZE (vision), not
+    # make/edit (image) — the bare «تصویر» (an image-production word) must not
+    # fire when the analysis phrase is present in the same sentence.
+    analysis_intent = any(
+        w in lowered for w in ("تحلیل تصویر", "پردازش تصویر", "بینایی ماشین")
+    )
+    if analysis_intent:
+        matched.pop("image", None)
+
     if not matched:
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
 

@@ -169,6 +169,21 @@ def _flow_params(
                 )
         return params, None
 
+    # VISION flow — the chain's produced image UNDERSTOOD by real computer
+    # vision (OpenCV): the platform sees its own output. The perception loop
+    # at the deepest level: make → look → understand.
+    if consumer == "vision" and produced_paths:
+        if params.get("operation"):
+            return params, None  # an explicit analysis choice wins
+        image_paths = [p for p in produced_paths if p.lower().endswith(_IMAGE_EXTENSIONS)]
+        if image_paths:
+            target = image_paths[-1]  # the most recent image the chain made
+            return (
+                {**params, "operation": "stats", "path": target},
+                f"آخرین تصویر زنجیره → بینایی (تحلیل {target.rsplit('/', 1)[-1].rsplit(chr(92), 1)[-1]})",
+            )
+        return params, None
+
     # DATABASE flow — the chain's computed results persisted into a REAL table
     # so the operator can query them later («چی ذخیره کردی؟»). The one sanctioned
     # UPGRADE (the pdf/persian_report pattern): when the sentence's raw-number

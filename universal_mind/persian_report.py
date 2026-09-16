@@ -250,6 +250,10 @@ def persian_report(payload: dict[str, Any]) -> str:
     archive_flow = next((f for f in flows if "→ archive" in f), None)
     if archive_flow:
         lines.append("• همهی خروجیهای این اجرا در یک بایگانی یکجا بستهبندی شد.")
+    # The perception detail for vision: the chain's own image, understood.
+    vision_flow = next((f for f in flows if "→ بینایی" in f or "→ vision" in f), None)
+    if vision_flow:
+        lines.append("• سیستم تصویری را که خودش ساخت، با بینایی ماشین تحلیل کرد.")
     # The persistence detail for database: computed results stored, named.
     database_flow = next((f for f in flows if "→ database" in f), None)
     if database_flow and "→ database (" in database_flow:

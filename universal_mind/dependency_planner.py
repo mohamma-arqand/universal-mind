@@ -35,7 +35,7 @@ _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 # of a resource after its PRODUCER — nothing else moves.
 _SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
-_IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image")  # need an image
+_IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf",)  # a report can tabulate real numbers
 _SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "database", "clipboard")  # run last, consume anything
 
@@ -142,7 +142,10 @@ def plan_chain(
             lesson = best_learned_operation(cap)
         except Exception:  # noqa: BLE001 — learning is a lens, never a blocker
             lesson = None
-        if lesson is not None and cap not in ("pdf", "image"):
+        # The learned lens must NOT displace synthesis for flow-fed consumers
+        # (pdf/image/vision): the chain's own artifact outranks history, exactly
+        # as the synthesis-aware default outranks the static table.
+        if lesson is not None and cap not in ("pdf", "image", "vision"):
             steps.append(PlannedStep(
                 capability=cap, operation=lesson.operation,
                 reason=f"عملیات {lesson.operation} — از داوریهای واقعی تاریخچه ({lesson.mean_excellence:.2f} در {lesson.uses} اجرا)",
