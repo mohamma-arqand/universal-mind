@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from universal_mind.dependency_planner import plan_chain, plan_params
 
 
@@ -40,33 +42,55 @@ class TestTopology:
 
 
 class TestOperationSelection:
+    """All operation-selection tests run with history-learning isolated OFF —
+    the planner's STATIC behavior is what they pin; the learned lens has its
+    own test file (test_planner_learning.py)."""
+
+    @staticmethod
+    def _no_history() -> "Any":
+        from unittest.mock import patch as mock_patch
+
+        import universal_mind.planner_learning as pl
+
+        return mock_patch.object(pl, "best_learned_operation", lambda cap, bar=0.75: None)
+
     def test_pdf_gets_persian_report_when_chain_has_an_image_producer(self) -> None:
         """No explicit pdf operation in the sentence → the planner picks the
         operation that EMBEDS the chart (real synthesis), and says why."""
-        plan = plan_chain(["chart", "pdf"])
-        pdf_step = [s for s in plan.steps if s.capability == "pdf"][0]
-        assert pdf_step.operation == "persian_report"
-        assert "سنتز" in pdf_step.reason
+        with self._no_history():
+            plan = plan_chain(["chart", "pdf"])
+            pdf_step = [s for s in plan.steps if s.capability == "pdf"][0]
+            assert pdf_step.operation == "persian_report"
+            assert "سنتز" in pdf_step.reason
 
     def test_explicit_operation_is_never_overridden(self) -> None:
         """The operator said invoice — the planner keeps invoice, no inference."""
-        plan = plan_chain(
-            ["chart", "pdf"],
-            {"pdf": {"operation": "invoice", "title": "قبض"}},
-        )
-        pdf_step = [s for s in plan.steps if s.capability == "pdf"][0]
-        assert pdf_step.operation == "invoice"
-        assert "صریح" in pdf_step.reason
+        with self._no_history():
+            plan = plan_chain(
+                ["chart", "pdf"],
+                {"pdf": {"operation": "invoice", "title": "قبض"}},
+            )
+            pdf_step = [s for s in plan.steps if s.capability == "pdf"][0]
+            assert pdf_step.operation == "invoice"
+            assert "صریح" in pdf_step.reason
 
     def test_params_materialized_for_orchestrator(self) -> None:
-        plan = plan_chain(["chart", "pdf"])
-        params = plan_params(plan)
+        with self._no_history():
+            plan = plan_chain(["chart", "pdf"])
+            params = plan_params(plan)
         assert params["pdf"]["operation"] == "persian_report"
         # chart keeps its suite default (no forced operation)
         assert "chart" not in params or "operation" not in params["chart"]
 
     def test_producer_only_no_needs_based_choice(self) -> None:
-        plan = plan_chain(["data", "database"])
+        """Isolated from history: with no lessons and no explicit operation,
+        every step keeps the suite default (learning is mocked to none)."""
+        from unittest.mock import patch as mock_patch
+
+        import universal_mind.planner_learning as pl
+
+        with mock_patch.object(pl, "best_learned_operation", lambda cap, bar=0.75: None):
+            plan = plan_chain(["data", "database"])
         for step in plan.steps:
             assert step.operation is None  # defaults, honestly
 

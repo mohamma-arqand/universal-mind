@@ -84,14 +84,18 @@ class DatabaseSuite:
             return {"ok": False, "error": str(exc)}
         return {"ok": True, "inserted": len(rows), "error": ""}
 
-    def query(self, sql: str) -> dict[str, Any]:
-        """Run a real SELECT and return real rows as dicts."""
+    def query(self, sql: str, params: tuple[Any, ...] | None = None) -> dict[str, Any]:
+        """Run a real SELECT and return real rows as dicts.
+
+        ``params`` are bound safely (never formatted into the SQL string);
+        None keeps the historical no-parameter behavior unchanged.
+        """
         if not sql.strip().lower().startswith("select"):
             return {"ok": False, "error": "query must be a SELECT"}
         try:
             with self._conn() as conn:
                 conn.row_factory = sqlite3.Row
-                cursor = conn.execute(sql)
+                cursor = conn.execute(sql, params) if params else conn.execute(sql)
                 rows = [dict(r) for r in cursor.fetchall()]
         except sqlite3.Error as exc:
             return {"ok": False, "error": str(exc)}

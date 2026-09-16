@@ -134,6 +134,21 @@ def plan_chain(
         if explicit_op:
             steps.append(PlannedStep(capability=cap, operation=str(explicit_op), reason="عملیات صریح از فرمان"))
             continue
+        # LEARNED choice first: what history has PROVEN best for this capability.
+        lesson = None
+        try:
+            from universal_mind.planner_learning import best_learned_operation
+
+            lesson = best_learned_operation(cap)
+        except Exception:  # noqa: BLE001 — learning is a lens, never a blocker
+            lesson = None
+        if lesson is not None and cap not in ("pdf", "image"):
+            steps.append(PlannedStep(
+                capability=cap, operation=lesson.operation,
+                reason=f"عملیات {lesson.operation} — از داوریهای واقعی تاریخچه ({lesson.mean_excellence:.2f} در {lesson.uses} اجرا)",
+            ))
+            notes.append(f"{cap}: {lesson.operation} — آموخته از تاریخچه")
+            continue
         # Synthesis-aware default: use the resource the chain produces.
         resource = "image" if cap in ("pdf", "image") and produced_images else None
         chosen = _NEEDS_BASED_OPERATION.get((cap, resource)) if resource else None

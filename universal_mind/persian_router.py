@@ -356,6 +356,22 @@ def route_and_run(
         import sys
 
         print(f"[history] ثبت اجرا ناموفق بود: {exc}", file=sys.stderr)
+
+    # Teach the planner: fold each capability's REAL verdict into the lessons
+    # table (successes only), so the needs table earns its entries over time.
+    try:
+        from universal_mind.planner_learning import teach
+
+        for sub in syn.sub_outputs:
+            if not sub.ok:
+                continue
+            operation = (capability_params.get(sub.capability) or {}).get("operation")
+            teach(sub.capability, str(operation) if operation else "",
+                  float(judgment.get("excellence") or 0.0), True)
+    except Exception as exc:  # noqa: BLE001 — teaching is a bonus, never fatal
+        import sys
+
+        print(f"[planner-learning] آموزش ناموفق بود: {exc}", file=sys.stderr)
     return {
         "ok": syn.ok,
         "command": command,
