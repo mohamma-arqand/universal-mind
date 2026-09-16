@@ -40,13 +40,29 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         status = "OK" if entry.get("ok") else f"FAILED ({entry.get('error', '')[:60]})"
         print(f"  - {entry.get('command', '')[:60]} → {status}")
 
-    if notify_summary and count:
+    # The folder watchers — the third perception channel (file events).
+    watched_fired = 0
+    try:
+        from universal_mind.scheduler import scan_watchers
+
+        watched = scan_watchers()
+        watched_fired = int(watched.get("count", 0))
+        for entry in watched.get("fired", []):
+            status = "OK" if entry.get("ok") else f"FAILED ({entry.get('error', '')[:50]})"
+            print(f"  - [watcher] {entry.get('file', '')} → {status}")
+    except Exception as exc:  # noqa: BLE001 — watchers are a channel, never fatal
+        print(f"(watchers failed: {exc})")
+
+    if notify_summary and (count or watched_fired):
         ok_count = sum(1 for f in fired if f.get("ok"))
         failed = count - ok_count
         # Persian digits, honest wording — successes first, failures named.
         fa = str(count).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
         fa_ok = str(ok_count).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
         body = f"{fa} کارِ زمان‌بندی‌شده اجرا شد ({fa_ok} موفق)"
+        if watched_fired:
+            fa_w = str(watched_fired).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+            body += f"، {fa_w} فایلِ جدید پردازش شد"
         if failed:
             fa_failed = str(failed).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
             body += f"، {fa_failed} ناموفق"
@@ -56,6 +72,7 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
             NotifyTool().notify(title="ذهن یکپارچه — اجرای خودکار", body=body)
         except Exception as exc:  # noqa: BLE001 — the toast is a bonus, never fatal
             print(f"(toast failed: {exc})")
+    result["watcher_fired"] = watched_fired
     return dict(result)
 
 
