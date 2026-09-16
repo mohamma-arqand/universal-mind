@@ -208,6 +208,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
     run.add_argument("--list", action="store_true", help="list every registered capability with its real operations")
 
+    sch = sub.add_parser("schedule", help="زمانبندی: «هر روز ساعت ۸ گزارش کامل بده» را ثبت میکند")
+    sch.add_argument("command", nargs="+", help="the Persian sentence WITH the schedule clause (quote it)")
+    sub.add_parser("schedule-list", help="لیست زمانبندیهای ثبتشده")
+    sub.add_parser("schedule-run", help="اجرا هر چه سررسید شده — the proactive loop tick")
+
     dsp = sub.add_parser("dashboard-sp", help="the super-platform dashboard — real usage, one self-contained Persian HTML")
     dsp.add_argument("--out", default="", help="output HTML path (default: artifacts/superplatform_dashboard.html)")
 
@@ -236,6 +241,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_dashboard(args)
     if args.verb == "cycle":
         return _cmd_cycle(args)
+    if args.verb == "schedule":
+        return _cmd_schedule(args)
+    if args.verb == "schedule-list":
+        return _cmd_schedule_list(args)
+    if args.verb == "schedule-run":
+        return _cmd_schedule_run(args)
     if args.verb == "dashboard-sp":
         return _cmd_dashboard_sp(args)
     if args.verb == "fa":
@@ -371,6 +382,37 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
     }
     print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
     return 0
+
+
+def _cmd_schedule(args: argparse.Namespace) -> int:
+    """Register a scheduled task from a Persian sentence."""
+    from universal_mind.scheduler import register
+
+    sentence = " ".join(args.command)
+    result = register(sentence)
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def _cmd_schedule_list(args: argparse.Namespace) -> int:
+    from universal_mind.scheduler import list_schedules
+
+    schedules = [
+        {"id": s.schedule_id, "command": s.command, "every_minutes": s.every_minutes,
+         "hour_of_day": s.hour_of_day, "last_run": s.last_run, "active": s.active}
+        for s in list_schedules()
+    ]
+    print(json.dumps(schedules, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _cmd_schedule_run(args: argparse.Namespace) -> int:
+    """Fire every due schedule through the real engine (the proactive tick)."""
+    from universal_mind.scheduler import run_due
+
+    result = run_due()
+    print(json.dumps(result, ensure_ascii=False, default=str))
+    return 0 if result.get("ok") else 1
 
 
 def _cmd_dashboard_sp(args: argparse.Namespace) -> int:
