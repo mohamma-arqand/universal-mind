@@ -131,6 +131,10 @@ class MindDesktopApp:
         # --- Tab: analytics (تحلیل تاریخچه) ---
         analytics_tab = ttk.Frame(self._notebook, padding=8)
         self._notebook.add(analytics_tab, text="تحلیل")
+        ttk.Button(
+            analytics_tab, text="📊 داشبورد را در مرورگر باز کن",
+            command=self._open_dashboard,
+        ).pack(anchor=tk.W, pady=(0, 6))
         self._analytics_text = scrolledtext.ScrolledText(
             analytics_tab, font=("Segoe UI", 12), wrap=tk.WORD
         )
@@ -242,6 +246,26 @@ class MindDesktopApp:
         ttk.Button(
             preview_frame, text="📂 باز کردن پوشه در Explorer", command=self._open_preview_folder
         ).pack(anchor=tk.W, pady=(4, 0))
+
+    def _open_dashboard(self) -> None:
+        """Build the REAL dashboard from history and open it in the browser."""
+        import subprocess
+        import webbrowser
+
+        try:
+            from universal_mind.superplatform_dashboard import build_dashboard
+
+            result = build_dashboard()
+            if result.get("ok"):
+                webbrowser.open(f"file:///{result['path'].replace(chr(92), '/')}")
+        except Exception as exc:  # noqa: BLE001 — a view action, never fatal
+            messagebox.showinfo("Universal Mind", f"ساخت داشبورد ناموفق بود: {exc}")
+            return
+        # webbrowser may silently no-op on some setups; explorer is the fallback
+        try:
+            subprocess.run(["explorer.exe", result["path"]], check=False, timeout=10)
+        except (OSError, subprocess.SubprocessError):  # noqa: BLE001 — bonus
+            pass
 
     def _open_preview_folder(self) -> None:
         """Open the produced artifact's folder in Windows Explorer (real)."""

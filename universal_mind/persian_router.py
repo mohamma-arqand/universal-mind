@@ -105,6 +105,11 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("ساختارش را بخوان", "vision"),
     ("ساختار تصویر", "vision"),
     ("ساختارش", "vision"),
+    # گزارش کامل: the EVERYTHING chain — numbers → chart → report → archive
+    ("گزارش کامل", "data"),
+    ("گزارش کامل", "chart"),
+    ("گزارش کامل", "pdf"),
+    ("گزارش کامل", "archive"),
     ("لبه", "vision"),
     ("لبهها", "vision"),
     ("کنتور", "vision"),

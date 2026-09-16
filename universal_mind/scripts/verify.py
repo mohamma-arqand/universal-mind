@@ -92,6 +92,7 @@ PROBES = [
     "probe_arete_run_judgment.py",
     "probe_planning_gate.py",
     "probe_perception_loop.py",
+    "probe_full_report.py",
 ]
 
 

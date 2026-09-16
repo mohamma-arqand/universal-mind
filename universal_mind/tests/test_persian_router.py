@@ -152,6 +152,23 @@ class TestSavedChainByPersianCommand:
             store.delete(saved.chain_id)
 
 
+class TestFullReportChain:
+    """«گزارش کامل» — one command, every artifact, all flows."""
+
+    def test_full_report_routes_everything(self) -> None:
+        payload = route_and_run("گزارش کامل فروش با اعداد ۳۰ و ۷۰ و ۲۰ را بساز")
+        assert payload["route"] == ["data", "chart", "pdf", "archive"]
+        assert payload["ok"] is True
+        # the two real flows happened (chart→pdf image, files→archive)
+        assert any("→ pdf" in f for f in payload["flows"])
+        assert any("→ archive" in f or "بایگانی" in f for f in payload["flows"])
+        # every artifact exists with real weight
+        result = payload["result"]
+        assert result["pdf"]["bytes"] > 40000
+        assert result["archive"]["bytes"] > 50000
+        assert result["chart"]["bytes"] > 5000
+
+
 class TestVisionIntentDisambiguation:
     """«تحلیل تصویر» is ANALYZE (vision) — the bare «تصویر» (image-production)
     must not fire in the same sentence and pollute the route."""
