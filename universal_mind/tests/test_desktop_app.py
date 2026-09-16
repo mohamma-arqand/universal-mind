@@ -250,6 +250,31 @@ def test_advice_pane_honest_without_history(tk_root: tk.Tk) -> None:
     assert "تجربهای" in advice_text  # the honest no-experience message
 
 
+def test_open_preview_folder_uses_explorer_select(tk_root: tk.Tk) -> None:
+    """The 📂 button opens Explorer with the produced artifact selected."""
+    from unittest.mock import patch as mock_patch
+
+    app = MindDesktopApp(tk_root)
+    app._preview_path = "C:\\tmp\\chart.png"
+    with mock_patch("subprocess.run") as run:
+        run.return_value.returncode = 0
+        app._open_preview_folder()
+    run.assert_called_once()
+    cmd = run.call_args.args[0]
+    assert cmd[0] == "explorer.exe" and "/select," in cmd
+
+
+def test_open_preview_folder_honest_without_artifact(tk_root: tk.Tk) -> None:
+    """With nothing on screen the button says so — never opens blindly."""
+    from unittest.mock import patch as mock_patch
+
+    app = MindDesktopApp(tk_root)
+    app._preview_path = None
+    with mock_patch("universal_mind.desktop_app.messagebox.showinfo") as info:
+        app._open_preview_folder()
+    info.assert_called_once()  # the honest message, never a blind explorer launch
+
+
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:
     """_do_work runs the genuine engine (numpy stats) and produces a payload."""
     app = MindDesktopApp(tk_root)

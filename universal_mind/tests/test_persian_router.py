@@ -152,6 +152,30 @@ class TestSavedChainByPersianCommand:
             store.delete(saved.chain_id)
 
 
+class TestVocabularyCoverage:
+    """Every registered real capability must be reachable in Persian — no
+    capability is allowed to be language-orphaned."""
+
+    def test_every_registry_capability_has_persian_words(self) -> None:
+        import universal_mind.persian_router as pr
+        import universal_mind.real_tool_registry as rtr
+
+        vocab_caps = {cap for _word, cap in pr._VOCAB if cap != "chain"}
+        registry_caps = set(rtr._REAL_CONNECTORS)
+        orphans = registry_caps - vocab_caps
+        assert not orphans, f"قابلیتهای بدون واژه فارسی: {orphans}"
+
+    def test_every_persian_word_maps_to_a_real_capability(self) -> None:
+        """Conversely: no vocabulary word may point at a capability that does
+        not exist in the registry (a dead word is a lie)."""
+        import universal_mind.persian_router as pr
+        import universal_mind.real_tool_registry as rtr
+
+        registry_caps = set(rtr._REAL_CONNECTORS)
+        dead = {word for word, cap in pr._VOCAB if cap not in registry_caps and cap != "chain"}
+        assert not dead, f"واژههای مرده (به قابلیت ناموجود): {dead}"
+
+
 class TestOrderPriority:
     """Data-flow ordering: producers first, sinks last."""
 

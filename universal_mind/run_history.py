@@ -94,10 +94,10 @@ class ChainAdvisor:
     def advise(self, command: str) -> ChainAdvice | None:
         """The best chain for this command, learned from past successes.
 
-        Candidates are ranked by (vocabulary overlap, times the chain succeeded):
-        the winner is the chain that BOTH resembles this command AND has the
-        strongest winning record — not merely the single most similar run.
-        No history or no overlap → None (never a guess).
+        Candidates come from BOTH real sources of evidence: the recorded run
+        history AND the operator's saved chains (a saved chain is an explicit
+        trust signal — it counts as one win). Ranked by (vocabulary overlap,
+        times succeeded); no history and no overlap → None (never a guess).
         """
         words = _capability_words(command)
         if not words:
@@ -118,6 +118,24 @@ class ChainAdvisor:
                     prev[1] + 1,
                     record.command if overlap >= prev[0] else prev[2],
                 )
+        # Saved chains are explicit operator trust: each becomes a candidate
+        # with its own overlap (a saved chain counts as one recorded win).
+        try:
+            from universal_mind.chains_store import ChainsStore
+
+            for chain in ChainsStore().load():
+                overlap = len(words & _capability_words(chain.name))
+                if overlap == 0:
+                    continue
+                route = tuple(chain.capabilities)
+                prev = candidates.get(route)
+                if prev is None:
+                    candidates[route] = (overlap, 1, chain.name)
+                elif overlap > prev[0]:
+                    candidates[route] = (overlap, prev[1] + 1, chain.name)
+        except Exception:  # noqa: BLE001 — the store is a bonus source, never fatal
+            pass
+
         if not candidates:
             return None
         # Rank: overlap first, then success count (the learned winning record).

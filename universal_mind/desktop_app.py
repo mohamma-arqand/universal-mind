@@ -238,6 +238,23 @@ class MindDesktopApp:
         )
         self._preview_label.pack(fill=tk.BOTH, expand=True)
         self._preview_photo: Any = None  # hold a reference so Tk doesn't GC it
+        self._preview_path: str | None = None  # the currently shown artifact
+        ttk.Button(
+            preview_frame, text="📂 باز کردن پوشه در Explorer", command=self._open_preview_folder
+        ).pack(anchor=tk.W, pady=(4, 0))
+
+    def _open_preview_folder(self) -> None:
+        """Open the produced artifact's folder in Windows Explorer (real)."""
+        import subprocess
+
+        path = self._preview_path
+        if not path:
+            messagebox.showinfo("Universal Mind", "ابتدا یک زنجیره اجرا کن")
+            return
+        try:
+            subprocess.run(["explorer.exe", "/select,", path], check=False, timeout=10)
+        except (OSError, subprocess.SubprocessError) as exc:  # noqa: BLE001 — bonus, never fatal
+            messagebox.showinfo("Universal Mind", f"باز کردن پوشه ناموفق بود: {exc}")
 
     def _write_status(self) -> None:
         box = self._status_text
@@ -553,6 +570,7 @@ class MindDesktopApp:
             return
         set_photo(photo)  # keep alive: Tk only renders referenced images
         label.configure(image=photo, text="")
+        self._preview_path = image_path  # remember what is on screen
 
 
 def _first_image_from(results: dict[str, Any]) -> str | None:

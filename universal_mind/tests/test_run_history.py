@@ -101,6 +101,26 @@ class TestChainAdvisor:
         assert advice is not None
         assert advice.succeeded_runs == 2
 
+    def test_saved_chain_is_a_candidate_too(self) -> None:
+        """A saved chain whose NAME overlaps the command is advised — explicit
+        operator trust, even with no run history for it."""
+        import string
+        import uuid
+
+        from universal_mind.chains_store import ChainsStore
+
+        letters = string.ascii_lowercase
+        suffix = "".join(letters[b % 26] for b in uuid.uuid4().bytes[:6])
+        store = ChainsStore()
+        saved = store.save(f"میانگین و نمودار سفارشی {suffix}", ["data", "chart"])
+        try:
+            history = _isolated_history()  # empty run history
+            advice = ChainAdvisor(history).advise(f"میانگین و نمودار بکش {suffix}")
+            assert advice is not None
+            assert advice.route == ("data", "chart")
+        finally:
+            store.delete(saved.chain_id)
+
     def test_end_to_end_route_and_run_records_history(self) -> None:
         """route_and_run writes the real run to the persistent history."""
         from universal_mind.persian_router import route_and_run
