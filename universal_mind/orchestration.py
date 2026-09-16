@@ -95,26 +95,69 @@ def _flow_params(
     """Enrich the consumer's params with the previous producer's real output.
 
     Returns (enriched_params, flow_description) — flow_description is None when
-    nothing flowed (the common, honest case).
+    nothing flowed (the common, honest case). Two real flows exist:
+    - IMAGE flow: chart/media/image/vision → pdf/image (the artifact is embedded);
+    - STATS flow: data → pdf (the computed statistics become a real table row).
     """
     if last_producer is None or not isinstance(last_output, dict):
         return params, None
+
+    # IMAGE flow — the previous program produced a real image file.
     path = last_output.get("path")
-    if not isinstance(path, str) or not path.lower().endswith(_IMAGE_EXTENSIONS):
+    if isinstance(path, str) and path.lower().endswith(_IMAGE_EXTENSIONS):
+        # The one sanctioned UPGRADE: a Persian report gets the just-made image
+        # embedded (persian_rtl → persian_report). Any other explicit intent wins.
+        if params.get("operation") and params["operation"] != "persian_rtl":
+            return params, None
+        if consumer == "pdf":
+            enriched = {
+                **params,
+                "operation": "persian_report",
+                "image_path": path,
+                "caption": params.get("title") or f"{last_producer} output",
+            }
+            return enriched, f"{last_producer} → pdf (گزارش فارسی با نمودار درونش)"
         return params, None
-    # The one sanctioned UPGRADE: a Persian report gets the just-made image
-    # embedded (persian_rtl → persian_report). Any other explicit intent wins.
-    if params.get("operation") and params["operation"] != "persian_rtl":
-        return params, None
-    if consumer == "pdf":
+
+    # STATS flow — the previous program computed real numbers; a pdf report
+    # renders them as a real table (the numbers ARE the content). Both shapes
+    # are honored: the suite's raw flat result (mean/std/... directly) and the
+    # wrapped shape ({"stats": {...}}).
+    stats = last_output.get("stats")
+    if not isinstance(stats, dict) or not stats:
+        flat = {
+            k: v
+            for k, v in last_output.items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "ok"
+        }
+        if flat:
+            stats = flat
+    if isinstance(stats, dict) and stats and consumer == "pdf":
+        if params.get("operation") and params["operation"] not in ("persian_rtl", "persian_report"):
+            return params, None  # explicit intent (invoice/table/...) wins
+        headers = ["شاخص", "مقدار"]
+        rows = [[str(k), _fmt_num(v)] for k, v in stats.items()]
         enriched = {
             **params,
             "operation": "persian_report",
-            "image_path": path,
-            "caption": params.get("title") or f"{last_producer} output",
+            "image_path": "",
+            "stats_headers": headers,
+            "stats_rows": rows,
         }
-        return enriched, f"{last_producer} → pdf (گزارش فارسی با نمودار درونش)"
+        return enriched, f"{last_producer} → pdf (جدول آمار واقعی درون گزارش)"
+
     return params, None
+
+
+def _fmt_num(value: Any) -> str:
+    """A number rendered compactly for a table cell (no fake precision)."""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if f == int(f) and abs(f) < 1e15:
+        return str(int(f))
+    return f"{f:.4f}".rstrip("0").rstrip(".")
 
 
 def orchestrate(

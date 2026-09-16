@@ -36,6 +36,10 @@ _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 _SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image")  # need an image
+_STATS_CONSUMERS: tuple[str, ...] = ("pdf",)  # a report can tabulate real numbers
+
+# pdf consumes BOTH image and stats: it must wait for whichever producer is in
+# the chain (chart for the image flow, data for the stats-table flow).
 
 
 # Which operation a capability should run when the sentence gave none AND the
@@ -81,6 +85,14 @@ def _capability_order(caps: list[str]) -> list[str]:
             blockers: list[str] = []
             if cap in _PLOT_CONSUMERS:
                 blockers = [p for p in _SERIES_PRODUCERS if p in remaining]
+            elif cap in _STATS_CONSUMERS:
+                # pdf/tabulate consumers wait on BOTH the stats producers and
+                # the image producers (either flow can feed the report).
+                blockers = [
+                    p
+                    for p in (*_SERIES_PRODUCERS, *_IMAGE_PRODUCERS)
+                    if p in remaining
+                ]
             elif cap in _IMAGE_CONSUMERS:
                 blockers = [p for p in _IMAGE_PRODUCERS if p in remaining]
             if not blockers:

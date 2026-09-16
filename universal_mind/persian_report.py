@@ -195,6 +195,13 @@ def persian_report(payload: dict[str, Any]) -> str:
         if sentence:
             lines.append(f"• {sentence}")
 
+    # The fusion detail for pdf: WHAT flowed into the report (chart or stats table).
+    pdf_flows = [f for f in flows if "→ pdf" in f]
+    if pdf_flows and "نمودار درونش" in pdf_flows[0]:
+        lines.append("• گزارش فارسی با نمودارِ همین اجرا درونش ساخته شد.")
+    elif pdf_flows and "جدول آمار" in pdf_flows[0]:
+        lines.append("• گزارش فارسی با جدولِ آمارِ همین اجرا درونش ساخته شد.")
+
     return "\n".join(lines)
 
 

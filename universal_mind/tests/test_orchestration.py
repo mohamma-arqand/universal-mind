@@ -136,6 +136,24 @@ class TestDataflowSynthesis:
         # bigger than a text-only RTL pdf because the chart image is inside.
         assert syn.output["synthesized_from"]["pdf"]["bytes"] > 20000
 
+    def test_data_feeds_pdf_stats_table_for_real(self) -> None:
+        """data → pdf: the computed statistics become a REAL table inside the
+        Persian report (bytes grow by the rendered table)."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["data", "pdf"],
+            connector_factory=real_connector_factory, flow=True,
+            capability_params={
+                "data": {"operation": "stats", "data": [10.0, 20.0, 30.0]},
+                "pdf": {"operation": "persian_rtl"},
+            },
+        )
+        assert syn.ok is True
+        assert syn.output["flows"] == ["data → pdf (جدول آمار واقعی درون گزارش)"]
+        # the report with a real stats table is bigger than the text-only one
+        assert syn.output["synthesized_from"]["pdf"]["bytes"] > 35500
+
     def test_failed_producer_never_flows(self) -> None:
         """A failed producer's (non-)output never becomes the next input."""
         from universal_mind.real_tool_registry import real_connector_factory

@@ -249,6 +249,8 @@ class PdfSuite:
         title: str = "گزارش ذهن یکپارچه",
         paragraphs: list[str] | None = None,
         out_dir: str | None = None,
+        stats_headers: list[str] | None = None,
+        stats_rows: list[list[str]] | None = None,
     ) -> dict[str, Any]:
         """A Persian RTL report that embeds a REAL produced image (the flow target).
 
@@ -257,8 +259,12 @@ class PdfSuite:
         produced (the chart, the image, ...). No image → honest failure, never a
         text-only silent substitute.
         """
-        if not image_path or not Path(image_path).exists():
-            return {"ok": False, "error": "نموداری برای درج نیست — ابتدا نمودار بساز"}
+        has_image = bool(image_path) and Path(image_path).exists()
+        has_stats = bool(stats_rows)
+        if not has_image and not has_stats:
+            if image_path:
+                return {"ok": False, "error": f"نمودار پیدا نشد: {image_path}"}
+            return {"ok": False, "error": "نه نموداری هست نه جدولی — ابتدا چیزی بساز"}
 
         from reportlab.lib.enums import TA_RIGHT
         from reportlab.pdfbase import pdfmetrics
@@ -281,10 +287,30 @@ class PdfSuite:
         for paragraph in paragraphs or ["گزارش تولیدشده توسط حلقهی سنتز ذهن یکپارچه."]:
             story.append(Spacer(1, 12))
             story.append(Paragraph(paragraph, fa_style))
-        story.append(Spacer(1, 18))
-        story.append(RLImage(image_path, width=380, height=240))
-        story.append(Spacer(1, 6))
-        story.append(Paragraph("نمودار تولیدشده در همین اجرا", fa_style))
+        if has_stats:
+            # The real computed numbers, rendered as a genuine RTL table.
+            from reportlab.platypus import Table as RLTable
+            from reportlab.platypus import TableStyle as RLTableStyle
+
+            data = [stats_headers or ["شاخص", "مقدار"]]
+            data.extend(stats_rows or [])
+            table = RLTable(data, colWidths=[220, 220])
+            table.setStyle(RLTableStyle([
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef7")),
+                ("FONTNAME", (0, 0), (-1, -1), "PersianFont"),
+                ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]))
+            story.append(Spacer(1, 14))
+            story.append(table)
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("آمار واقعی محاسبهشده در همین اجرا", fa_style))
+        if has_image:
+            story.append(Spacer(1, 18))
+            story.append(RLImage(image_path, width=380, height=240))
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("نمودار تولیدشده در همین اجرا", fa_style))
         return self._build(story, out_path)
 
     def persian_rtl(
@@ -359,6 +385,8 @@ class PdfSuiteConnector:
             "persian_report": lambda: suite.persian_report(
                 params.get("image_path", ""), params.get("title", "گزارش ذهن یکپارچه"),
                 params.get("paragraphs"),
+                stats_headers=params.get("stats_headers"),
+                stats_rows=params.get("stats_rows"),
             ),
             "persian_rtl": lambda: suite.persian_rtl(
                 params.get("title", "گزارش ذهن یکپارچه"), params.get("paragraphs")

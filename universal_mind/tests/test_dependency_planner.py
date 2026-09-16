@@ -71,6 +71,21 @@ class TestOperationSelection:
             assert step.operation is None  # defaults, honestly
 
 
+class TestStatsFlowTopology:
+    def test_pdf_waits_for_data_even_when_said_first(self) -> None:
+        """«گزارش بساز و میانگینها را حساب کن» — pdf needs the stats table."""
+        plan = plan_chain(["pdf", "data"])
+        caps = [s.capability for s in plan.steps]
+        assert caps == ["data", "pdf"]
+        assert plan.reorder_happened is True
+
+    def test_full_chain_orders_all_dependencies(self) -> None:
+        """data → chart → pdf: every consumer waits for every producer."""
+        plan = plan_chain(["pdf", "chart", "data"])
+        caps = [s.capability for s in plan.steps]
+        assert caps == ["data", "chart", "pdf"]
+
+
 class TestPlanHonesty:
     def test_never_invents_or_drops_capabilities(self) -> None:
         caps = ["pdf", "chart", "data"]
