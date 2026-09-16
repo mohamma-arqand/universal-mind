@@ -24,12 +24,17 @@ class TestStoreIsRealInsert:
         assert params["operation"] == "query"
 
     def test_store_route_and_run_inserts_for_real(self) -> None:
-        """End-to-end: the Persian store command really inserts into SQLite."""
+        """End-to-end: the Persian store command really inserts into SQLite.
+
+        The database flow upgrades a raw-number echo into the COMPUTED results:
+        the six real metrics (mean/std/min/max/median/count), named by metric —
+        storing what was computed beats re-stating the input."""
         from universal_mind.persian_router import route_and_run
 
         payload = route_and_run("میانگین ۱۰ و ۲۰ و ۳۰ را حساب کن و در دیتابیس ذخیره کن")
         assert payload["ok"] is True
-        assert payload["result"]["database"]["inserted"] == 3
+        assert payload["result"]["database"]["inserted"] == 6  # the computed metrics
+        assert any("→ database" in f for f in payload["flows"])  # the flow, narrated
 
 
 class TestColloquialAndFolders:

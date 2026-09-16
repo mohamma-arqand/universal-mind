@@ -117,6 +117,22 @@ def analytics_report(stats: HistoryAnalytics) -> str:
             fa = _CAP_FA.get(cap, cap)
             rate = stats.per_capability_success.get(cap, 0.0)
             lines.append(f"• {fa}: {_fa_num(count)} بار (موفق {_fa_num(round(rate * 100))}٪)")
+    # What the planner has LEARNED from real verdicts (the earned table).
+    try:
+        from universal_mind.planner_learning import lessons_report
+
+        lessons = lessons_report()["lessons"]
+        taught = [l for l in lessons if l["mean_excellence"] >= 0.75]
+        if taught:
+            lines.append("\n🧠 planner چه آموخته (از داوریهای واقعی):")
+            for lesson in taught[:6]:
+                lines.append(
+                    f"• {_CAP_FA.get(lesson['capability'], lesson['capability'])}: "
+                    f"«{lesson['operation']}» — داوری {_fa_num(round(lesson['mean_excellence'] * 100))}٪ "
+                    f"در {_fa_num(lesson['uses'])} اجرا"
+                )
+    except Exception:  # noqa: BLE001 — lessons are a view, never fatal
+        pass
     return "\n".join(lines)
 
 

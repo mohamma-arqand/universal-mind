@@ -168,6 +168,39 @@ def _flow_params(
                 )
         return params, None
 
+    # DATABASE flow — the chain's computed results persisted into a REAL table
+    # so the operator can query them later («چی ذخیره کردی؟»). The one sanctioned
+    # UPGRADE (the pdf/persian_report pattern): when the sentence's raw-number
+    # insert coincides with a real computing producer, the COMPUTED results
+    # replace the raw echo — storing what was computed beats re-stating the
+    # input. Any other explicit shape wins untouched.
+    if consumer == "database":
+        op = params.get("operation")
+        raw_insert = (
+            op == "insert_many" and params.get("table") == "extracted_data"
+            and all(set(r) == {"value"} for r in params.get("rows") or [])
+        )
+        if op and op != "query" and not raw_insert:
+            return params, None  # an explicit insert/query choice wins
+        stats = last_output.get("stats")
+        if not isinstance(stats, dict) or not stats:
+            stats = {
+                k: v
+                for k, v in last_output.items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "ok"
+            }
+        if stats:
+            result_rows: list[dict[str, str]] = [
+                {"metric": str(k), "value": _fmt_num(v)} for k, v in stats.items()
+            ]
+            return (
+                {**{k: v for k, v in params.items() if k != "rows"},
+                 "operation": "insert_many", "table": "chain_results",
+                 "rows": result_rows, "persistent": True},
+                f"{last_producer} → database ({len(result_rows)} شاخصِ محاسبهشده ذخیره شد)",
+            )
+        return params, None
+
     # ARCHIVE flow — the run's produced FILES packed into one real .tar.gz.
     # The whole chain's output, preserved as a single portable bundle.
     # A generic "compress" (the vocabulary default) is upgradeable: archiving

@@ -212,6 +212,25 @@ class TestDataflowSynthesis:
         assert syn.ok is True
         assert not any("→ clipboard" in f for f in syn.output.get("flows", []))
 
+    def test_database_flow_stores_the_computed_results(self) -> None:
+        """data → database: the COMPUTED metrics (not the raw input echo) are
+        persisted, named by metric — the record IS what was computed."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["data", "database"],
+            connector_factory=real_connector_factory, flow=True,
+            command="میانگین ۳ و ۷ و ۱۱ را حساب کن و در دیتابیس ذخیره کن",
+            capability_params={"data": {"operation": "stats", "data": [3.0, 7.0, 11.0]},
+                               "database": {"operation": "insert_many", "table": "extracted_data",
+                                            "rows": [{"value": "3"}, {"value": "7"}, {"value": "11"}],
+                                            "persistent": True}},
+        )
+        assert syn.ok is True
+        assert syn.output["flows"] == ["data → database (6 شاخصِ محاسبهشده ذخیره شد)"]
+        db_out = syn.output["synthesized_from"]["database"]
+        assert db_out["inserted"] == 6  # the six computed metrics, not the 3 raw numbers
+
     def test_failed_producer_never_flows(self) -> None:
         """A failed producer's (non-)output never becomes the next input."""
         from universal_mind.real_tool_registry import real_connector_factory

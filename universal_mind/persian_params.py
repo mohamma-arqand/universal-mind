@@ -229,6 +229,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # the operator said store, so the numbers go into a real table — and the
         # PERSISTENT database (~/.universal-mind/mind.db), because data the
         # operator chose to store must survive the session, not die with it.
+        # BUT when a computing capability is also routed (data/ai), the rows
+        # must come from the COMPUTED results (the flow layer), not the raw
+        # numbers — storing what was computed beats re-stating the input.
         if "ذخیره" in command and data:
             return {
                 "operation": "insert_many",

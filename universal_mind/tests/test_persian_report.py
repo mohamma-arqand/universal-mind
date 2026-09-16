@@ -48,7 +48,11 @@ class TestFlowNarration:
 
 class TestRealRunsRendered:
     def test_stats_chart_store_chain(self) -> None:
-        """The full stats→chart→store chain renders as fluent Persian."""
+        """The full stats→chart→store chain renders as fluent Persian.
+
+        The database flow stores the COMPUTED chart metrics (named, e.g. the
+        chart's contour/size figures) — the stored record is what was MADE,
+        not the raw input echo."""
         from universal_mind.persian_router import route_and_run
 
         payload = route_and_run("میانگین ۲ و ۴ و ۶ را حساب کن، نمودارش کن و ذخیره کن")
@@ -56,7 +60,8 @@ class TestRealRunsRendered:
         assert report.startswith("✅")
         assert "میانگین ۳ عدد برابر ۴" in report          # real stats rendered
         assert "نمودار" in report and "کیلوبایت" in report  # real chart rendered
-        assert "۳ ردیف در دیتابیس ذخیره شد" in report      # real insert rendered
+        assert "در دیتابیس ذخیره شد" in report            # real insert rendered
+        assert "شاخصِ محاسبهشده" in report               # the flow: computed, named
         assert "data" not in report and "mean" not in report  # no English keys leaked
 
     def test_vision_command_renders_contours(self) -> None:

@@ -169,10 +169,19 @@ def persian_report(payload: dict[str, Any]) -> str:
 
     # The dataflow — when one program's output became the next program's input,
     # the report SAYS SO (the fusion is the whole point, it must be visible).
+    # Capability names inside the flow are rendered in Persian (no English leak).
     flows: list[str] = list(payload.get("flows", []) or [])
-    if flows:
-        for flow in flows:
-            lines.append(f"🔗 {flow}")
+    for flow in flows:
+        rendered = flow
+        # Longest English name FIRST — 'database' before 'data' (a prefix
+        # translate of 'data' would corrupt 'database' into 'تحلیل دادهbase').
+        for en, fa in sorted(_CAP_FA.items(), key=lambda kv: -len(kv[0])):
+            rendered = rendered.replace(f" {en} ", f" {fa} ")
+            rendered = rendered.replace(f"→ {en}", f"→ {fa}")
+            rendered = rendered.replace(f"{en} →", f"{fa} →")
+        # Persian digits inside the flow line too (a Latin '1' is a leak).
+        rendered = rendered.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+        lines.append(f"🔗 {rendered}")
 
     # ARETĒ's judgment of this very run — the virtues computed from its own data.
     judgment: dict[str, Any] = payload.get("judgment") or {}
@@ -210,6 +219,11 @@ def persian_report(payload: dict[str, Any]) -> str:
     archive_flow = next((f for f in flows if "→ archive" in f), None)
     if archive_flow:
         lines.append("• همهی خروجیهای این اجرا در یک بایگانی یکجا بستهبندی شد.")
+    # The persistence detail for database: computed results stored, named.
+    database_flow = next((f for f in flows if "→ database" in f), None)
+    if database_flow and "→ database (" in database_flow:
+        detail = database_flow.split("→ database (", 1)[1].rstrip(")")
+        lines.append(f"• نتایج محاسبهشده در دیتابیس ذخیره شد ({detail}).")
     # The hand-over detail for clipboard: what was made is ready to paste.
     clipboard_flow = next((f for f in flows if "→ clipboard" in f), None)
     if clipboard_flow and "→ clipboard (" in clipboard_flow:
