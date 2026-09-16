@@ -66,3 +66,45 @@ def test_chart_suite_joins_the_synthesis_loop() -> None:
     syn = orchestrate(reg, ["chart"], connector_factory=real_connector_factory)
     assert syn.ok is True
     assert syn.output["synthesized_from"]["chart"]["bytes"] > 0
+
+class TestPersianChartRendering:
+    """A Persian sentence deserves a Persian-rendered chart (real glyphs)."""
+
+    def test_bar_kind_from_words(self) -> None:
+        """«میلهای» names the bar operation — not the line default."""
+        from universal_mind.persian_params import extract_params
+
+        params = extract_params("نمودار میلهای فروش با ۳ و ۷ را بکش", "chart")
+        assert params["operation"] == "bar"
+        assert params["values"] == [3.0, 7.0]
+
+    def test_pie_kind_from_words(self) -> None:
+        from universal_mind.persian_params import extract_params
+
+        params = extract_params("نمودار دایرهای با ۴۰ و ۳۵ و ۲۵ بکش", "chart")
+        assert params["operation"] == "pie"
+
+    def test_line_default_unchanged(self) -> None:
+        from universal_mind.persian_params import extract_params
+
+        params = extract_params("نمودار فروش با ۱ و ۲ و ۳", "chart")
+        assert params["operation"] == "line"
+
+    def test_persian_text_renders_real_glyphs(self) -> None:
+        """Persian labels must produce substantial ink — tofu boxes would be
+        sparse; real shaped glyphs carry many more dark pixels."""
+
+        import numpy as np
+        from PIL import Image
+
+        from universal_mind.chart_suite import ChartSuite
+
+        r = ChartSuite().bar(
+            categories=["فروردین", "اردیبهشت", "خرداد"],
+            values=[3, 7, 5],
+            title="فروش ماهانه",
+        )
+        assert r["ok"] is True
+        img = np.array(Image.open(r["path"]).convert("L"))
+        ink = int((img < 128).sum())
+        assert ink > 5000  # real shaped Persian text, not tofu boxes

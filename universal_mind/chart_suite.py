@@ -22,6 +22,27 @@ matplotlib.use("Agg")  # headless: real files, no display
 from matplotlib import pyplot as plt
 
 
+def _apply_persian_font() -> None:
+    """Point matplotlib at a Persian-capable OS font (Segoe UI/Tahoma shape and
+    bidi Arabic-script glyphs themselves; the default DejaVu draws boxes)."""
+    from matplotlib import font_manager
+
+    names = {f.name for f in font_manager.fontManager.ttflist}
+    for candidate in ("Segoe UI", "Tahoma", "Arial"):
+        if candidate in names:
+            matplotlib.rcParams["font.family"] = "sans-serif"
+            matplotlib.rcParams["font.sans-serif"] = [candidate, "DejaVu Sans"]
+            break
+
+
+def _has_persian(*texts: object) -> bool:
+    """True when any of the texts carries Arabic-script (Persian) characters."""
+    for t in texts:
+        if isinstance(t, str) and any("\u0600" <= ch <= "\u06FF" for ch in t):
+            return True
+    return False
+
+
 class ChartSuite:
     """The integrated matplotlib capability surface (a complete charting program)."""
 
@@ -51,6 +72,8 @@ class ChartSuite:
 
     def line(self, series: dict[str, list[float]] | None = None, title: str = "Line chart") -> dict[str, Any]:
         data = series or {"a": [1, 3, 2, 5], "b": [2, 2, 4, 4]}
+        if _has_persian(title, *data.keys()):
+            _apply_persian_font()
         fig, ax = plt.subplots()
         for label, values in data.items():
             ax.plot(values, label=label)
@@ -61,6 +84,8 @@ class ChartSuite:
     def bar(self, categories: list[str] | None = None, values: list[float] | None = None, title: str = "Bar chart") -> dict[str, Any]:
         cats = categories or ["x", "y", "z"]
         vals = values or [3, 7, 5]
+        if _has_persian(title, *cats):
+            _apply_persian_font()
         fig, ax = plt.subplots()
         ax.bar(cats, vals)
         ax.set_title(title)
@@ -69,6 +94,8 @@ class ChartSuite:
     def pie(self, values: list[float] | None = None, labels: list[str] | None = None, title: str = "Pie chart") -> dict[str, Any]:
         vals = values or [40, 35, 25]
         labs = labels or ["a", "b", "c"]
+        if _has_persian(title, *labs):
+            _apply_persian_font()
         fig, ax = plt.subplots()
         ax.pie(vals, labels=labs, autopct="%1.0f%%")
         ax.set_title(title)

@@ -134,8 +134,25 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "stats", "data": data}
         return {"operation": "stats"}
     if capability == "chart":
-        params: dict[str, Any] = {"operation": "line"}
-        if data:
+        # Chart KIND words name the operation explicitly (میلهای/دایرهای/خطی/...);
+        # the default remains the line chart.
+        kind = "line"
+        if "میلهای" in command or "ستونی" in command or "میله" in command:
+            kind = "bar"
+        elif "دایرهای" in command or "دایره" in command or "پایهای" in command:
+            kind = "pie"
+        elif "پراکنده" in command or "اسکتر" in command:
+            kind = "scatter"
+        elif "هیستوگرام" in command or "هیستوگرامش" in command:
+            kind = "histogram"
+        params: dict[str, Any] = {"operation": kind}
+        if kind == "bar":
+            params["categories"] = ["الف", "ب", "ج"][:len(data)] if data else None
+            params["values"] = data
+        elif kind == "pie":
+            params["values"] = data
+            params["labels"] = ["الف", "ب", "ج"][:len(data)] if data else None
+        elif data:
             params["series"] = {"داده": data}
         if text:
             params["title"] = with_resolved_date(text, command)
