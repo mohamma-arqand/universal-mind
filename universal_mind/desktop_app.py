@@ -167,10 +167,33 @@ class MindDesktopApp:
         chain_left.pack(side=tk.LEFT, fill=tk.Y)
         self._chain_list = tk.Listbox(chain_left, width=40, height=24, font=("Segoe UI", 10))
         self._chain_list.pack(fill=tk.Y, expand=True)
-        for name in _PRESET_CHAINS:
-            self._chain_list.insert(tk.END, name)
+        self._refresh_chain_list()
         if self._chain_list.size():
             self._chain_list.selection_set(0)
+
+        # Chain builder: the operator's own sequences, saved to the persistent db.
+        builder = ttk.LabelFrame(chain_tab, text="سازنده زنجیره (قابلیتها را به ترتیب انتخاب کن)", padding=6)
+        builder.pack(side=tk.BOTTOM, fill=tk.X, pady=(6, 0))
+        self._builder_list = tk.Listbox(builder, width=20, height=5, font=("Segoe UI", 9))
+        self._builder_list.pack(side=tk.LEFT, fill=tk.Y)
+        self._builder_picked: list[str] = []
+        builder_controls = ttk.Frame(builder)
+        builder_controls.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
+        row1 = ttk.Frame(builder_controls)
+        row1.pack(fill=tk.X)
+        self._builder_choice = ttk.Combobox(row1, values=sorted(_CAPABILITY_DESCRIPTIONS), width=14, state="readonly")
+        self._builder_choice.pack(side=tk.LEFT)
+        ttk.Button(row1, text="+ افزودن", command=self._builder_add).pack(side=tk.LEFT, padx=3)
+        ttk.Button(row1, text="− حذف آخرین", command=self._builder_remove_last).pack(side=tk.LEFT, padx=3)
+        ttk.Button(row1, text="پاک کردن", command=self._builder_clear).pack(side=tk.LEFT, padx=3)
+        row2 = ttk.Frame(builder_controls)
+        row2.pack(fill=tk.X, pady=3)
+        ttk.Label(row2, text="نام:").pack(side=tk.LEFT)
+        self._builder_name = ttk.Entry(row2, width=28)
+        self._builder_name.pack(side=tk.LEFT, padx=4)
+        ttk.Button(row2, text="💾 ذخیره زنجیره", command=self._builder_save).pack(side=tk.LEFT, padx=3)
+        self._builder_status = ttk.Label(builder_controls, text="", foreground="#2a7")
+        self._builder_status.pack(anchor=tk.W)
 
         chain_right = ttk.LabelFrame(chain_tab, text="نتیجهی زنجیره", padding=6)
         chain_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8)
@@ -278,8 +301,7 @@ class MindDesktopApp:
         selection: tuple[int, ...] = tuple(self._chain_list.curselection())  # type: ignore[no-untyped-call]
         if not selection:
             return None
-        name = self._chain_list.get(selection[0])
-        return _PRESET_CHAINS.get(name)
+        return self._chain_names[selection[0]][1]
 
     def _run_chain(self) -> None:
         caps = self._selected_chain()
@@ -318,6 +340,60 @@ class MindDesktopApp:
         except Exception as exc:  # noqa: BLE001 — a crashed engine is a real error
             payload = {"ok": False, "chain": caps, "error": str(exc)}
         self._root.after(0, self._post_chain_result, payload)
+
+    # ------------------------------------------------------------- builder
+    def _refresh_chain_list(self) -> None:
+        """List presets + the operator's saved custom chains (real, persistent)."""
+        from universal_mind.chains_store import ChainsStore
+
+        self._chain_list.delete(0, tk.END)
+        self._chain_names: list[tuple[str, list[str]]] = []
+        for name, caps in _PRESET_CHAINS.items():
+            self._chain_list.insert(tk.END, name)
+            self._chain_names.append((name, caps))
+        try:
+            for chain in ChainsStore().load():
+                label = f"{chain.name} (ذخیرهشده)"
+                self._chain_list.insert(tk.END, label)
+                self._chain_names.append((label, list(chain.capabilities)))
+        except Exception as exc:  # noqa: BLE001 — a missing store never breaks the window
+            self._chain_list.insert(tk.END, f"(خطا در خواندن زنجیرهها: {exc})")
+
+    def _builder_add(self) -> None:
+        cap = self._builder_choice.get()
+        if not cap:
+            return
+        self._builder_picked.append(cap)
+        self._builder_list.insert(tk.END, cap)
+
+    def _builder_remove_last(self) -> None:
+        if self._builder_picked:
+            self._builder_picked.pop()
+            self._builder_list.delete(tk.END)
+
+    def _builder_clear(self) -> None:
+        self._builder_picked.clear()
+        self._builder_list.delete(0, tk.END)
+
+    def _builder_save(self) -> None:
+        from universal_mind.chains_store import ChainsStore
+
+        name = self._builder_name.get().strip()
+        if not name:
+            messagebox.showinfo("Universal Mind", "یک نام برای زنجیره بنویس")
+            return
+        if not self._builder_picked:
+            messagebox.showinfo("Universal Mind", "ابتدا قابلیت انتخاب کن")
+            return
+        try:
+            ChainsStore().save(name, list(self._builder_picked))
+        except (ValueError, RuntimeError) as exc:
+            messagebox.showerror("ذخیره ناموفق", str(exc))
+            return
+        self._builder_status.configure(text=f"✓ ذخیره شد: {name}")
+        self._builder_clear()
+        self._builder_name.delete(0, tk.END)
+        self._refresh_chain_list()
 
     def _post_chain_result(self, payload: dict[str, Any]) -> None:
         self._chain_run_btn.configure(state=tk.NORMAL)

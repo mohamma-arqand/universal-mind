@@ -88,7 +88,9 @@ def test_chains_are_listed_and_all_real(tk_root: tk.Tk) -> None:
 
     app = MindDesktopApp(tk_root)
     listed = list(app._chain_list.get(0, tk.END))
-    assert len(listed) == len(_PRESET_CHAINS)
+    # The list holds the presets PLUS the operator's saved custom chains (from
+    # the persistent db) — so it is at least the preset count.
+    assert len(listed) >= len(_PRESET_CHAINS)
     for name, caps in _PRESET_CHAINS.items():
         assert name in listed
         for cap in caps:
