@@ -184,6 +184,21 @@ def _flow_params(
                 )
         return params, None
 
+    # OCR flow — the chain's own image READ: real text extraction from what
+    # the platform just made. The deepest read loop: make → look → READ.
+    if consumer == "ocr" and produced_paths:
+        if params.get("path"):
+            return params, None  # an explicit target wins
+        image_paths = [p for p in produced_paths if p.lower().endswith(_IMAGE_EXTENSIONS)]
+        if image_paths:
+            target = image_paths[-1]
+            name = target.rsplit("/", 1)[-1].rsplit(chr(92), 1)[-1]
+            return (
+                {**params, "operation": "read", "path": target},
+                f"آخرین تصویر زنجیره → متنخوان (خواندن {name})",
+            )
+        return params, None
+
     # VISION flow — the chain's produced image UNDERSTOOD by real computer
     # vision (OpenCV): the platform sees its own output. The perception loop
     # at the deepest level: make → look → understand.

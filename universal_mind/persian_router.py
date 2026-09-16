@@ -105,6 +105,10 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("ساختارش را بخوان", "vision"),
     ("ساختار تصویر", "vision"),
     ("ساختارش", "vision"),
+    # ocr (Windows.Media.Ocr) — the platform READS images
+    ("متنش را بخوان", "ocr"),
+    ("متن تصویر", "ocr"),
+    ("ocr کن", "ocr"),
     # speech (SAPI) — the platform speaks its results aloud
     ("بگو", "speech"),
     ("بلند بخوان", "speech"),
@@ -216,7 +220,7 @@ def route(command: str) -> PersianRoute:
     # make/edit (image) — the bare «تصویر» (an image-production word) must not
     # fire when the analysis phrase is present in the same sentence.
     analysis_intent = any(
-        w in lowered for w in ("تحلیل تصویر", "پردازش تصویر", "بینایی ماشین")
+        w in lowered for w in ("تحلیل تصویر", "پردازش تصویر", "بینایی ماشین", "متن تصویر", "متنش را بخوان")
     )
     if analysis_intent:
         matched.pop("image", None)

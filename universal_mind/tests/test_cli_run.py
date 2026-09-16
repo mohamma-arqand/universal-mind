@@ -58,8 +58,9 @@ def test_run_list_shows_every_capability_and_ops(capsys: CaptureFixture[str]) ->
     """`run --list` shows every registered capability (13 with speech) + ops."""
     code, payload = _run_cli(capsys, ["run", "--list"])
     assert code == 0
-    assert len(payload) == 13
+    assert len(payload) == 14
     assert "speech" in payload
+    assert "ocr" in payload
     total = sum(len(ops) for ops in payload.values())
     assert total >= 100  # the real surface, honestly counted
     assert payload["data"] and "stats" in payload["data"]

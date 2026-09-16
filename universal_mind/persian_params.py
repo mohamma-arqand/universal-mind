@@ -201,6 +201,13 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             # «جمع ۲ و ۳» → a real JS expression over the extracted numbers.
             return {"operation": "evaluate", "expression": " + ".join(str(n) for n in numbers)}
         return {"operation": "evaluate"}
+    if capability == "ocr":
+        # «متن تصویر را بخوان» — with a path in the sentence it is explicit;
+        # without one the flow layer aims it at the chain's own image.
+        if path:
+            return {"operation": "read", "path": path}
+        return {"operation": "read"}  # OPEN: the flow picks the chain's image
+
     if capability == "speech":
         # «بلند بخوان» says: read ALOUD what was made. With no explicit text in
         # the sentence, the flow layer fills the body with the chain's summary.

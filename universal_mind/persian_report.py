@@ -34,6 +34,7 @@ _CAP_FA: dict[str, str] = {
     "notify": "اطلاعرسانی",
     "clipboard": "کلیپبورد",
     "speech": "گفتار",
+    "ocr": "متنخوان",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -154,6 +155,13 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "pdf":
         return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+    if cap == "ocr" and isinstance(result, dict):
+        text = str(result.get("text", "")).strip()
+        lang = str(result.get("language", ""))
+        if text:
+            preview = text[:40] + ("…" if len(text) > 40 else "")
+            return f"متنِ تصویر خوانده شد ({lang}): «{preview}»"
+        return "تصویر خوانده شد — متنی در آن پیدا نشد."
     if cap == "speech" and isinstance(result, dict):
         if result.get("spoken"):
             voice = result.get("voice", "")
