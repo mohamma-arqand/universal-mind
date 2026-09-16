@@ -104,9 +104,15 @@ def _flow_params(
     if last_producer is None or not isinstance(last_output, dict):
         return params, None
 
-    # IMAGE flow — the previous program produced a real image file.
+    # IMAGE flow — the previous program produced a real image file; only an
+    # image consumer (pdf/image) can embed it. Other consumers (clipboard/
+    # archive/notify) fall through to their own flows below.
     path = last_output.get("path")
-    if isinstance(path, str) and path.lower().endswith(_IMAGE_EXTENSIONS):
+    if (
+        isinstance(path, str)
+        and path.lower().endswith(_IMAGE_EXTENSIONS)
+        and consumer in ("pdf", "image")
+    ):
         # The one sanctioned UPGRADE: a Persian report gets the just-made image
         # embedded (persian_rtl → persian_report). Any other explicit intent wins.
         if params.get("operation") and params["operation"] != "persian_rtl":
@@ -147,6 +153,20 @@ def _flow_params(
             "stats_rows": rows,
         }
         return enriched, f"{last_producer} → pdf (جدول آمار واقعی درون گزارش)"
+
+    # CLIPBOARD flow — the chain's real output summarized INTO the Windows
+    # clipboard, ready to paste. An explicit text always wins.
+    if consumer == "clipboard":
+        if params.get("operation") == "read":
+            return params, None  # the operator asked to READ, never override
+        if not params.get("text"):
+            summary = _artifact_summary(last_output)
+            if summary:
+                return (
+                    {**params, "operation": "write", "text": summary},
+                    f"{last_producer} → clipboard ({summary})",
+                )
+        return params, None
 
     # ARCHIVE flow — the run's produced FILES packed into one real .tar.gz.
     # The whole chain's output, preserved as a single portable bundle.

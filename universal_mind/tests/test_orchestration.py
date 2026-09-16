@@ -183,6 +183,35 @@ class TestDataflowSynthesis:
         assert syn.ok is True
         assert not any("→ notify" in f for f in syn.output.get("flows", []))
 
+    def test_clipboard_flow_puts_the_real_summary_on_the_clipboard(self) -> None:
+        """chart → clipboard: the Windows clipboard carries a real summary of
+        what was made, ready to paste."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "clipboard"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و در کلیپبورد بگذار",
+        )
+        assert syn.ok is True
+        assert any("→ clipboard" in f and "line.png" in f for f in syn.output["flows"])
+        # and the clipboard REALLY carries it (read back)
+        cb = syn.output["synthesized_from"]["clipboard"]
+        assert isinstance(cb, str) and "line.png" in cb
+
+    def test_clipboard_read_is_never_overridden(self) -> None:
+        """«کلیپبورد را بخوان» — an explicit read is the operator's choice."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "clipboard"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و کلیپبورد را بخوان",
+            capability_params={"clipboard": {"operation": "read"}},
+        )
+        assert syn.ok is True
+        assert not any("→ clipboard" in f for f in syn.output.get("flows", []))
+
     def test_failed_producer_never_flows(self) -> None:
         """A failed producer's (non-)output never becomes the next input."""
         from universal_mind.real_tool_registry import real_connector_factory

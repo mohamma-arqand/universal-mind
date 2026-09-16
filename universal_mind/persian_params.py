@@ -184,6 +184,16 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             # «جمع ۲ و ۳» → a real JS expression over the extracted numbers.
             return {"operation": "evaluate", "expression": " + ".join(str(n) for n in numbers)}
         return {"operation": "evaluate"}
+    if capability == "clipboard":
+        # «بگذار/کپی کن» = write (the flow layer fills the text with what was
+        # made); «بخوان/کپی چی توشه» = read. Default stays read (honest no-op
+        # unless the sentence says otherwise).
+        if "بخوان" in command or "چه چیزی" in command or "چیه" in command:
+            return {"operation": "read"}
+        if "بگذار" in command or "کپی" in command or "قرار بده" in command:
+            return {"operation": "write"}  # text comes from the flow
+        return {"operation": "read"}
+
     if capability == "notify":
         # The body defaults to the command itself, but the dataflow layer will
         # REPLACE a bare command echo with a real summary of what was made

@@ -37,7 +37,7 @@ _SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf",)  # a report can tabulate real numbers
-_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "database")  # run last, consume anything
+_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "database", "clipboard")  # run last, consume anything
 
 # pdf consumes BOTH image and stats: it must wait for whichever producer is in
 # the chain (chart for the image flow, data for the stats-table flow).

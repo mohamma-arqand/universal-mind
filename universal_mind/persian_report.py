@@ -210,6 +210,11 @@ def persian_report(payload: dict[str, Any]) -> str:
     archive_flow = next((f for f in flows if "→ archive" in f), None)
     if archive_flow:
         lines.append("• همهی خروجیهای این اجرا در یک بایگانی یکجا بستهبندی شد.")
+    # The hand-over detail for clipboard: what was made is ready to paste.
+    clipboard_flow = next((f for f in flows if "→ clipboard" in f), None)
+    if clipboard_flow and "→ clipboard (" in clipboard_flow:
+        summary = clipboard_flow.split("→ clipboard (", 1)[1].rstrip(")")
+        lines.append(f"• خلاصه در کلیپبورد ویندوز قرار گرفت: «{summary}»")
 
     return "\n".join(lines)
 
