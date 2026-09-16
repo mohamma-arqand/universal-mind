@@ -76,6 +76,31 @@ class TestChainAdvisor:
         assert advice is not None
         assert "ai" in advice.route  # the richer match wins
 
+    def test_winning_record_beats_single_similarity(self) -> None:
+        """A chain that succeeded 3 times beats a chain seen once, even when
+        both overlap the command (the learned winning record matters)."""
+        history = _isolated_history()
+        marker = uuid.uuid4().hex[:6]
+        # One weakly-seen route...
+        history.record(f"میانگین و خوشهبندی فقطیکبار {marker}", ["data", "ai"], True)
+        # ...and a route that succeeded three times.
+        for _ in range(3):
+            history.record(f"میانگین و نمودار {marker}", ["data", "chart"], True)
+        advisor = ChainAdvisor(history)
+        advice = advisor.advise(f"میانگین و نمودار را بکش {marker}")
+        assert advice is not None
+        assert advice.route == ("data", "chart")
+        assert advice.succeeded_runs == 3
+
+    def test_advice_reports_how_many_times_it_won(self) -> None:
+        history = _isolated_history()
+        marker = uuid.uuid4().hex[:6]
+        for _ in range(2):
+            history.record(f"محاسبه {marker}", ["data"], True)
+        advice = ChainAdvisor(history).advise(f"محاسبه کن {marker}")
+        assert advice is not None
+        assert advice.succeeded_runs == 2
+
     def test_end_to_end_route_and_run_records_history(self) -> None:
         """route_and_run writes the real run to the persistent history."""
         from universal_mind.persian_router import route_and_run

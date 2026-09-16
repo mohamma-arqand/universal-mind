@@ -218,6 +218,38 @@ def test_vision_chain_lists_and_runs_real(tk_root: tk.Tk) -> None:
     assert payload.get("ok") is True
 
 
+def test_advice_pane_learns_from_a_real_run(tk_root: tk.Tk) -> None:
+    """After one real run, typing a similar command shows the learned advice."""
+    import uuid
+
+    marker = uuid.uuid4().hex[:6]
+    app = MindDesktopApp(tk_root)
+    # Run a real chain once (recorded to the persistent history).
+    app._do_persian_work(f"محاسبه کن و نمودارش کن {marker}")
+    tk_root.update()
+    # Type a similar command: the advice pane must surface the learned chain.
+    app._fa_entry.delete(0, tk.END)
+    app._fa_entry.insert(tk.END, f"محاسبه کن و نمودار بکش {marker}")
+    app._on_fa_typing(None)
+    tk_root.update()
+    advice_text = str(app._fa_advice_label.cget("text"))
+    assert "پیشنهاد" in advice_text
+    assert "نمودار" in advice_text  # the learned chain includes chart
+
+
+def test_advice_pane_honest_without_history(tk_root: tk.Tk) -> None:
+    """With no relevant history the pane says so — never a fabricated advice."""
+    import uuid
+
+    app = MindDesktopApp(tk_root)
+    app._fa_entry.delete(0, tk.END)
+    app._fa_entry.insert(tk.END, f"فرمان بی Rajasthan {uuid.uuid4().hex[:6]}")
+    app._on_fa_typing(None)
+    tk_root.update()
+    advice_text = str(app._fa_advice_label.cget("text"))
+    assert "تجربهای" in advice_text  # the honest no-experience message
+
+
 def test_engine_work_is_real(tk_root: tk.Tk) -> None:
     """_do_work runs the genuine engine (numpy stats) and produces a payload."""
     app = MindDesktopApp(tk_root)

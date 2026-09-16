@@ -140,6 +140,16 @@ class MindDesktopApp:
         self._fa_run_btn = ttk.Button(fa_top, text="▶ اجرا", command=self._run_persian)
         self._fa_run_btn.pack(side=tk.LEFT, padx=6)
 
+        # The advisor's live suggestion — learned from the operator's own history.
+        advice = ttk.LabelFrame(fa_tab, text="پیشنهاد (از تجربهی اجراهای قبلی)", padding=6)
+        advice.pack(fill=tk.X, pady=(4, 0))
+        self._fa_advice_label = ttk.Label(
+            advice, text="در حال نوشتن فرمان، پیشنهاد همینجا ظاهر میشود…",
+            foreground="#667", font=("Segoe UI", 10),
+        )
+        self._fa_advice_label.pack(anchor=tk.W)
+        self._fa_entry.bind("<KeyRelease>", self._on_fa_typing)
+
         fa_body = ttk.Frame(fa_tab, padding=(0, 6))
         fa_body.pack(fill=tk.BOTH, expand=True)
         fa_left = ttk.LabelFrame(fa_body, text="مسیر و کلمات", padding=6)
@@ -413,6 +423,32 @@ class MindDesktopApp:
         self._show_result(json.dumps(payload, indent=2, ensure_ascii=False))
 
     # ------------------------------------------------------------- persian
+    def _on_fa_typing(self, _event: Any) -> None:
+        """Live advice as the operator types — the chain history suggests."""
+        command = self._fa_entry.get().strip()
+        if len(command) < 6:
+            self._fa_advice_label.configure(
+                text="در حال نوشتن فرمان، پیشنهاد همینجا ظاهر میشود…", foreground="#667"
+            )
+            return
+        try:
+            from universal_mind.run_history import ChainAdvisor
+            from universal_mind.persian_report import _CAP_FA
+
+            suggestion = ChainAdvisor().advise(command)
+        except Exception:  # noqa: BLE001 — advice is a bonus, never fatal
+            suggestion = None
+        if suggestion is None:
+            self._fa_advice_label.configure(
+                text="هنوز تجربهای برای این فرمان نیست — اجرا کن تا یاد بگیرد", foreground="#667"
+            )
+        else:
+            chain_fa = " → ".join(_CAP_FA.get(c, c) for c in suggestion.route)
+            self._fa_advice_label.configure(
+                text=f"💡 پیشنهاد: {chain_fa} (در {suggestion.succeeded_runs} اجرای موفق قبلی)",
+                foreground="#2a7",
+            )
+
     def _run_persian(self) -> None:
         command = self._fa_entry.get().strip()
         if not command:

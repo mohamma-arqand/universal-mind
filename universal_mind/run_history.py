@@ -94,27 +94,41 @@ class ChainAdvisor:
     def advise(self, command: str) -> ChainAdvice | None:
         """The best chain for this command, learned from past successes.
 
-        Ranks past successful runs by shared vocabulary; the winner's route is
-        the advice. No history or no overlap → None (never a guess).
+        Candidates are ranked by (vocabulary overlap, times the chain succeeded):
+        the winner is the chain that BOTH resembles this command AND has the
+        strongest winning record — not merely the single most similar run.
+        No history or no overlap → None (never a guess).
         """
         words = _capability_words(command)
         if not words:
             return None
-        best: tuple[int, RunRecord] | None = None
+        # route -> (best overlap, success count, representative command)
+        candidates: dict[tuple[str, ...], tuple[int, int, str]] = {}
         for record in self._history.successful_runs():
             overlap = len(words & _capability_words(record.command))
             if overlap == 0:
                 continue
-            if best is None or overlap > best[0]:
-                best = (overlap, record)
-        if best is None:
+            route = record.route
+            prev = candidates.get(route)
+            if prev is None:
+                candidates[route] = (overlap, 1, record.command)
+            else:
+                candidates[route] = (
+                    max(prev[0], overlap),
+                    prev[1] + 1,
+                    record.command if overlap >= prev[0] else prev[2],
+                )
+        if not candidates:
             return None
-        overlap, record = best
+        # Rank: overlap first, then success count (the learned winning record).
+        route, (overlap, wins, command) = max(
+            candidates.items(), key=lambda item: (item[1][0], item[1][1])
+        )
         return ChainAdvice(
-            route=record.route,
-            similar_command=record.command,
+            route=route,
+            similar_command=command,
             similarity=overlap,
-            succeeded_runs=1,
+            succeeded_runs=wins,
         )
 
 
