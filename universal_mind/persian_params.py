@@ -185,6 +185,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "evaluate", "expression": " + ".join(str(n) for n in numbers)}
         return {"operation": "evaluate"}
     if capability == "notify":
+        # The body defaults to the command itself, but the dataflow layer will
+        # REPLACE a bare command echo with a real summary of what was made
+        # (the toast should say what the chain produced, not echo the order).
         return {"operation": "notify", "title": text or "Universal Mind", "body": command}
     if capability == "vision":
         # «تحلیل تصویر» -> real OpenCV work on the operator's real file/folder.

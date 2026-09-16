@@ -86,6 +86,15 @@ class TestStatsFlowTopology:
         assert caps == ["data", "chart", "pdf"]
 
 
+class TestSinkOrdering:
+    def test_notify_always_runs_last(self) -> None:
+        """notify is a sink: whatever order the words came in, it goes last."""
+        plan = plan_chain(["notify", "chart", "pdf", "data"])
+        caps = [s.capability for s in plan.steps]
+        assert caps[-1] == "notify"
+        assert caps.index("data") < caps.index("chart") < caps.index("pdf")
+
+
 class TestPlanHonesty:
     def test_never_invents_or_drops_capabilities(self) -> None:
         caps = ["pdf", "chart", "data"]

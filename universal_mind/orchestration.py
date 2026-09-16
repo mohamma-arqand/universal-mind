@@ -91,6 +91,7 @@ def _flow_params(
     params: dict[str, Any],
     last_producer: str | None,
     last_output: Any,
+    command: str = "",
 ) -> tuple[dict[str, Any], str | None]:
     """Enrich the consumer's params with the previous producer's real output.
 
@@ -146,7 +147,39 @@ def _flow_params(
         }
         return enriched, f"{last_producer} → pdf (جدول آمار واقعی درون گزارش)"
 
+    # NOTIFY flow — the chain's final artifact summarized as a real Windows
+    # toast. The perception loop closes: the platform not only MAKES, it SAYS
+    # what it made. Explicit title/body in the params always win.
+    if consumer == "notify":
+        title = params.get("title") or "ذهن یکپارچه"
+        body = params.get("body")
+        # A body that merely echoes the command carries no information — the
+        # real summary of what the chain MADE is worthier than the order echo.
+        if not body or body == command:
+            summary = _artifact_summary(last_output)
+            if summary:
+                return (
+                    {**params, "operation": "notify", "title": title, "body": summary},
+                    f"{last_producer} → notify ({summary})",
+                )
     return params, None
+
+
+def _artifact_summary(output: Any) -> str:
+    """A short honest Persian summary of one program's real output."""
+    if not isinstance(output, dict):
+        return ""
+    path = output.get("path")
+    if isinstance(path, str) and path:
+        name = path.replace("\\", "/").rsplit("/", 1)[-1]
+        return f"ساخته شد: {name}"
+    bytes_value = output.get("bytes")
+    if isinstance(bytes_value, (int, float)) and bytes_value > 0:
+        return f"خروجی {_fmt_num(bytes_value / 1024)} کیلوبایتی ساخته شد"
+    stats = output.get("stats")
+    if isinstance(stats, dict) and stats:
+        return "آمار محاسبه شد"
+    return ""
 
 
 def _fmt_num(value: Any) -> str:
@@ -168,6 +201,7 @@ def orchestrate(
     connector_factory: ConnectorFactory | None = None,
     capability_params: dict[str, dict[str, Any]] | None = None,
     flow: bool = False,
+    command: str = "",
 ) -> Synthesis:
     """Reach a tool for each needed capability and fuse their outputs into one D.
 
@@ -194,7 +228,7 @@ def orchestrate(
         tool = registry.best_for(capability)
         call_params = dict((capability_params or {}).get(capability, {}))
         if flow:
-            call_params, flow_desc = _flow_params(capability, call_params, last_producer, last_output)
+            call_params, flow_desc = _flow_params(capability, call_params, last_producer, last_output, command)
             if flow_desc:
                 flows.append(flow_desc)
         if tool is None:

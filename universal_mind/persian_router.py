@@ -305,6 +305,7 @@ def route_and_run(
         connector_factory=real_connector_factory,
         capability_params=capability_params,
         flow=len(caps) > 1,
+        command=command,
     )
     # ---- The quality gate: judgment must change behavior, not just grade it.
     # When ARETĒ grades the planned run weak (below the bar), the platform

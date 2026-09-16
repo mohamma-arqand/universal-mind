@@ -37,6 +37,7 @@ _SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf",)  # a report can tabulate real numbers
+_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "database")  # run last, consume anything
 
 # pdf consumes BOTH image and stats: it must wait for whichever producer is in
 # the chain (chart for the image flow, data for the stats-table flow).
@@ -93,6 +94,8 @@ def _capability_order(caps: list[str]) -> list[str]:
                     for p in (*_SERIES_PRODUCERS, *_IMAGE_PRODUCERS)
                     if p in remaining
                 ]
+            elif cap in _SINK_CONSUMERS:
+                blockers = [p for p in remaining if p != cap]
             elif cap in _IMAGE_CONSUMERS:
                 blockers = [p for p in _IMAGE_PRODUCERS if p in remaining]
             if not blockers:

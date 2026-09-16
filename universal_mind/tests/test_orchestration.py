@@ -154,6 +154,35 @@ class TestDataflowSynthesis:
         # the report with a real stats table is bigger than the text-only one
         assert syn.output["synthesized_from"]["pdf"]["bytes"] > 35500
 
+    def test_notify_flow_summarizes_the_real_artifact(self) -> None:
+        """pdf → notify: the toast body is a real summary of what was MADE,
+        not an echo of the order."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "pdf", "notify"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و گزارشش کن و اطلاع بده",
+        )
+        assert syn.ok is True
+        flow_strs = syn.output["flows"]
+        assert any("pdf → notify" in f and "persian_report.pdf" in f for f in flow_strs)
+        notify_out = syn.output["synthesized_from"]["notify"]
+        assert notify_out.get("shown") is True
+
+    def test_explicit_notify_body_wins_over_flow(self) -> None:
+        """The operator named a body — inference never overrides it."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "notify"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و بهم بگو «تمام شد»",
+            capability_params={"notify": {"operation": "notify", "title": "T", "body": "تمام شد"}},
+        )
+        assert syn.ok is True
+        assert not any("→ notify" in f for f in syn.output.get("flows", []))
+
     def test_failed_producer_never_flows(self) -> None:
         """A failed producer's (non-)output never becomes the next input."""
         from universal_mind.real_tool_registry import real_connector_factory

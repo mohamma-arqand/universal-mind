@@ -201,6 +201,11 @@ def persian_report(payload: dict[str, Any]) -> str:
         lines.append("• گزارش فارسی با نمودارِ همین اجرا درونش ساخته شد.")
     elif pdf_flows and "جدول آمار" in pdf_flows[0]:
         lines.append("• گزارش فارسی با جدولِ آمارِ همین اجرا درونش ساخته شد.")
+    # The perception detail for notify: the toast said what the chain MADE.
+    notify_flow = next((f for f in flows if "→ notify" in f), None)
+    if notify_flow and "→ notify (" in notify_flow:
+        summary = notify_flow.split("→ notify (", 1)[1].rstrip(")")
+        lines.append(f"• اعلان ویندوز نشان داده شد: «{summary}»")
 
     return "\n".join(lines)
 
