@@ -44,8 +44,19 @@ _CHART_KIND_FA: dict[str, str] = {
 }
 
 
-def _fa_num(value: float) -> str:
-    """A number with Persian digits and trimmed decimals."""
+def _fa_num(value: float | str) -> str:
+    """A number with Persian digits and trimmed decimals.
+
+    A ``str`` is parsed as a number when possible (stored values come back
+    from SQLite as text); a non-numeric label is returned as-is.
+    """
+    # A stored value may come back as a numeric STRING ('12', '3.266') —
+    # parse it first so fresh and stored numbers render identically.
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            return str(value)  # a genuine label, not a number — render as-is
     if isinstance(value, int):
         text = str(value)
     elif value == int(value):
@@ -112,7 +123,10 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     if cap == "compute" and isinstance(result, (int, float)):
         return f"محاسبه انجام شد: نتیجه {_fa_num(result)}."
     if not isinstance(result, dict):
-        return None
+        # A database read-back is a LIST of rows — fall through so the
+        # database branch can narrate it (everything else needs a dict).
+        if not (cap == "database" and isinstance(result, list)):
+            return None
     if cap == "data":
         return _sentence_data(result)
     if cap == "ai":
@@ -125,6 +139,23 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "pdf":
         return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+    if cap == "database" and isinstance(result, list):
+        # The read-back: real stored rows narrated as Persian memory.
+        if not result:
+            return "دیتابیس را خواندم — هنوز چیزی ذخیره نشده."
+        fa_metric = {
+            "mean": "میانگین", "std": "انحراف معیار", "min": "کمینه", "max": "بیشینه",
+            "median": "میانه", "count": "تعداد", "value": "مقدار",
+        }
+        parts = []
+        for row in result[:5]:
+            if not isinstance(row, dict):
+                continue
+            metric = str(row.get("metric", "?"))
+            fa = fa_metric.get(metric, metric)
+            parts.append(f"{fa}={_fa_num(str(row.get('value', '')))}")
+        more = f" (و {_fa_num(len(result) - 5)} مورد دیگر)" if len(result) > 5 else ""
+        return f"دیتابیس را خواندم — آخرین ذخیرهها: {'، '.join(parts)}{more}."
     if cap == "archive":
         return f"آرشیو فشرده ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "compute":

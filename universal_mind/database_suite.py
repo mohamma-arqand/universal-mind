@@ -122,10 +122,11 @@ class DatabaseSuiteConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "query") or "query"
-        # A params["persistent"]=True insert rebinds this call to the FIXED
-        # on-disk database (~/.universal-mind/mind.db) so the stored data
-        # survives the session — the operator said store; it must last.
-        if params.get("persistent") and operation == "insert_many":
+        # A params["persistent"]=True call rebinds to the FIXED on-disk database
+        # (~/.universal-mind/mind.db) so stored data survives the session —
+        # both for INSERTS (the operator said store) and QUERIES (reading back
+        # what was stored must hit the same persistent store, not an empty temp).
+        if params.get("persistent") and operation in ("insert_many", "query", "execute", "tables"):
             self._suite = DatabaseSuite(persistent=True)
         # A missing SQL defaults to a real, harmless catalog query, so a no-params
         # call (as orchestrate issues) still performs genuine database work.

@@ -225,6 +225,16 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "regression", "xs": xs, "ys": ys}
         return {"operation": "regression"}
     if capability == "database":
+        # «چی ذخیره کردی؟» — a READ-back of the real persistent store: the
+        # memory loop closes (store → recall → narrate).
+        asking = any(w in command for w in ("چی ذخیره", "چه ذخیره", "نشونم بده", "نشان بده", "بخوان"))
+        if asking:
+            return {
+                "operation": "query",
+                "sql": "SELECT metric, value FROM chain_results "
+                       "ORDER BY rowid DESC LIMIT 20",
+                "persistent": True,
+            }
         # «ذخیره کن» + extracted numbers -> a REAL insert (not an empty query):
         # the operator said store, so the numbers go into a real table — and the
         # PERSISTENT database (~/.universal-mind/mind.db), because data the

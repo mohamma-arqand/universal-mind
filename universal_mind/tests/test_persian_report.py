@@ -5,6 +5,48 @@ from __future__ import annotations
 from universal_mind.persian_report import persian_report
 
 
+class TestMemoryReadback:
+    """«چی ذخیره کردی؟» — the memory loop closes: store → recall → narrate."""
+
+    def test_asking_reads_the_persistent_store(self) -> None:
+        from universal_mind.persian_params import extract_params
+
+        params = extract_params("چی ذخیره کردی؟", "database")
+        assert params["operation"] == "query"
+        assert "chain_results" in params["sql"]
+        assert params["persistent"] is True
+
+    def test_storing_then_asking_round_trips(self) -> None:
+        """Store real metrics, then ask — the answer contains what was stored."""
+        from universal_mind.persian_router import route_and_run
+
+        store = route_and_run("میانگین ۱ و ۵ را حساب کن و در دیتابیس ذخیره کن")
+        assert store["ok"] is True
+        ask = route_and_run("چی ذخیره کردی؟")
+        assert ask["ok"] is True
+        rows = ask["result"]["database"]
+        assert isinstance(rows, list) and rows  # real rows came back
+        metrics = {r["metric"] for r in rows}
+        assert {"mean", "median"} <= metrics  # the computed metrics are recallable
+
+    def test_empty_store_narrates_honestly(self) -> None:
+        from universal_mind.persian_report import _render_capability
+
+        sentence = _render_capability("database", [], None)
+        assert sentence is not None
+        assert "هنوز چیزی ذخیره نشده" in sentence
+
+    def test_readback_narrates_in_fluent_persian(self) -> None:
+        from universal_mind.persian_report import _render_capability
+
+        rows = [{"metric": "mean", "value": "3"}, {"metric": "std", "value": "1.4142"}]
+        sentence = _render_capability("database", rows, None)
+        assert sentence is not None
+        assert "میانگین=۳" in sentence
+        assert "انحراف معیار=۱.۴۱۴۲" in sentence
+        assert "mean" not in sentence and "std" not in sentence  # no English leak
+
+
 class TestArchiveNarration:
     def test_report_narrates_the_archive(self) -> None:
         from universal_mind.persian_router import route_and_run
