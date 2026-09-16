@@ -260,6 +260,43 @@ class TestDataflowSynthesis:
         assert syn.ok is True
         assert not any("→ بینایی" in f for f in syn.output.get("flows", []))
 
+    def test_vision_stats_flow_into_the_pdf_report(self) -> None:
+        """chart → vision → pdf: the vision analysis (real OpenCV stats on the
+        chain's own chart) becomes a real table INSIDE the Persian report,
+        together with the chart image itself."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "vision", "pdf"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و تحلیل تصویرش کن و گزارشش کن",
+        )
+        assert syn.ok is True
+        flow_strs = syn.output["flows"]
+        assert any("→ بینایی" in f for f in flow_strs)          # the perception flow
+        assert any("جدول آمار + نمودار درون گزارش" in f for f in flow_strs)  # both parts
+        # the report carries BOTH the table and the image (bigger than either alone)
+        assert syn.output["synthesized_from"]["pdf"]["bytes"] > 45000
+
+    def test_chart_structure_understands_the_chart_for_real(self) -> None:
+        """«ساختارش را بخوان» — real OpenCV structure detection on the chain's
+        own chart: dominant colors, long lines, ink density — the platform
+        UNDERSTANDS the chart it just drew."""
+        from universal_mind.real_tool_registry import real_connector_factory
+
+        syn = orchestrate(
+            _real_registry(), ["chart", "vision"],
+            connector_factory=real_connector_factory, flow=True,
+            command="نمودار بساز و ساختارش را بخوان",
+            capability_params={"vision": {"operation": "chart_structure"}},
+        )
+        assert syn.ok is True
+        vision_out = syn.output["synthesized_from"]["vision"]
+        assert "dominant_colors" in vision_out
+        assert vision_out["long_lines"] >= 2  # axes/grid lines really detected
+        # the dominant color is the canvas background (a real chart readout)
+        assert vision_out["dominant_colors"][0]["share"] > 0.5
+
     def test_failed_producer_never_flows(self) -> None:
         """A failed producer's (non-)output never becomes the next input."""
         from universal_mind.real_tool_registry import real_connector_factory

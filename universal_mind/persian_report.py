@@ -104,6 +104,20 @@ def _sentence_ai(result: dict[str, Any]) -> str:
 
 
 def _sentence_vision(result: dict[str, Any]) -> str:
+    # A structure read (chart_structure) narrates UNDERSTANDING, not pixels.
+    if "dominant_colors" in result:
+        colors = result.get("dominant_colors") or []
+        lines_n = result.get("long_lines", 0)
+        ink = result.get("ink_ratio", 0.0)
+        if colors:
+            top = colors[0]
+            share = top.get("share", 0.0)
+            return (
+                f"ساختار تصویر خوانده شد: {_fa_num(lines_n)} خطِ بلند شناسایی شد، "
+                f"رنگِ غالب {_fa_num(round(share * 100))}٪ کانوس را پوشانده، "
+                f"تراکم جوهر {_fa_num(round(ink * 100, 1))}٪."
+            )
+        return f"ساختار تصویر خوانده شد: {_fa_num(lines_n)} خطِ بلند."
     if "edge_pixels" in result:
         return f"{_fa_num(result['edge_pixels'])} پیکسل لبه پیدا شد."
     if "contour_count" in result:

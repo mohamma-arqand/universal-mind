@@ -141,18 +141,28 @@ def _flow_params(
         }
         if flat:
             stats = flat
+    # A vision read-back carries its own stats wrapper (shape/means/std of the
+    # image the chain made) — the pdf report can tabulate it too.
     if isinstance(stats, dict) and stats and consumer == "pdf":
         if params.get("operation") and params["operation"] not in ("persian_rtl", "persian_report"):
             return params, None  # explicit intent (invoice/table/...) wins
         headers = ["شاخص", "مقدار"]
         rows = [[str(k), _fmt_num(v)] for k, v in stats.items()]
+        # A report with a chart in the chain gets BOTH: the table AND the image
+        # (persian_report renders each part it is given).
+        image_in_chain = next(
+            (p2 for p2 in reversed(produced_paths) if p2.lower().endswith(_IMAGE_EXTENSIONS)),
+            "",
+        )
         enriched = {
             **params,
             "operation": "persian_report",
-            "image_path": "",
+            "image_path": image_in_chain,
             "stats_headers": headers,
             "stats_rows": rows,
         }
+        if image_in_chain:
+            return enriched, f"{last_producer} → pdf (جدول آمار + نمودار درون گزارش)"
         return enriched, f"{last_producer} → pdf (جدول آمار واقعی درون گزارش)"
 
     # CLIPBOARD flow — the chain's real output summarized INTO the Windows
@@ -352,7 +362,7 @@ def orchestrate(
                 # results, not just the last program's). Only COMPUTING
                 # capabilities contribute metrics: an artifact producer's
                 # bytes/size is evidence ABOUT the artifact, not content.
-                if capability in ("data", "ai", "compute"):
+                if capability in ("data", "ai", "compute", "vision"):
                     for k, v in result.output.items():
                         if (
                             isinstance(v, (int, float))

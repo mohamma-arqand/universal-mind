@@ -209,7 +209,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         folder = resolve_folder(command)
         # Named analyses in the sentence are explicit intent (they win over the
         # flow's default stats): «تشخیص لبه» → edges, «کنتور» → contours.
-        if "لبه" in command or "تشخیص لبه" in command:
+        if "ساختار" in command:
+            vision_params["operation"] = "chart_structure"
+        elif "لبه" in command or "تشخیص لبه" in command:
             vision_params["operation"] = "edges"
         elif "کنتور" in command or "کانتور" in command:
             vision_params["operation"] = "contours"

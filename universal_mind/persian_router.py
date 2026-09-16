@@ -102,6 +102,9 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # vision (OpenCV) — تحلیل تصویر واقعی
     ("بینایی", "vision"),
     ("تحلیل تصویر", "vision"),
+    ("ساختارش را بخوان", "vision"),
+    ("ساختار تصویر", "vision"),
+    ("ساختارش", "vision"),
     ("لبه", "vision"),
     ("لبهها", "vision"),
     ("کنتور", "vision"),

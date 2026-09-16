@@ -31,7 +31,7 @@ class VisionSuite:
 
     OPERATIONS = (
         "edges", "grayscale", "blur", "threshold", "contours",
-        "equalize", "flip", "rotate", "resize", "stats",
+        "equalize", "flip", "rotate", "resize", "stats", "chart_structure",
     )
 
     @staticmethod
@@ -179,6 +179,67 @@ class VisionSuite:
             "error": "",
         }
 
+    def chart_structure(self, path: str) -> dict[str, Any]:
+        """Understand a chart image as a CHART, not just pixels.
+
+        Real OpenCV structure detection, one honest measurement per question:
+        - dominant_colors: the k=3 most present colors (what is the chart of?);
+        - long_lines: how many pronounced straight segments (axes/grid/series);
+        - ink_ratio: how much of the canvas carries ink (density);
+        - bright_pixels / dark_pixels: the light/dark balance.
+        No guesses beyond the measurement — a photo returns the same numbers
+        with a different story.
+        """
+        import numpy as np
+
+        image = self._load(path)
+        if image is None:
+            return {"ok": False, "error": f"file not found: {path}"}
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Dominant colors: k-means over a pixel sample — real palette readout.
+        small = cv2.resize(image, (120, 90))
+        pixels = small.reshape(-1, 3).astype(np.float32)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        _, labels, centers = cv2.kmeans(
+            pixels, 3, None, criteria, 3, cv2.KMEANS_PP_CENTERS
+        )
+        counts = np.bincount(labels.flatten(), minlength=3)
+        order = np.argsort(-counts)
+        dominant = [
+            {
+                "b": int(centers[i][0]),
+                "g": int(centers[i][1]),
+                "r": int(centers[i][2]),
+                "share": round(float(counts[i]) / float(counts.sum()), 3),
+            }
+            for i in order
+        ]
+
+        # Long straight segments: Hough on edges — axes and series lines.
+        edges = cv2.Canny(gray, 50, 150)
+        lines = cv2.HoughLinesP(
+            edges, 1, np.pi / 180, threshold=60,
+            minLineLength=60, maxLineGap=8,
+        )
+        long_lines = int(len(lines)) if lines is not None else 0
+
+        ink_ratio = round(float(np.count_nonzero(edges)) / float(edges.size), 4)
+        bright = int(np.count_nonzero(gray > 200))
+        dark = int(np.count_nonzero(gray < 55))
+
+        return {
+            "ok": True,
+            "structure": {
+                "dominant_colors": dominant,
+                "long_lines": long_lines,
+                "ink_ratio": ink_ratio,
+                "bright_pixels": bright,
+                "dark_pixels": dark,
+            },
+            "error": "",
+        }
+
 
 class VisionSuiteConnector:
     """Adapter: VisionSuite through the Connector protocol (dispatch by operation)."""
@@ -204,15 +265,19 @@ class VisionSuiteConnector:
             "rotate": lambda: suite.rotate(path, int(params.get("degrees", 90))),
             "resize": lambda: suite.resize(path, int(params.get("width", 50)), int(params.get("height", 50))),
             "stats": lambda: suite.stats(path),
+            "chart_structure": lambda: suite.chart_structure(path),
         }.get(operation)
         if method is None:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
         result = method()
         if result.get("ok") is not True:
             return ConnectorResult(ok=False, output=None, error=result.get("error", "failed"))
-        output: Any = result.get("stats") if operation == "stats" else {
-            k: v for k, v in result.items() if k not in ("ok", "error")
-        }
+        # stats/chart_structure carry their own wrapper key; others are flat.
+        output: Any = (
+            result.get("stats") if operation == "stats"
+            else result.get("structure") if operation == "chart_structure"
+            else {k: v for k, v in result.items() if k not in ("ok", "error")}
+        )
         return ConnectorResult(ok=True, output=output)
 
     @staticmethod
