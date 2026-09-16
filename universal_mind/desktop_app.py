@@ -141,6 +141,24 @@ class MindDesktopApp:
         self._analytics_text.pack(fill=tk.BOTH, expand=True)
         self._refresh_analytics()
 
+        # --- Tab: schedules (زمانبندیها — the proactive tasks) ---
+        sched_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(sched_tab, text="زمانبندیها")
+        sched_top = ttk.LabelFrame(sched_tab, text="زمانبندی جدید", padding=6)
+        sched_top.pack(fill=tk.X)
+        self._sched_entry = ttk.Entry(sched_top, font=("Segoe UI", 11))
+        self._sched_entry.pack(fill=tk.X, side=tk.LEFT, expand=True)
+        self._sched_entry.insert(tk.END, "هر روز ساعت ۸ گزارش کامل بده")
+        ttk.Button(sched_top, text="＋ ثبت", command=self._register_schedule).pack(side=tk.LEFT, padx=6)
+        ttk.Button(
+            sched_tab, text="▶ اجرای سررسیدها", command=self._run_schedules,
+        ).pack(anchor=tk.W, pady=6)
+        self._sched_text = scrolledtext.ScrolledText(
+            sched_tab, font=("Segoe UI", 12), wrap=tk.WORD
+        )
+        self._sched_text.pack(fill=tk.BOTH, expand=True)
+        self._refresh_schedules()
+
         # --- Tab 2: Persian command (فارسی بگو، سیستم اجرا کند) ---
         fa_tab = ttk.Frame(self._notebook, padding=6)
         self._notebook.add(fa_tab, text="فرمان فارسی")
@@ -246,6 +264,53 @@ class MindDesktopApp:
         ttk.Button(
             preview_frame, text="📂 باز کردن پوشه در Explorer", command=self._open_preview_folder
         ).pack(anchor=tk.W, pady=(4, 0))
+
+    def _refresh_schedules(self) -> None:
+        """Render the operator's real schedule table (persisted, with status)."""
+        from datetime import datetime as _dt
+
+        from universal_mind.scheduler import _next_due, list_schedules
+
+        self._sched_text.delete("1.0", tk.END)
+        schedules = list_schedules()
+        if not schedules:
+            self._sched_text.insert(tk.END, "هنوز زمانبندیای ثبت نشده است.\n")
+            return
+        now = _dt.now()
+        for s in schedules:
+            nxt = _next_due(s, now)
+            when = nxt.strftime("%H:%M %Y-%m-%d") if nxt else "غیرفعال"
+            state = "فعال" if s.active else "غیرفعال"
+            self._sched_text.insert(
+                tk.END,
+                f"• [{state}] {s.command}\n  سررسید بعدی: {when} | آخرین اجرا: {s.last_run[:16] or '—'}\n\n",
+            )
+
+    def _register_schedule(self) -> None:
+        """Register the sentence in the entry as a real persisted schedule."""
+        from universal_mind.scheduler import register
+
+        sentence = self._sched_entry.get().strip()
+        if not sentence:
+            messagebox.showinfo("Universal Mind", "یک جملهی زمانبندی بنویس")
+            return
+        result = register(sentence)
+        if result.get("ok"):
+            self._refresh_schedules()
+        else:
+            messagebox.showinfo("Universal Mind", str(result.get("error")))
+
+    def _run_schedules(self) -> None:
+        """Fire every due schedule through the real engine."""
+        from universal_mind.scheduler import run_due
+
+        result = run_due()
+        self._refresh_schedules()
+        fired = result.get("count", 0)
+        messagebox.showinfo(
+            "Universal Mind",
+            f"{fired} زمانبندی اجرا شد" if fired else "چیزی سررسید نشده بود",
+        )
 
     def _open_dashboard(self) -> None:
         """Build the REAL dashboard from history and open it in the browser."""
