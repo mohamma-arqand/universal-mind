@@ -18,7 +18,7 @@ from typing import Any
 
 
 class ArchiveTool:
-    """A real gzip-backed specialist that compresses a real payload."""
+    """A real gzip/tar-backed specialist that compresses real payloads."""
 
     name = "gzip"
     capability = "archive_compress"
@@ -43,6 +43,50 @@ class ArchiveTool:
         if not gz_path.exists():
             return {"ok": False, "path": None, "bytes": 0, "error": "gzip archive was not produced"}
         return {"ok": True, "path": str(gz_path), "bytes": gz_path.stat().st_size, "error": ""}
+
+
+
+    def compress_files(self, files: list[str] | None = None, out_dir: str | None = None) -> dict[str, Any]:
+        """Archive REAL produced files of a chain into one .tar.gz bundle.
+
+        The flow target: every artifact the chain made (the chart, the report,
+        ...) packed into ONE archive — the run's complete output, preserved.
+        Missing files are skipped honestly (listed in 'skipped'); an empty
+        or all-missing file set is an honest failure, never a fake archive.
+        """
+        import tarfile
+
+        target_dir = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-archive-"))
+        target_dir.mkdir(parents=True, exist_ok=True)
+        archive_path = target_dir / "chain_output.tar.gz"
+
+        existing: list[Path] = []
+        skipped: list[str] = []
+        for file_str in files or []:
+            path = Path(file_str)
+            if path.exists():
+                existing.append(path)
+            else:
+                skipped.append(file_str)
+        if not existing:
+            return {
+                "ok": False, "path": None, "bytes": 0,
+                "archived": [], "skipped": skipped,
+                "error": "هیچ فایل واقعیای برای بایگانی نبود",
+            }
+        try:
+            with tarfile.open(str(archive_path), "w:gz") as tar:
+                for path in existing:
+                    tar.add(str(path), arcname=path.name)
+        except (OSError, tarfile.TarError) as exc:
+            return {
+                "ok": False, "path": None, "bytes": 0,
+                "archived": [], "skipped": skipped, "error": str(exc),
+            }
+        return {
+            "ok": True, "path": str(archive_path), "bytes": archive_path.stat().st_size,
+            "archived": [p.name for p in existing], "skipped": skipped, "error": "",
+        }
 
 
 __all__ = ["ArchiveTool"]

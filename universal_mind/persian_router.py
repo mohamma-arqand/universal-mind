@@ -97,6 +97,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فشرده", "archive"),
     ("آرشیو", "archive"),
     ("زیپ", "archive"),
+    ("بایگانی", "archive"),
+    ("بایگانیش کن", "archive"),
     # vision (OpenCV) — تحلیل تصویر واقعی
     ("بینایی", "vision"),
     ("تحلیل تصویر", "vision"),

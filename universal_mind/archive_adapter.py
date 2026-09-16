@@ -20,11 +20,22 @@ class ArchiveToolConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "compress") or "compress"
-        if operation != "compress":
+        if operation not in ("compress", "compress_files"):
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
-        result = self._tool.compress(content=params.get("content", "Universal Mind payload"))
+        if operation == "compress_files":
+            result = self._tool.compress_files(files=params.get("files"))
+        else:
+            result = self._tool.compress(content=params.get("content", "Universal Mind payload"))
         if result.get("ok") is not True:
             return ConnectorResult(ok=False, output=None, error=result.get("error", "failed"))
+        if operation == "compress_files":
+            # carry the archived file list: the evidence of what is inside
+            return ConnectorResult(ok=True, output={
+                "path": result.get("path"),
+                "bytes": result.get("bytes"),
+                "archived": result.get("archived", []),
+                "skipped": result.get("skipped", []),
+            })
         return ConnectorResult(
             ok=True,
             output={"path": result.get("path"), "bytes": result.get("bytes")},

@@ -206,6 +206,10 @@ def persian_report(payload: dict[str, Any]) -> str:
     if notify_flow and "→ notify (" in notify_flow:
         summary = notify_flow.split("→ notify (", 1)[1].rstrip(")")
         lines.append(f"• اعلان ویندوز نشان داده شد: «{summary}»")
+    # The preservation detail for archive: everything made, packed together.
+    archive_flow = next((f for f in flows if "→ archive" in f), None)
+    if archive_flow:
+        lines.append("• همهی خروجیهای این اجرا در یک بایگانی یکجا بستهبندی شد.")
 
     return "\n".join(lines)
 

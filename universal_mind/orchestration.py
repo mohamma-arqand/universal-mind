@@ -92,6 +92,7 @@ def _flow_params(
     last_producer: str | None,
     last_output: Any,
     command: str = "",
+    produced_paths: tuple[str, ...] = (),
 ) -> tuple[dict[str, Any], str | None]:
     """Enrich the consumer's params with the previous producer's real output.
 
@@ -146,6 +147,21 @@ def _flow_params(
             "stats_rows": rows,
         }
         return enriched, f"{last_producer} → pdf (جدول آمار واقعی درون گزارش)"
+
+    # ARCHIVE flow — the run's produced FILES packed into one real .tar.gz.
+    # The whole chain's output, preserved as a single portable bundle.
+    # A generic "compress" (the vocabulary default) is upgradeable: archiving
+    # the chain's real files is the superior interpretation of the same intent.
+    if consumer == "archive" and produced_paths:
+        op = params.get("operation")
+        if op and op not in ("compress", "compress_files"):
+            return params, None  # an explicit other operation wins
+        enriched = {
+            **params,
+            "operation": "compress_files",
+            "files": list(produced_paths),
+        }
+        return enriched, f"{len(produced_paths)} فایلِ این اجرا → archive (بایگانی یکجا)"
 
     # NOTIFY flow — the chain's final artifact summarized as a real Windows
     # toast. The perception loop closes: the platform not only MAKES, it SAYS
@@ -224,11 +240,15 @@ def orchestrate(
     flows: list[str] = []
     last_producer: str | None = None
     last_output: Any = None
+    produced_paths: list[str] = []  # every real file this run produced so far
     for capability in capabilities:
         tool = registry.best_for(capability)
         call_params = dict((capability_params or {}).get(capability, {}))
         if flow:
-            call_params, flow_desc = _flow_params(capability, call_params, last_producer, last_output, command)
+            call_params, flow_desc = _flow_params(
+                capability, call_params, last_producer, last_output, command,
+                tuple(produced_paths),
+            )
             if flow_desc:
                 flows.append(flow_desc)
         if tool is None:
@@ -254,11 +274,14 @@ def orchestrate(
         # Track the last SUCCESSFUL producer so the next consumer can feed on it.
         if result.ok and result.output is not None:
             last_producer, last_output = capability, result.output
+            if isinstance(result.output, dict) and isinstance(result.output.get("path"), str):
+                produced_paths.append(result.output["path"])
         else:
             last_producer, last_output = None, None
         # Record the outcome on the tool's evidence trail so the next synthesis
         # ranks tools by what actually worked (feeds Phase E).
         tool.evidence.append({"succeeded": result.ok, "score": 1.0 if result.ok else 0.0, "note": capability})
+
 
     fused = fuse(sub_outputs)
     if isinstance(fused, dict) and flows:

@@ -5,6 +5,16 @@ from __future__ import annotations
 from universal_mind.persian_report import persian_report
 
 
+class TestArchiveNarration:
+    def test_report_narrates_the_archive(self) -> None:
+        from universal_mind.persian_router import route_and_run
+
+        payload = route_and_run("نمودار خطی بساز و گزارشش کن و بایگانی کن")
+        report = persian_report(payload)
+        assert any("→ archive" in f for f in payload["flows"])
+        assert "بایگانی یکجا" in report
+
+
 class TestNotifyNarration:
     def test_report_narrates_the_toast_summary(self) -> None:
         from universal_mind.persian_router import route_and_run
