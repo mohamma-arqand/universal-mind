@@ -36,7 +36,9 @@ def check_full_persian_loop() -> bool:
     ok = ok and set(payload["route"]) == {"data", "chart", "database"}
     ok = ok and payload["result"]["data"]["mean"] == 12.0  # extracted numbers really used
     ok = ok and payload["result"]["chart"]["bytes"] > 0
-    ok = ok and payload["result"]["database"]["inserted"] == 3
+    # The database flow: the six COMPUTED metrics are stored (named by metric),
+    # not the 3-number input echo — storing what was computed beats re-stating it.
+    ok = ok and payload["result"]["database"]["inserted"] == 6
 
     report = persian_report(payload)
     ok = ok and report.startswith("✅") and "میانگین" in report

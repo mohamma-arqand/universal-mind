@@ -93,6 +93,7 @@ def _flow_params(
     last_output: Any,
     command: str = "",
     produced_paths: tuple[str, ...] = (),
+    produced_stats: dict[str, float] | None = None,
 ) -> tuple[dict[str, Any], str | None]:
     """Enrich the consumer's params with the previous producer's real output.
 
@@ -182,16 +183,16 @@ def _flow_params(
         )
         if op and op != "query" and not raw_insert:
             return params, None  # an explicit insert/query choice wins
-        stats = last_output.get("stats")
-        if not isinstance(stats, dict) or not stats:
-            stats = {
-                k: v
-                for k, v in last_output.items()
-                if isinstance(v, (int, float)) and not isinstance(v, bool) and k != "ok"
-            }
-        if stats:
+        # The whole chain's computed metrics (every producer), not just the
+        # last one — «حساب کن ... ذخیره کن» stores ALL the numbers made.
+        chain_metrics: dict[str, Any] = dict(produced_stats) if produced_stats else {}
+        if not chain_metrics:
+            last_stats = last_output.get("stats") if isinstance(last_output, dict) else None
+            if isinstance(last_stats, dict) and last_stats:
+                chain_metrics = dict(last_stats)
+        if chain_metrics:
             result_rows: list[dict[str, str]] = [
-                {"metric": str(k), "value": _fmt_num(v)} for k, v in stats.items()
+                {"metric": str(k), "value": _fmt_num(v)} for k, v in chain_metrics.items()
             ]
             return (
                 {**{k: v for k, v in params.items() if k != "rows"},
@@ -294,13 +295,14 @@ def orchestrate(
     last_producer: str | None = None
     last_output: Any = None
     produced_paths: list[str] = []  # every real file this run produced so far
+    produced_stats: dict[str, float] = {}  # every computed metric so far (all producers)
     for capability in capabilities:
         tool = registry.best_for(capability)
         call_params = dict((capability_params or {}).get(capability, {}))
         if flow:
             call_params, flow_desc = _flow_params(
                 capability, call_params, last_producer, last_output, command,
-                tuple(produced_paths),
+                tuple(produced_paths), dict(produced_stats),
             )
             if flow_desc:
                 flows.append(flow_desc)
@@ -327,8 +329,23 @@ def orchestrate(
         # Track the last SUCCESSFUL producer so the next consumer can feed on it.
         if result.ok and result.output is not None:
             last_producer, last_output = capability, result.output
-            if isinstance(result.output, dict) and isinstance(result.output.get("path"), str):
-                produced_paths.append(result.output["path"])
+            if isinstance(result.output, dict):
+                if isinstance(result.output.get("path"), str):
+                    produced_paths.append(result.output["path"])
+                # Every numeric metric this producer computed — ALL producers
+                # accumulate (a consumer like database deserves the whole chain's
+                # results, not just the last program's). Only COMPUTING
+                # capabilities contribute metrics: an artifact producer's
+                # bytes/size is evidence ABOUT the artifact, not content.
+                if capability in ("data", "ai", "compute"):
+                    for k, v in result.output.items():
+                        if (
+                            isinstance(v, (int, float))
+                            and not isinstance(v, bool)
+                            and k != "ok"
+                        ):
+                            metric_name = f"{capability}.{k}" if k in produced_stats else k
+                            produced_stats[metric_name] = float(v)
         else:
             last_producer, last_output = None, None
         # Record the outcome on the tool's evidence trail so the next synthesis
