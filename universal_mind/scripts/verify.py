@@ -88,6 +88,7 @@ PROBES = [
     "probe_superplatform_connectors.py",
     "probe_real_media.py",
     "probe_media_pipeline.py",
+    "probe_persian_loop.py",
 ]
 
 

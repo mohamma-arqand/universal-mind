@@ -3,7 +3,7 @@
 A local-first orchestration system, not a chatbot: one identity, one input gate,
 specialists that never see identity, judgment that is always backed by evidence,
 and a self-watching loop that reasons about its own reasoning. Everything below
-is implemented, tested (541 tests), probed (40 self-verifying probes), and
+is implemented, tested (1052+ tests), probed (43+ self-verifying probes), and
 type-clean (mypy 0) — see **Status** at the bottom.
 
 ## The whole mind in one command (for a stranger)
@@ -176,7 +176,19 @@ policy), and world-connection (multilingual, temporal, real tools, distributed
 memory, persistent identity, deploy metrics) — plus the metacognitive layer that
 folds prior self-reasoning into one trust judgment.
 
-- **541 tests** green, **40 probes** green, **mypy 0**, **ruff clean**.
+**The super-platform layer** (see ARCHITECTURE_SUPERPLATFORM.md): seven integrated
+PROGRAMS — data (numpy), ai (sklearn/scipy: real trained models), vision (OpenCV),
+chart (matplotlib), pdf (reportlab incl. Persian RTL), database (SQLite, persistent
+`~/.universal-mind/mind.db`), image (Pillow) — plus five real OS effects
+(ffmpeg media, gzip archive, node compute, Windows toast, Windows clipboard), all
+behind one registry. Three faces: `universal-mind run` (CLI), a native Windows
+desktop app (single-capability / Persian-command / chain tabs with live previews
+and a chain builder), and a Persian natural-language layer (colloquial forms,
+numbers-in-sentence as parameters, Jalali dates, folder resolution, saved chains
+by name, fluent Persian reports, and a chain advisor that learns from the
+operator's own run history).
+
+- **1052+ tests** green, **43+ probes** green (incl. the live Persian-loop probe), **mypy 0**, **ruff clean**.
 - Closed end-to-end: `make test` + `make probe` (self-verifying receipt), and the
   full release gate `python scripts/verify.py` (or `make verify`) prints READY
   only when everything is green.

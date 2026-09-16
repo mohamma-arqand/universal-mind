@@ -128,6 +128,15 @@ class MindDesktopApp:
         self._status_text.pack(fill=tk.Y, expand=True)
         self._write_status()
 
+        # --- Tab: analytics (تحلیل تاریخچه) ---
+        analytics_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(analytics_tab, text="تحلیل")
+        self._analytics_text = scrolledtext.ScrolledText(
+            analytics_tab, font=("Segoe UI", 12), wrap=tk.WORD
+        )
+        self._analytics_text.pack(fill=tk.BOTH, expand=True)
+        self._refresh_analytics()
+
         # --- Tab 2: Persian command (فارسی بگو، سیستم اجرا کند) ---
         fa_tab = ttk.Frame(self._notebook, padding=6)
         self._notebook.add(fa_tab, text="فرمان فارسی")
@@ -432,8 +441,8 @@ class MindDesktopApp:
             )
             return
         try:
-            from universal_mind.run_history import ChainAdvisor
             from universal_mind.persian_report import _CAP_FA
+            from universal_mind.run_history import ChainAdvisor
 
             suggestion = ChainAdvisor().advise(command)
         except Exception:  # noqa: BLE001 — advice is a bonus, never fatal
@@ -448,6 +457,16 @@ class MindDesktopApp:
                 text=f"💡 پیشنهاد: {chain_fa} (در {suggestion.succeeded_runs} اجرای موفق قبلی)",
                 foreground="#2a7",
             )
+
+    def _refresh_analytics(self) -> None:
+        """Render the real history statistics (the operator's actual usage)."""
+        from universal_mind.history_analytics import analytics_report, analyze_history
+
+        self._analytics_text.delete("1.0", tk.END)
+        try:
+            self._analytics_text.insert(tk.END, analytics_report(analyze_history()))
+        except Exception as exc:  # noqa: BLE001 — analytics is a view, never fatal
+            self._analytics_text.insert(tk.END, f"(تحلیل ناموجود: {exc})")
 
     def _run_persian(self) -> None:
         command = self._fa_entry.get().strip()
@@ -492,6 +511,8 @@ class MindDesktopApp:
 
         self._fa_report_text.delete("1.0", tk.END)
         self._fa_report_text.insert(tk.END, persian_report(payload))
+        # The analytics tab reflects the just-recorded run too.
+        self._refresh_analytics()
         # Show the produced image in the Persian tab's preview pane too.
         self._show_fa_preview(_first_image_from(payload.get("result", {})))
 
