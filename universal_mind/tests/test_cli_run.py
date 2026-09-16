@@ -54,6 +54,22 @@ def test_run_invalid_params_json_fails_clean(capsys: CaptureFixture[str]) -> Non
     assert "invalid --params" in payload["error"]
 
 
+def test_run_list_shows_every_capability_and_ops(capsys: CaptureFixture[str]) -> None:
+    """`run --list` shows all 12 capabilities with their real operation counts."""
+    code, payload = _run_cli(capsys, ["run", "--list"])
+    assert code == 0
+    assert len(payload) == 12
+    total = sum(len(ops) for ops in payload.values())
+    assert total >= 100  # the real surface, honestly counted
+    assert payload["data"] and "stats" in payload["data"]
+
+
+def test_run_without_capability_is_honest(capsys: CaptureFixture[str]) -> None:
+    code, payload = _run_cli(capsys, ["run"])
+    assert code == 1
+    assert payload["ok"] is False
+
+
 def test_run_database_query_real(capsys: CaptureFixture[str]) -> None:
     code, payload = _run_cli(capsys, ["run", "database"])  # default catalog query
     assert code == 0

@@ -132,6 +132,39 @@ from the repo root provides the `universal-mind` console script; provider keys
 are injected at runtime via environment (e.g. `UM_OPENAI_API_KEY`) and are
 never stored or logged.
 
+## The desktop application (نسخه ویندوزی)
+
+```bash
+cd universal_mind
+python desktop_app.py
+```
+
+A native Windows window (tkinter, no install) with four tabs:
+
+- **تک قابلیت** — pick one of the ten capabilities, edit its JSON params, run it for real.
+- **فرمان فارسی** — type a Persian command («میانگین ۲ و ۴ را حساب کن و نمودارش کن»);
+  the advisor suggests a chain while you type, the engine runs it, and you get
+  a fluent Persian report plus a live image preview.
+- **زنجیره** — nine preset chains (media→chart→pdf, vision→ai→pdf, ...) and a
+  chain builder: pick capabilities in order, name it, save it — stored chains
+  survive restarts (~/.universal-mind/mind.db) and are runnable by name.
+- **تحلیل** — real statistics over your recorded runs: success rate, top chains,
+  top capabilities.
+
+Every button does real work through the unified engine; the 📂 button opens the
+produced artifact in Windows Explorer.
+
+## The Persian layer (لایه فارسی)
+
+- Colloquial + formal vocabulary (۶۰+ words): «میانگینشو حساب کن» routes to data.
+- The numbers IN the sentence ARE the parameters («خوشهبندی ۱ و ۲ و ۹ و ۱۰» trains real KMeans).
+- «امروز» resolves to the real Jalali date; «از دسکتاپ» resolves to the real folder.
+- «ذخیره کن» really inserts (persistent ~/.universal-mind/mind.db).
+- «زنجیرهی X را اجرا کن» runs your saved chain X.
+- Results render as fluent Persian reports (no English keys).
+- Every run is recorded; the advisor recommends chains from your own history
+  and your saved chains — evidence-based, never guessed.
+
 ## Dashboard
 
 `universal-mind dashboard --out dashboard.html` (or `cycle`) writes a single

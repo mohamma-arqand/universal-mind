@@ -203,9 +203,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     cycle.add_argument("--out", required=True, help="output .html path")
 
     run = sub.add_parser("run", help="run one real capability through the super-platform (JSON output)")
-    run.add_argument("capability", help="capability to invoke (data/database/image/chart/pdf/media/archive/compute/notify/clipboard or any registered tool)")
+    run.add_argument("capability", nargs="?", default="", help="capability to invoke (data/database/image/chart/pdf/media/archive/compute/notify/clipboard/vision/ai) — omit with --list to see all")
     run.add_argument("--params", default="{}", help="JSON params for the operation (e.g. '{\"operation\":\"stats\",\"data\":[1,2,3]}')")
     run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
+    run.add_argument("--list", action="store_true", help="list every registered capability with its real operations")
 
     args = parser.parse_args(argv)
 
@@ -373,6 +374,31 @@ def _cmd_run(args: argparse.Namespace) -> int:
         ToolEntry,
         ToolRegistry,
     )
+
+    if args.list:
+        from universal_mind.real_tool_registry import _REAL_CONNECTORS
+
+        listing: dict[str, Any] = {}
+        for cap in sorted(_REAL_CONNECTORS):
+            connector = _REAL_CONNECTORS[cap]()
+            suite = getattr(connector, "_suite", None)  # every *SuiteConnector holds its suite
+            ops = getattr(suite, "OPERATIONS", None) if suite is not None else None
+            if not ops:
+                # The five real-effect tools report their concrete operations.
+                ops = {
+                    "media": ("generate", "inspect", "transcode"),
+                    "archive": ("compress",),
+                    "compute": ("evaluate",),
+                    "notify": ("notify",),
+                    "clipboard": ("read", "write"),
+                }.get(cap, ("(real effect)",))
+            listing[cap] = list(ops)
+        print(_json.dumps(listing, indent=2, ensure_ascii=False))
+        return 0
+
+    if not args.capability and not args.capabilities:
+        print(_json.dumps({"ok": False, "error": "یک قابلیت بده یا --list بزن"}))
+        return 1
 
     try:
         params = _json.loads(args.params)
