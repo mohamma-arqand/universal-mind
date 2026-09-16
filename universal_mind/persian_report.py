@@ -37,7 +37,7 @@ _CHART_KIND_FA: dict[str, str] = {
 }
 
 
-def _fa_num(value: float | int) -> str:
+def _fa_num(value: float) -> str:
     """A number with Persian digits and trimmed decimals."""
     if isinstance(value, int):
         text = str(value)

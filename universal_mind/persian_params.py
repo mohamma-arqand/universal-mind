@@ -192,8 +192,8 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             pairs = [[float(numbers[i]), float(numbers[i + 1])] for i in range(0, len(numbers) - 1, 2)]
             return {"operation": "cluster", "data": pairs}
         if numbers and len(numbers) > 1:
-            xs = [[float(numbers[i])] for i in range(0, len(numbers) - 1)]
-            ys = [float(numbers[i + 1]) for i in range(0, len(numbers) - 1)]
+            xs = [[float(numbers[i])] for i in range(len(numbers) - 1)]
+            ys = [float(numbers[i + 1]) for i in range(len(numbers) - 1)]
             return {"operation": "regression", "xs": xs, "ys": ys}
         return {"operation": "regression"}
     if capability == "database":

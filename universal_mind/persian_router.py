@@ -200,7 +200,7 @@ def route(command: str) -> PersianRoute:
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
 
     # Order capabilities by the natural data-flow priority; ties keep first-seen.
-    executable = [c for c in matched.keys() if c not in _NON_EXECUTABLE]
+    executable = [c for c in matched if c not in _NON_EXECUTABLE]
     if not executable:
         # A pure «زنجیره...» command (handled above) or nothing executable.
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
@@ -283,6 +283,15 @@ def route_and_run(
         connector_factory=real_connector_factory,
         capability_params=capability_params,
     )
+    # Record the real run to the persistent history (the advisor learns from it).
+    try:
+        from universal_mind.run_history import RunHistory
+
+        RunHistory().record(command, caps, syn.ok)
+    except Exception as exc:  # noqa: BLE001 — a failed history write never breaks the run
+        import sys
+
+        print(f"[history] ثبت اجرا ناموفق بود: {exc}", file=sys.stderr)
     return {
         "ok": syn.ok,
         "command": command,
