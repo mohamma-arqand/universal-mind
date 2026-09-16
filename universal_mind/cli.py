@@ -208,6 +208,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
     run.add_argument("--list", action="store_true", help="list every registered capability with its real operations")
 
+    dsp = sub.add_parser("dashboard-sp", help="the super-platform dashboard — real usage, one self-contained Persian HTML")
+    dsp.add_argument("--out", default="", help="output HTML path (default: artifacts/superplatform_dashboard.html)")
+
     fa = sub.add_parser("fa", help="اجرای فرمان فارسی (Persian command → real chain, Persian report)")
     fa.add_argument("command", help="the Persian command (quote it)")
     fa.add_argument("--json", action="store_true", help="print the raw JSON payload instead of the Persian report")
@@ -233,6 +236,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_dashboard(args)
     if args.verb == "cycle":
         return _cmd_cycle(args)
+    if args.verb == "dashboard-sp":
+        return _cmd_dashboard_sp(args)
     if args.verb == "fa":
         return _cmd_fa(args)
     if args.verb == "fa-contest":
@@ -366,6 +371,15 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
     }
     print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
     return 0
+
+
+def _cmd_dashboard_sp(args: argparse.Namespace) -> int:
+    """Build the super-platform dashboard from the REAL persistent history."""
+    from universal_mind.superplatform_dashboard import build_dashboard
+
+    result = build_dashboard(args.out or None)
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
 
 
 def _cmd_fa(args: argparse.Namespace) -> int:
