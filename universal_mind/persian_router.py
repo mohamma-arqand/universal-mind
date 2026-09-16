@@ -97,6 +97,30 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فشرده", "archive"),
     ("آرشیو", "archive"),
     ("زیپ", "archive"),
+    # vision (OpenCV) — تحلیل تصویر واقعی
+    ("بینایی", "vision"),
+    ("تحلیل تصویر", "vision"),
+    ("لبه", "vision"),
+    ("لبهها", "vision"),
+    ("کنتور", "vision"),
+    ("خطوط تصویر", "vision"),
+    ("تشخیص لبه", "vision"),
+    ("پردازش تصویر", "vision"),
+    # ai (sklearn/scipy) — یادگیری ماشین واقعی
+    ("یادگیری", "ai"),
+    ("یادگیری ماشین", "ai"),
+    ("خوشه", "ai"),
+    ("خوشهبندی", "ai"),
+    ("خوشه بندی", "ai"),
+    ("طبقهبندی", "ai"),
+    ("طبقه بندی", "ai"),
+    ("رگرسیون", "ai"),
+    ("مدل", "ai"),
+    ("آموزش", "ai"),
+    ("فوریه", "ai"),
+    ("سیگنال", "ai"),
+    ("پیشبینی", "ai"),
+    ("پیش بینی", "ai"),
     # compute (node)
     ("جاوااسکریپت", "compute"),
     ("جاوا اسکریپت", "compute"),
@@ -116,8 +140,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
 # data/compute produce inputs; chart/pdf consume them; database/notify/archive
 # are sinks. The order below is the natural data-flow order.
 _PRIORITY: tuple[str, ...] = (
-    "data", "compute", "image", "media", "chart", "pdf", "database", "archive",
-    "clipboard", "notify",
+    "data", "compute", "image", "media", "vision", "ai",
+    "chart", "pdf", "database", "archive", "clipboard", "notify",
 )
 
 

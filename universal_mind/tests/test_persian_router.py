@@ -68,6 +68,41 @@ class TestRouteAndRun:
         assert "route" not in payload
 
 
+class TestVisionAndAIRoutes:
+    """«بینایی» and «یادگیری ماشین» are first-class Persian commands now."""
+
+    def test_vision_words_route_to_vision(self) -> None:
+        assert "vision" in route("تحلیل تصویر و تشخیص لبه").capabilities
+        assert "vision" in route("این عکس را پردازش تصویر کن").capabilities
+
+    def test_ai_words_route_to_ai(self) -> None:
+        assert "ai" in route("یادگیری ماشین انجام بده").capabilities
+        assert "ai" in route("اعداد را خوشهبندی کن").capabilities
+        assert "ai" in route("مدل رگرسیون بساز").capabilities
+
+    def test_vision_and_pdf_chain(self) -> None:
+        """«تحلیل تصویر و گزارشش را بساز» -> vision → pdf (real CV + real PDF)."""
+        payload = route_and_run("تحلیل تصویر این عکس و گزارشش را بساز")
+        assert payload["ok"] is True
+        assert "vision" in payload["route"]
+        assert "pdf" in payload["route"]
+
+    def test_cluster_command_runs_real_kmeans(self) -> None:
+        """«خوشهبندی ۱ و ۲ و ۹ و ۱۰» really trains KMeans over the command's numbers."""
+        payload = route_and_run("اعداد ۱ و ۲ و ۹ و ۱۰ را خوشهبندی کن")
+        assert payload["ok"] is True
+        centroids = payload["result"]["ai"]["centroids"]
+        # Two tight groups (1,2) and (9,10): KMeans must separate them for real.
+        assert len(centroids) == 2
+        flat = sorted(c[0] for c in centroids)
+        assert flat[0] < 5 < flat[1]
+
+    def test_vision_runs_before_pdf(self) -> None:
+        """Data-flow order: the analysis runs before the report consumes it."""
+        result = route("تحلیل تصویر و گزارش پی دی اف بساز")
+        assert result.capabilities.index("vision") < result.capabilities.index("pdf")
+
+
 class TestOrderPriority:
     """Data-flow ordering: producers first, sinks last."""
 

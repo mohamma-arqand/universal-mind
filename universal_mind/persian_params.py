@@ -14,6 +14,7 @@ Deterministic and pure: a given sentence always yields the same parameters.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 from universal_mind.persian_date import with_resolved_date
@@ -170,6 +171,31 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "evaluate"}
     if capability == "notify":
         return {"operation": "notify", "title": text or "Universal Mind", "body": command}
+    if capability == "vision":
+        # «تحلیل تصویر» -> real OpenCV work on the operator's real file/folder.
+        params = {"operation": "contours"}
+        folder = resolve_folder(command)
+        if path:
+            params["path"] = path
+        elif folder:
+            # Analyze the first real image in the resolved folder (if any).
+            import os
+
+            for entry in sorted(os.listdir(folder)):
+                if entry.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
+                    params["path"] = str(Path(folder) / entry)
+                    break
+        return params
+    if capability == "ai":
+        # «خوشهبندی»/«یادگیری» -> real ML over the numbers in the command.
+        if "خوشه" in command and numbers:
+            pairs = [[float(numbers[i]), float(numbers[i + 1])] for i in range(0, len(numbers) - 1, 2)]
+            return {"operation": "cluster", "data": pairs}
+        if numbers and len(numbers) > 1:
+            xs = [[float(numbers[i])] for i in range(0, len(numbers) - 1)]
+            ys = [float(numbers[i + 1]) for i in range(0, len(numbers) - 1)]
+            return {"operation": "regression", "xs": xs, "ys": ys}
+        return {"operation": "regression"}
     if capability == "database":
         # «ذخیره کن» + extracted numbers -> a REAL insert (not an empty query):
         # the operator said store, so the numbers go into a real table — and the
