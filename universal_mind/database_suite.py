@@ -45,6 +45,18 @@ class DatabaseSuite:
             target = Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
         target.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(target)
+        # HEADER GUARD: a partially-overwritten db (an external writer once
+        # splattered stderr over the header page) fails later with a cryptic
+        # 'unsupported file format' deep inside sqlite3. Fail EARLY, with the
+        # exact remedy, and never silently treat corruption as a schema issue.
+        if target.exists() and target.stat().st_size >= 16:
+            with open(target, "rb") as probe:
+                magic = probe.read(16)
+            if magic != b"SQLite format 3\x00":
+                raise RuntimeError(
+                    f"پایگاه داده خراب است (امضای فایل نامعتبر): {target} — "
+                    "فایل را با scripts/rebuild_db.py بازسازی کن"
+                )
 
     @property
     def db_path(self) -> str:
