@@ -285,6 +285,42 @@ def route_and_run(
     agent's report (the goal loop with its verdicts). Ordinary commands are
     never hijacked — the goal marker is explicit intent.
     """
+    # «ادامه بده» — the shortest possible resume: every STOPPED goal is
+    # resumed from its exact failing step. The human phrasing of recovery.
+    if forced_route is None and command.strip() in ("ادامه بده", "ادامه", "برو ادامه"):
+        from universal_mind.agent_loop import _ensure_goals_table
+        from universal_mind.database_suite import DatabaseSuite
+
+        db = DatabaseSuite(persistent=True)
+        _ensure_goals_table(db)
+        q = db.query("SELECT id FROM goals WHERE state = 'stopped' ORDER BY id")
+        stopped = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []
+        if not stopped:
+            return {
+                "ok": True, "command": command, "route": ["goal"],
+                "matched_words": ["ادامه"], "unknown": [],
+                "extracted_params": {}, "result": {"goal": {"finished": True, "steps": 0,
+                                                            "report": "هدفی متوقف نشده که ادامه بدهم."}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": "هدفی متوقف نشده که ادامه بدهم.",
+                "_registry": registry or ToolRegistry(),
+            }
+        from universal_mind.agent_loop import goal_run_report, run_goal
+
+        reports = [goal_run_report(run_goal(gid)) for gid in stopped[:3]]
+        joined = "\n\n".join(reports)
+        all_finished = "ناتمام" not in joined
+        return {
+            "ok": all_finished, "command": command, "route": ["goal"],
+            "matched_words": ["ادامه"], "unknown": [],
+            "extracted_params": {},
+            "result": {"goal": {"finished": all_finished, "steps": len(stopped), "report": joined}},
+            "errors": {} if all_finished else {"goal": "بیش از سه هدف متوقف است — بقیه را با یک «ادامه بده»ی دیگر بگیر"},
+            "durations_ms": {}, "flows": [], "judgment": {},
+            "agent_report": joined,
+            "_registry": registry or ToolRegistry(),
+        }
+
     if forced_route is None and "هدف" in command and ":" in command:
         from universal_mind.goal_parser import parse_goal
 

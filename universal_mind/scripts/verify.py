@@ -98,6 +98,7 @@ PROBES = [
     "probe_agent_loop.py",
     "probe_autonomous_agent.py",
     "probe_honesty_pressure.py",
+    "probe_crown_cycle.py",
 ]
 
 

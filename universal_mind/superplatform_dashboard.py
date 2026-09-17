@@ -80,11 +80,25 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 
         _ensure_goals_table(db)
         goals_q = db.query(
-            "SELECT goal, next_step, state FROM goals ORDER BY id DESC LIMIT 8"
+            "SELECT goal, next_step, state, outcomes FROM goals ORDER BY id DESC LIMIT 8"
         )
         goals_rows = goals_q["rows"] if goals_q.get("ok") else []
     except Exception:  # noqa: BLE001
         goals_rows = []
+
+    # The CROWN: the currently-standing standard chain (the ARETĒ-elected best).
+    try:
+        from universal_mind.history_analytics import crown_standing_chain
+
+        crown = crown_standing_chain()
+        crown_html = (
+            f"'{crown['chain']}' با {_persian_digits(str(crown['wins']))} برد "
+            f"و داوری {_persian_digits(str(round(crown['mean_excellence'] * 100)))}٪"
+            if crown.get("ok") and crown.get("crowned")
+            else "هنوز زنجیرهای سزاوارِ تاج نشده"
+        )
+    except Exception:  # noqa: BLE001
+        crown_html = "—"
 
     # The proactive layer: the operator's real schedules (what runs itself).
     try:
@@ -112,11 +126,22 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
         f"<tr><td dir='ltr'>{t['d']}</td><td>{_persian_digits(str(round(float(t['m'] or 0) * 100)))}٪</td></tr>"
         for t in trend
     ) or "<tr><td colspan='2'>هنوز داوریای ثبت نشده</td></tr>"
+    def _verdict(outcomes_raw: str) -> str:
+        import json
+
+        try:
+            outcomes = json.loads(outcomes_raw or "[]")
+            last = outcomes[-1]["excellence"] if outcomes else None
+            return _persian_digits(str(round(float(last) * 100))) + "٪" if last is not None else "—"
+        except (ValueError, KeyError, IndexError, TypeError):
+            return "—"
+
     agent_rows = "".join(
         f"<tr><td>{g['goal']}</td><td>{_persian_digits(str(g['next_step']))}</td>"
+        f"<td>{_verdict(g.get('outcomes', ''))}</td>"
         f"<td>{'✅ تمام' if g['state'] == 'done' else ('⏸ متوقف' if g['state'] == 'stopped' else '▶ فعال')}</td></tr>"
         for g in goals_rows
-    ) or "<tr><td colspan='3'>هدفی ثبت نشده</td></tr>"
+    ) or "<tr><td colspan='4'>هدفی ثبت نشده</td></tr>"
     watcher_rows = "".join(
         f"<tr><td dir='ltr'>{w['folder']}</td>"
         f"<td>{w['action']}</td>"
@@ -204,8 +229,13 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 </div>
 
 <div class="card" style="margin-top:16px">
+  <h2>👑 استاندارد ایستاده (تاج ARETĒ)</h2>
+  <div style="font-size:15px">{crown_html}</div>
+</div>
+
+<div class="card" style="margin-top:16px">
   <h2>🎯 اهداف عامل</h2>
-  <table><tr><th>هدف</th><th>گام بعدی</th><th>وضعیت</th></tr>{agent_rows}</table>
+  <table><tr><th>هدف</th><th>گام بعدی</th><th>آخرین داوری</th><th>وضعیت</th></tr>{agent_rows}</table>
 </div>
 
 <div class="card" style="margin-top:16px">
