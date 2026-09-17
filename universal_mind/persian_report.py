@@ -35,6 +35,7 @@ _CAP_FA: dict[str, str] = {
     "clipboard": "کلیپبورد",
     "speech": "گفتار",
     "ocr": "متنخوان",
+    "excel": "صفحهگسترده",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -155,6 +156,18 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "pdf":
         return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+    if cap == "excel" and isinstance(result, dict):
+        if "rows" in result:  # a write: a real workbook was made
+            return (
+                f"صفحهگستردهی اکسل ساخته شد "
+                f"({_fa_num(result['rows'])} ردیف × {_fa_num(result['columns'])} ستون، {_kb(result.get('bytes'))})."
+            )
+        if "headers" in result:  # a read: a real workbook came back
+            return (
+                f"صفحهگسترده خوانده شد: {_fa_num(len(result.get('rows', [])))} ردیف "
+                f"با ستونهای {'، '.join(str(h) for h in result.get('headers', []))}."
+            )
+        return None
     if cap == "ocr" and isinstance(result, dict):
         text = str(result.get("text", "")).strip()
         lang = str(result.get("language", ""))

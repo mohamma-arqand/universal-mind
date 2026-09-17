@@ -176,5 +176,31 @@ class ChainAdvisor:
             mean_excellence=round(excellence_sum / wins, 4),
         )
 
+    def completion_hint(self, command: str) -> str | None:
+        """The synthesis-completion suggestion: when the advised chain MAKES an
+        artifact but never ships it (e.g. chart without pdf/archive), suggest
+        the completed form — grounded in what the operator actually runs:
+        the hint fires only when the FULL chain exists in history with wins."""
+        words = _capability_words(command)
+        if not words:
+            return None
+        advice = self.advise(command)
+        if advice is None:
+            return None
+        route = advice.route
+        # A maker without a shipper: chart/image/vision present, pdf/archive absent
+        makers = {"chart", "image", "vision"}
+        shippers = {"pdf", "archive", "excel"}
+        if route and (set(route) & makers) and not (set(route) & shippers):
+            completed = (*route, "pdf")
+            # the completed chain must have REALLY succeeded before
+            for record in self._history.successful_runs():
+                if record.route == completed:
+                    return (
+                        f"💡 میتوانی کاملش کنی: {' → '.join(completed)} "
+                        f"(سنتزِ نمودار درون گزارش، {record.excellence or 1.0:.0%} داوری)"
+                    )
+        return None
+
 
 __all__ = ["ChainAdvice", "ChainAdvisor", "RunHistory", "RunRecord"]

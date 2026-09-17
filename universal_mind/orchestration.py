@@ -184,6 +184,26 @@ def _flow_params(
                 )
         return params, None
 
+    # EXCEL flow — the chain's computed numbers become a REAL .xlsx table:
+    # the stats/metrics the chain produced, styled headers, typed cells.
+    # Explicit headers/rows in the params always win.
+    if consumer == "excel":
+        if params.get("operation") == "read_table":
+            return params, None  # the operator asked to READ a workbook
+        if params.get("headers") or params.get("rows"):
+            return params, None  # explicit table content wins
+        stats = last_output.get("stats") if isinstance(last_output, dict) else None
+        if not isinstance(stats, dict) or not stats:
+            stats = dict(produced_stats) if produced_stats else {}
+        if stats:
+            headers = ["شاخص", "مقدار"]
+            rows = [[str(k), _fmt_num(v)] for k, v in stats.items()]
+            return (
+                {**params, "operation": "write_table", "headers": headers, "rows": rows},
+                f"{last_producer} → excel ({len(rows)} شاخص در اکسل)",
+            )
+        return params, None
+
     # OCR flow — the chain's own image READ: real text extraction from what
     # the platform just made. The deepest read loop: make → look → READ.
     if consumer == "ocr" and produced_paths:

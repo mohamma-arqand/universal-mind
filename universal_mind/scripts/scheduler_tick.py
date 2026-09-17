@@ -23,13 +23,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 
 def tick(*, notify_summary: bool = True) -> dict[str, object]:
-    """One honest tick: fire everything due, then SAY what ran.
+    """One honest tick: back up the store, fire everything due, then SAY it.
 
-    With ``notify_summary`` the tick closes its own perception loop: a real
-    Windows toast reports how many scheduled tasks fired and how they went —
-    the operator learns the platform worked while away, without opening it.
+    The rotating backup runs FIRST (the corrupted-db lesson: an external
+    writer once splattered stderr over mind.db's header — a fresh backup at
+    every tick means the worst case is always one tick old). Then the due
+    work, then the toast.
     """
-    from universal_mind.scheduler import run_due
+    from universal_mind.scheduler import backup_database, run_due
+
+    try:
+        backup_database()
+    except Exception as exc:  # noqa: BLE001 — a backup failure never blocks work
+        print(f"(backup failed: {exc})")
 
     stamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     result = run_due()

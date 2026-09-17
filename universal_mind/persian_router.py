@@ -105,6 +105,15 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("ساختارش را بخوان", "vision"),
     ("ساختار تصویر", "vision"),
     ("ساختارش", "vision"),
+    # webfetch (urllib) — the platform reaches the web
+    ("وب را بگیر", "webfetch"),
+    ("صفحه وب", "webfetch"),
+    ("سایت", "webfetch"),
+    ("آدرسش را بگیر", "webfetch"),
+    # excel (openpyxl) — real spreadsheets
+    ("اکسل", "excel"),
+    ("در اکسل", "excel"),
+    ("صفحهگسترده", "excel"),
     # ocr (Windows.Media.Ocr) — the platform READS images
     ("متنش را بخوان", "ocr"),
     ("متن تصویر", "ocr"),

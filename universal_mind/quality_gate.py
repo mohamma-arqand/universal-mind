@@ -71,11 +71,18 @@ def run_with_quality_gate(
     attempts: list[GateAttempt] = []
     seen: set[tuple[str, ...]] = set()
 
+    # THREE honest candidates: the advised route, its reverse, and a
+    # planner-style rotation (first→last) for 3+ chains. Each is REAL work —
+    # never a straw man; duplicates are de-duplicated.
     candidates: list[tuple[str, ...]] = [route]
     if len(route) >= 2:
         reversed_route = tuple(reversed(route))
         if reversed_route != route:
             candidates.append(reversed_route)
+    if len(route) >= 3:
+        rotated = (route[-1], *route[:-1])
+        if rotated not in candidates:
+            candidates.append(rotated)
 
     for candidate in candidates[:max(1, max_attempts)]:
         if candidate in seen:

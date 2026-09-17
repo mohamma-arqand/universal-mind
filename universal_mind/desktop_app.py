@@ -591,10 +591,19 @@ class MindDesktopApp:
                 if suggestion.mean_excellence > 0.0
                 else "بدون داوری هنوز"
             )
+            completion = ""
+            try:
+                from universal_mind.run_history import ChainAdvisor
+
+                hint = ChainAdvisor().completion_hint(command)
+                if hint:
+                    completion = f"\n{hint}"
+            except Exception:  # noqa: BLE001 — a hint is a bonus, never fatal
+                pass
             self._fa_advice_label.configure(
                 text=(
                     f"💡 پیشنهاد: {chain_fa} "
-                    f"({suggestion.succeeded_runs} اجرای موفق، {quality})"
+                    f"({suggestion.succeeded_runs} اجرای موفق، {quality}){completion}"
                 ),
                 foreground="#2a7",
             )

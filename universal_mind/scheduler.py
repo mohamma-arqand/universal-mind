@@ -352,6 +352,41 @@ def _register_watcher(folder: str, action: str) -> dict[str, Any]:
     return {"ok": True, "watcher": True, "folder": folder, "action": action, "error": ""}
 
 
+def backup_database(keep: int = 3) -> dict[str, Any]:
+    """A rotating safe copy of the persistent store (the corruption lesson).
+
+    Copies mind.db to mind.db.bak-<timestamp> and prunes to the newest
+    ``keep`` copies. An honest failure (db busy, disk full) reports why —
+    never a silent skip: the backup IS the recovery path, its health matters.
+    """
+    import shutil
+    from datetime import datetime as _dt
+
+    src = DatabaseSuite.DEFAULT_DB_DIR / "mind.db"
+    if not src.exists():
+        return {"ok": False, "error": "mind.db does not exist", "backups": []}
+    stamp = _dt.now().strftime("%Y%m%d-%H%M%S")
+    dst = src.parent / f"mind.db.bak-{stamp}"
+    try:
+        shutil.copy2(src, dst)
+    except OSError as exc:
+        return {"ok": False, "error": str(exc), "backups": []}
+    # prune: keep the newest `keep` timestamped backups
+    backups = sorted(
+        (f for f in src.parent.glob("mind.db.bak-2*") if f.is_file()),
+        key=lambda f: f.name,
+    )
+    pruned = []
+    for old_file in backups[:-keep] if len(backups) > keep else []:
+        try:
+            old_file.unlink()
+            pruned.append(old_file.name)
+        except OSError:
+            pass
+    return {"ok": True, "backup": str(dst), "bytes": dst.stat().st_size,
+            "total_backups": len(backups) - len(pruned), "pruned": len(pruned), "error": ""}
+
+
 def _ensure_watcher_table(db: DatabaseSuite) -> None:
     db.execute(
         "CREATE TABLE IF NOT EXISTS folder_watchers ("

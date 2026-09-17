@@ -36,7 +36,7 @@ _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 _SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
-_STATS_CONSUMERS: tuple[str, ...] = ("pdf",)  # a report can tabulate real numbers
+_STATS_CONSUMERS: tuple[str, ...] = ("pdf", "excel")  # a report/sheet can tabulate real numbers
 _SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "clipboard")  # run last, consume anything
 # database is a CONDITIONAL sink: it runs last when WRITING (a computing
 # producer feeds it), but it runs BEFORE pdf when READING — «چی ذخیره کردی؟

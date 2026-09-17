@@ -201,6 +201,26 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             # «جمع ۲ و ۳» → a real JS expression over the extracted numbers.
             return {"operation": "evaluate", "expression": " + ".join(str(n) for n in numbers)}
         return {"operation": "evaluate"}
+    if capability == "webfetch":
+        # URL extraction: http(s)://... in the sentence, or a bare domain
+        # after «آدرس». Honest: without a recognizable URL the fetch refuses.
+        import re as _re
+
+        m = _re.search(r"https?://\S+", command)
+        if m:
+            return {"operation": "fetch", "url": m.group(0)}
+        m2 = _re.search(r"آدرس ([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", command)
+        if m2:
+            return {"operation": "fetch", "url": "https://" + m2.group(1)}
+        return {}  # no URL found — the connector will refuse honestly
+
+    if capability == "excel":
+        # «در اکسل بریز» — the flow fills headers/rows from the chain's real
+        # numbers; an explicit path means reading an existing workbook back.
+        if path:
+            return {"operation": "read_table", "path": path}
+        return {"operation": "write_table"}  # OPEN: the flow fills the table
+
     if capability == "ocr":
         # «متن تصویر را بخوان» — with a path in the sentence it is explicit;
         # without one the flow layer aims it at the chain's own image.

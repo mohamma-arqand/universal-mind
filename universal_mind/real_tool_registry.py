@@ -22,6 +22,8 @@ from universal_mind.database_suite import DatabaseSuiteConnector
 from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
+from universal_mind.excel_suite import ExcelSuiteConnector
+from universal_mind.webfetch_tool import WebFetchToolConnector
 from universal_mind.ocr_tool import OcrToolConnector
 from universal_mind.speech_tool import SpeechToolConnector
 from universal_mind.pdf_suite import PdfSuiteConnector
@@ -41,6 +43,8 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "clipboard": ClipboardToolConnector,
     "speech": SpeechToolConnector,         # real Windows SAPI voice (fa-preferred, honest)
     "ocr": OcrToolConnector,              # real Windows.Media.Ocr — the platform READS images
+    "excel": ExcelSuiteConnector,         # real openpyxl workbooks (the 15th program)
+    "webfetch": WebFetchToolConnector,    # real urllib fetch — the 16th program
     "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)
     "pdf": PdfSuiteConnector,          # full reportlab surface (documents/tables/images)
     "chart": ChartSuiteConnector,      # full matplotlib surface (line/bar/pie/hist/scatter)
