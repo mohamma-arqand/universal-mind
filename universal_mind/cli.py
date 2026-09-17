@@ -424,7 +424,7 @@ def _cmd_goal(args: argparse.Namespace) -> int:
     if parsed is None:
         print(json.dumps({"ok": False, "error": "قالب هدف: هدف: گام اول و گام دوم ..."}, ensure_ascii=False))
         return 1
-    started = start_goal(parsed.text, parsed.steps)
+    started = start_goal(parsed.text, parsed.steps, getattr(parsed, "guarded", None))
     result = run_goal(started["goal_id"])
     print(goal_run_report(result))
     return 0 if result.finished else 1

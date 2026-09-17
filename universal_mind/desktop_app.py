@@ -351,7 +351,7 @@ class MindDesktopApp:
         if parsed is None:
             messagebox.showinfo("Universal Mind", "قالب هدف: هدف: گام اول و گام دوم ...")
             return
-        started = start_goal(parsed.text, parsed.steps)
+        started = start_goal(parsed.text, parsed.steps, getattr(parsed, "guarded", None))
         result = run_goal(started["goal_id"])
         self._refresh_goals()
         self._goals_text.insert(tk.END, "\n" + goal_run_report(result) + "\n")

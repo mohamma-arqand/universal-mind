@@ -25,56 +25,65 @@ _FA_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
 
 @dataclass(frozen=True)
 class Goal:
-    """One parsed objective: its steps, ready to run as commands."""
+    """One parsed objective: its steps (and which are conditionally guarded)."""
 
     text: str
     steps: tuple[str, ...]
+    guarded: tuple[bool, ...] = ()  # parallel to steps: True = run only if the
+    #                                    previous step's ARETĒ verdict said ok
 
 
 def parse_goal(sentence: str) -> Goal | None:
     """Extract a goal and its steps from a Persian sentence, or None.
 
-    The honest forms:
-      «هدف: ...»     — a goal header (with or without «داشتن»/«کردن» endings)
+    Honest forms:
+      «هدف: ...»     — a goal header
+      «هدفم ... است» — the alternate form
       «و» / «سپس» / «بعد» / «،» — the step separators
-    A sentence without the goal marker is NOT a goal (the caller treats it
-    as a normal command) — the agent never hijacks ordinary commands.
+      «اگر ... موفق بود، Y» — a CONDITIONAL step: Y runs only when the
+        previous step's ARETĒ verdict says ok (the guard is recorded).
+    A sentence without the goal marker is NOT a goal.
     """
     normalized = sentence.translate(_FA_DIGITS).strip()
-    # A goal sentence may carry a LEADING schedule clause («هر روز ساعت ۸
-    # هدف: ...») — the schedule layer parses it; here we only need the goal
-    # body, so strip any leading «هر ...» clause before matching.
-    stripped = re.sub(r"^هر\s+(?:روز\s+ساعت\s+\d{1,2}|\d+\s+(?:دقیقه|ساعت))\s+", "", normalized)
+    stripped = re.sub(
+        r"^هر\s+(?:روز\s+ساعت\s+\d{1,2}|\d+\s+(?:دقیقه|ساعت))\s+", "", normalized
+    )
     marker = re.search(r"هدف\s*[:：]\s*(.+)$", stripped, re.IGNORECASE)
     body = marker.group(1).strip() if marker else None
     if body is None:
-        # also accept «هدفم ... است»
         marker2 = re.match(r"^هدفم\s+(.+?)\s*است$", stripped)
         body = marker2.group(1).strip() if marker2 else None
     if not body:
         return None
-    # Split on the step separators «سپس/بعد/،» — and «و» ONLY when it does not
-    # join two numbers («۱۰ و ۲۰» is a data list, not two steps). We scan with
-    # a marker pass instead of one fragile regex.
-    MARK = chr(0)  # guards numeric «و» from the step split
+
+    MARK = chr(0)
     guarded = re.sub(r"(\d)\s+و\s+(\d)", r"\1" + MARK + r"و" + MARK + r"\2", body)
-    parts = re.split(r"\s+(?:سپس|بعد(?:ش)?|آن(?:گاه)?)\s+|،|\s+و\s+", guarded)
-    parts = [p2.replace(MARK, " ") for p2 in parts]
+    raw_parts = re.split(r"\s+(?:سپس|بعد(?:ش)?|آن(?:گاه)?)\s+|،|\s+و\s+", guarded)
+
     steps: list[str] = []
-    for part in parts:
-        step = part.strip()
-        # a real step ends in a verb-ish suffix or carries a capability word;
-        # tiny fragments like «گزارش» alone attach to the previous step
+    guarded_steps: list[bool] = []
+    pending_guard = False
+    for part in raw_parts:
+        step = part.replace(MARK, " ").strip()
         if not step:
             continue
-        if len(step) < 3:
-            if steps:
-                steps[-1] = f"{steps[-1]} و {step}"
+        m = re.match(r"^اگر.*?(?:موفق بود|درست بود|خوب بود)[،,]?\s*(.*)$", step)
+        if m and m.group(1).strip():
+            steps.append(m.group(1).strip())
+            guarded_steps.append(True)
+            continue
+        if m:
+            pending_guard = True
+            continue
+        if len(step) < 3 and steps:
+            steps[-1] = f"{steps[-1]} و {step}"
             continue
         steps.append(step)
+        guarded_steps.append(pending_guard)
+        pending_guard = False
     if not steps:
         return None
-    return Goal(text=sentence.strip(), steps=tuple(steps))
+    return Goal(text=sentence.strip(), steps=tuple(steps), guarded=tuple(guarded_steps))
 
 
 def goal_report(goal: Goal) -> dict[str, Any]:

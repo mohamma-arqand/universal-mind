@@ -96,7 +96,6 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # archive (gzip)
     ("فشرده", "archive"),
     ("آرشیو", "archive"),
-    ("زیپ", "archive"),
     ("بایگانی", "archive"),
     ("بایگانیش کن", "archive"),
     # vision (OpenCV) — تحلیل تصویر واقعی
@@ -118,6 +117,14 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("متن پی دی اف", "pdfreader"),
     ("pdf را بخوان", "pdfreader"),
     ("پی دی افش را بخوان", "pdfreader"),
+    # zip (stdlib) — the world's archive format
+    ("زیپش کن", "zip"),
+    ("در زیپ", "zip"),
+    ("بستهبندی کن", "zip"),
+    # csv (stdlib) — the universal interchange
+    ("در سیاسوی", "csv"),
+    ("سیاسویش کن", "csv"),
+    ("csv کن", "csv"),
     # excel (openpyxl) — real spreadsheets
     ("اکسل", "excel"),
     ("در اکسل", "excel"),
@@ -285,6 +292,55 @@ def route_and_run(
     agent's report (the goal loop with its verdicts). Ordinary commands are
     never hijacked — the goal marker is explicit intent.
     """
+    # «وضعیت» — the agent's status board: every goal, its state and verdict.
+    if forced_route is None and command.strip() in ("وضعیت", "وضعیت عامل", "چی شد؟", "چه خبر"):
+        from universal_mind.agent_loop import _ensure_goals_table
+        from universal_mind.database_suite import DatabaseSuite
+
+        db = DatabaseSuite(persistent=True)
+        _ensure_goals_table(db)
+        q = db.query(
+            "SELECT goal, next_step, state, outcomes FROM goals "
+            "WHERE state != 'archived' ORDER BY id DESC LIMIT 10"
+        )
+        rows = q["rows"] if q.get("ok") else []
+        state_fa = {"done": "✅ تمام", "stopped": "⏸ متوقف", "active": "▶ فعال"}
+        if not rows:
+            report = "هنوز هدفی ثبت نشده. با «هدف: ...» شروع کن."
+        else:
+            import json as _json
+
+            fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+            lines = []
+            for g in rows:
+                try:
+                    outcomes = _json.loads(g.get("outcomes") or "[]")
+                    last_exc = outcomes[-1]["excellence"] if outcomes else None
+                    verdict = (
+                        str(round(float(last_exc), 2)).translate(fa)
+                        if last_exc is not None else "—"
+                    )
+                except (ValueError, KeyError, TypeError):
+                    verdict = "—"
+                goal_fa = str(g["goal"]).translate(fa)  # the operator's digits,
+                # rendered Persian (the STORED text stays verbatim — the
+                # RENDERING is ours)
+                lines.append(
+                    f"{state_fa.get(g['state'], g['state'])} {goal_fa} "
+                    f"(گام بعدی: {str(g['next_step']).translate(fa)}"
+                    f"{'، آخرین داوری: ' + verdict if verdict != '—' else ''})"
+                )
+            report = "\n".join(lines)
+        return {
+            "ok": True, "command": command, "route": ["goal"],
+            "matched_words": ["وضعیت"], "unknown": [],
+            "extracted_params": {},
+            "result": {"goal": {"finished": True, "steps": 0, "report": report}},
+            "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+            "agent_report": report,
+            "_registry": registry or ToolRegistry(),
+        }
+
     # «ادامه بده» — the shortest possible resume: every STOPPED goal is
     # resumed from its exact failing step. The human phrasing of recovery.
     if forced_route is None and command.strip() in ("ادامه بده", "ادامه", "برو ادامه"):
@@ -328,7 +384,7 @@ def route_and_run(
         if parsed is not None:
             from universal_mind.agent_loop import goal_run_report, run_goal, start_goal
 
-            started = start_goal(parsed.text, parsed.steps)
+            started = start_goal(parsed.text, parsed.steps, getattr(parsed, "guarded", None))
             result = run_goal(started["goal_id"])
             report = goal_run_report(result)
             return {

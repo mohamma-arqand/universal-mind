@@ -38,7 +38,7 @@ _OCR_CONSUMER_LIKE: tuple[str, ...] = ("ocr",)  # reads an image (waits for imag
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf", "excel")  # a report/sheet can tabulate real numbers
-_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "clipboard", "database")  # run last, consume anything
+_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "clipboard", "database", "zip")  # run last, consume anything
 # database is a CONDITIONAL sink: it runs last when WRITING (a computing
 # producer feeds it), but it runs BEFORE pdf when READING — «چی ذخیره کردی؟
 # و گزارشش کن» is database(read) → pdf(report). The planner distinguishes by

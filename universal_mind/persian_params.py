@@ -219,6 +219,16 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "read_text", "path": path}
         return {"operation": "read_text"}  # OPEN: the flow picks the chain's pdf
 
+    if capability == "zip":
+        if path:
+            return {"operation": "list", "path": path}
+        return {"operation": "pack"}  # OPEN: the flow packs the chain's files
+
+    if capability == "csv":
+        if path:
+            return {"operation": "read_table", "path": path}
+        return {"operation": "write_table"}  # OPEN: the flow fills the table
+
     if capability == "excel":
         # «در اکسل بریز» — the flow fills headers/rows from the chain's real
         # numbers; an explicit path means reading an existing workbook back.

@@ -22,6 +22,8 @@ from universal_mind.database_suite import DatabaseSuiteConnector
 from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
+from universal_mind.csv_suite import CsvSuiteConnector
+from universal_mind.zip_suite import ZipSuiteConnector
 from universal_mind.excel_suite import ExcelSuiteConnector
 from universal_mind.pdfreader_tool import PdfReaderToolConnector
 from universal_mind.screenshot_tool import ScreenshotToolConnector
@@ -49,6 +51,8 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "webfetch": WebFetchToolConnector,    # real urllib fetch — the 16th program
     "pdfreader": PdfReaderToolConnector, # real pypdf — the 17th: reads PDFs
     "screenshot": ScreenshotToolConnector,  # real ImageGrab — the 18th: sees the screen
+    "csv": CsvSuiteConnector,             # real csv stdlib — the 19th: universal interchange
+    "zip": ZipSuiteConnector,             # real zipfile — the 20th: the world's archive format
     "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)
     "pdf": PdfSuiteConnector,          # full reportlab surface (documents/tables/images)
     "chart": ChartSuiteConnector,      # full matplotlib surface (line/bar/pie/hist/scatter)

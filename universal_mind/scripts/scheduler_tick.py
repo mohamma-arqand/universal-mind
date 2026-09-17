@@ -59,7 +59,21 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — watchers are a channel, never fatal
         print(f"(watchers failed: {exc})")
 
-    if notify_summary and (count or watched_fired):
+    # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
+    # operator's «ادامه بده» is the recovery for exactly these.
+    stopped_goals = 0
+    try:
+        from universal_mind.agent_loop import _ensure_goals_table
+        from universal_mind.database_suite import DatabaseSuite
+
+        gdb = DatabaseSuite(persistent=True)
+        _ensure_goals_table(gdb)
+        gq = gdb.query("SELECT COUNT(*) AS n FROM goals WHERE state = 'stopped'")
+        stopped_goals = int(gq["rows"][0]["n"]) if gq.get("ok") else 0
+    except Exception:  # noqa: BLE001 — a status view, never fatal
+        stopped_goals = 0
+
+    if notify_summary and (count or watched_fired or stopped_goals):
         ok_count = sum(1 for f in fired if f.get("ok"))
         failed = count - ok_count
         # Persian digits, honest wording — successes first, failures named.
@@ -69,6 +83,9 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         if watched_fired:
             fa_w = str(watched_fired).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
             body += f"، {fa_w} فایلِ جدید پردازش شد"
+        if stopped_goals:
+            fa_g = str(stopped_goals).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+            body += f"، {fa_g} هدفِ متوقف‌شده در انتظارِ «ادامه بده»"
         if failed:
             fa_failed = str(failed).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
             body += f"، {fa_failed} ناموفق"

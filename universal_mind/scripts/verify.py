@@ -99,6 +99,7 @@ PROBES = [
     "probe_autonomous_agent.py",
     "probe_honesty_pressure.py",
     "probe_crown_cycle.py",
+    "probe_operator_experience.py",
 ]
 
 

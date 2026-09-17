@@ -61,8 +61,17 @@ def _ensure_goals_table(db: DatabaseSuite) -> None:
         "CREATE TABLE IF NOT EXISTS goals ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "goal TEXT, steps TEXT, next_step INTEGER DEFAULT 0, "
-        "outcomes TEXT DEFAULT '[]', state TEXT DEFAULT 'active')"
+        "outcomes TEXT DEFAULT '[]', state TEXT DEFAULT 'active', "
+        "guarded TEXT DEFAULT '')"
     )
+    # migrate an existing table: add guarded when missing (the silent-migration
+    # lesson: verify the column list afterwards).
+    try:
+        cols = db.query("SELECT name FROM pragma_table_info('goals')")
+        if cols.get("ok") and "guarded" not in {str(c["name"]) for c in cols["rows"]}:
+            db.execute("ALTER TABLE goals ADD COLUMN guarded TEXT DEFAULT ''")
+    except Exception:  # noqa: BLE001
+        pass
     # GOAL ARCHIVE: finished/stopped goals older than the newest 100 move to
     # goals_archive (the live table stays fast; nothing is ever DELETED —
     # history is append-only, the archive is where it lives).
@@ -97,7 +106,11 @@ def _ensure_goals_table(db: DatabaseSuite) -> None:
         pass
 
 
-def start_goal(goal_text: str, steps: tuple[str, ...]) -> dict[str, Any]:
+def start_goal(
+    goal_text: str,
+    steps: tuple[str, ...],
+    guarded: tuple[bool, ...] | None = None,
+) -> dict[str, Any]:
     """Persist a new goal (or revive an identical unfinished one)."""
     db = _store()
     _ensure_goals_table(db)
@@ -110,6 +123,7 @@ def start_goal(goal_text: str, steps: tuple[str, ...]) -> dict[str, Any]:
     db.insert_many("goals", [{
         "goal": goal_text, "steps": "|".join(steps),
         "next_step": "0", "outcomes": "[]", "state": "active",
+        "guarded": "|".join("1" if g else "0" for g in (guarded or ()) * 1)[: len(steps) * 2 - 1] if guarded else "",
     }])
     q2 = db.query("SELECT id FROM goals WHERE goal = ? AND state = 'active'", (goal_text,))
     goal_id = int(q2["rows"][0]["id"]) if q2.get("ok") and q2["rows"] else -1
@@ -140,18 +154,35 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
 
     db = _store()
     _ensure_goals_table(db)
-    q = db.query("SELECT goal, steps, next_step FROM goals WHERE id = ?", (str(goal_id),))
+    q = db.query("SELECT goal, steps, next_step, guarded FROM goals WHERE id = ?", (str(goal_id),))
     if not q.get("ok") or not q["rows"]:
         return GoalRunResult(goal="", steps=(), finished=False, stopped_at=-1,
                              reasoning="چنین هدفی ثبت نشده است")
     row = q["rows"][0]
     goal_text = str(row["goal"])
     steps = tuple(str(row["steps"]).split("|"))
+    guard_raw = str(row.get("guarded", "") or "")
+    guarded = tuple(g == "1" for g in guard_raw.split("|") if g != "") if guard_raw else tuple(False for _ in steps)
     next_step = int(row["next_step"] or 0)
 
     outcomes: list[StepOutcome] = []
     for index in range(next_step, min(len(steps), next_step + max_steps)):
         command = steps[index]
+        # A CONDITIONAL step: run only if the previous executed step's
+        # ARETĒ verdict said ok. Previous failure → SKIPPED honestly (the
+        # goal continues; the guard's whole point is not to march on).
+        if index > 0 and index < len(guarded) and guarded[index]:
+            prev = outcomes[-1] if outcomes else None
+            if prev is None or not prev.ok:
+                skip = StepOutcome(
+                    index=index, command=command, ok=True,
+                    excellence=0.0, repaired=False,
+                    detail="رد شد — گام شرطیِ پس از گام ناموفق اجرا نشد",
+                )
+                outcomes.append(skip)
+                _record_outcome(db, goal_id, skip)
+                db.execute(f"UPDATE goals SET next_step = {index + 1} WHERE id = {goal_id}")
+                continue
         payload = route_and_run(command)
         judgment = judge_run(payload)
         excellence = float(judgment.get("excellence", 0.0))
@@ -177,12 +208,19 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
         outcomes.append(outcome)
         _record_outcome(db, goal_id, outcome)
         if not step_ok:
-            db.execute(f"UPDATE goals SET next_step = {index}, state = 'stopped' WHERE id = {goal_id}")
-            return GoalRunResult(
-                goal=goal_text, steps=tuple(outcomes), finished=False,
-                stopped_at=index,
-                reasoning=f"گام {index + 1} شکست خورد ({outcome.detail[:60]}) — هدف متوقف شد",
+            # A failed step stops the goal UNLESS the next step is CONDITIONAL:
+            # a guard's whole purpose is to react to failure — the loop walks
+            # on so the guard can skip honestly (or run after a repair).
+            next_guarded = (
+                index + 1 < len(guarded) and guarded[index + 1]
             )
+            if not next_guarded:
+                db.execute(f"UPDATE goals SET next_step = {index}, state = 'stopped' WHERE id = {goal_id}")
+                return GoalRunResult(
+                    goal=goal_text, steps=tuple(outcomes), finished=False,
+                    stopped_at=index,
+                    reasoning=f"گام {index + 1} شکست خورد ({outcome.detail[:60]}) — هدف متوقف شد",
+                )
         db.execute(f"UPDATE goals SET next_step = {index + 1} WHERE id = {goal_id}")
 
     db.execute(f"UPDATE goals SET state = 'done' WHERE id = {goal_id}")

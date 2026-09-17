@@ -273,6 +273,75 @@ def _flow_params(
             )
         return params, None
 
+    # ZIP flow — every file the chain produced, as a REAL .zip (the world's
+    # format; the tar.gz dossier stays for the archive capability).
+    if consumer == "zip":
+        if params.get("operation") in ("list", "extract"):
+            return params, None  # the operator's explicit zip intent
+        if params.get("files"):
+            return params, None  # explicit file list wins
+        if produced_paths:
+            return (
+                {**params, "operation": "pack", "files": list(produced_paths)},
+                f"{len(produced_paths)} فایلِ این اجرا → zip (بستهبندی جهانی)",
+            )
+        return params, None
+
+    # ZIP→DATABASE flow — a zip LISTING lands in the memory store (what the
+    # archive contains, as rows: name + bytes).
+    if consumer == "database" and isinstance(last_output, dict) and "entries" in last_output:
+        if params.get("operation") and params["operation"] not in ("query", "insert_many"):
+            return params, None
+        rows_out = [
+            {"metric": str(e.get("name", ""))[:40], "value": str(e.get("bytes", ""))}
+            for e in last_output.get("entries", [])[:20]
+        ]
+        if rows_out:
+            return (
+                {**{k: v for k, v in params.items() if k != "rows"},
+                 "operation": "insert_many", "table": "chain_results",
+                 "rows": rows_out, "persistent": True},
+                f"zip → database (محتوای آرشیو: {len(rows_out)} ردیف ذخیره شد)",
+            )
+        return params, None
+
+    # CSV flow — the chain's computed numbers become a REAL .csv (utf-8-sig):
+    # the universal interchange; any program can open it.
+    if consumer == "csv":
+        if params.get("operation") == "read_table":
+            return params, None
+        if params.get("headers") or params.get("rows"):
+            return params, None
+        stats = last_output.get("stats") if isinstance(last_output, dict) else None
+        if not isinstance(stats, dict) or not stats:
+            stats = dict(produced_stats) if produced_stats else {}
+        if stats:
+            headers = ["شاخص", "مقدار"]
+            rows = [[str(k), v] for k, v in stats.items()]
+            return (
+                {**params, "operation": "write_table", "headers": headers, "rows": rows},
+                f"{last_producer} → csv ({len(rows)} شاخص در سیاسوی)",
+            )
+        return params, None
+
+    # CSV→DATABASE flow — a csv READ lands its typed rows in the memory store.
+    if consumer == "database" and isinstance(last_output, dict) and "rows" in last_output and "headers" in last_output:
+        if params.get("operation") and params["operation"] not in ("query", "insert_many"):
+            return params, None
+        rows_out = [
+            {"metric": str(r[0])[:40], "value": str(r[1])[:60]}
+            for r in last_output.get("rows", [])[:20]
+            if isinstance(r, list) and len(r) >= 2
+        ]
+        if rows_out:
+            return (
+                {**{k: v for k, v in params.items() if k != "rows"},
+                 "operation": "insert_many", "table": "chain_results",
+                 "rows": rows_out, "persistent": True},
+                f"csv → database ({len(rows_out)} ردیفِ سیاسوی ذخیره شد)",
+            )
+        return params, None
+
     # EXCEL flow — the chain's computed numbers become a REAL .xlsx table:
     # the stats/metrics the chain produced, styled headers, typed cells.
     # Explicit headers/rows in the params always win.
