@@ -33,7 +33,8 @@ _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 
 # Which capabilities produce which resource. The planner reorders a CONSUMER
 # of a resource after its PRODUCER — nothing else moves.
-_SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute", "webfetch", "ocr")  # numbers/tables/web/read text
+_SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute", "webfetch")  # numbers/tables/web
+_OCR_CONSUMER_LIKE: tuple[str, ...] = ("ocr",)  # reads an image (waits for image producers)
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf", "excel")  # a report/sheet can tabulate real numbers
@@ -122,7 +123,7 @@ def _capability_order(caps: list[str]) -> list[str]:
                 # a READING database feeds the report: it waits only on other
                 # readers, but must run BEFORE the pdf that consumes its rows.
                 blockers = []  # free to run now — before the pdf below
-            elif cap in _IMAGE_CONSUMERS:
+            elif cap in _IMAGE_CONSUMERS or cap in _OCR_CONSUMER_LIKE:
                 blockers = [p for p in _IMAGE_PRODUCERS if p in remaining]
             if not blockers:
                 ordered.append(cap)
