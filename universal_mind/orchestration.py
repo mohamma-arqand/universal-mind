@@ -391,6 +391,34 @@ def _flow_params(
     # voice (fa-preferred, honest when no Persian voice is installed).
     # Explicit text always wins; the command echo is treated as empty.
     if consumer == "speech":
+        # The AGENT's own narration: when the run just CAME FROM the goal
+        # layer (its command carries the goal marker), the goal's report is
+        # the worthiest text to speak — the platform narrates its own pursuit.
+        if not params.get("text") and "هدف" in command:
+            from universal_mind.agent_loop import _ensure_goals_table
+            from universal_mind.database_suite import DatabaseSuite
+
+            gdb = DatabaseSuite(persistent=True)
+            _ensure_goals_table(gdb)
+            gq = gdb.query(
+                "SELECT outcomes, state FROM goals ORDER BY id DESC LIMIT 1"
+            )
+            if gq.get("ok") and gq["rows"]:
+                import json as _json
+
+                outcomes = _json.loads(gq["rows"][0]["outcomes"] or "[]")
+                if outcomes:
+                    last = outcomes[-1]
+                    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+                    spoken = (
+                        f"گام {str(last['index'] + 1).translate(fa)}: {last['command']}. "
+                        f"داوری {str(round(last['excellence'], 2)).translate(fa)}. "
+                        + ("گام موفق بود." if last["ok"] else "گام شکست خورد و هدف متوقف شد.")
+                    )
+                    return (
+                        {**params, "operation": "speak", "text": spoken},
+                        "goal → speech (گزارش آخرین گام بلند گفته شد)",
+                    )
         if not params.get("text") or params.get("text") == command:
             summary = _artifact_summary(last_output)
             if summary:

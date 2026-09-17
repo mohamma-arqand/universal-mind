@@ -336,6 +336,21 @@ def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
                     "ok": goal_result.finished,
                     "route": ["goal"],
                 }
+                # The goal's OUTCOME, said ALOUD (the tick already toasts; the
+                # voice closes the perception loop for the operator's ears).
+                try:
+                    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+                    n_steps = str(len(goal_result.steps)).translate(fa)
+                    spoken = (
+                        f"هدف زمانبندیشده تمام شد؛ {n_steps} گام اجرا شد."
+                        if goal_result.finished
+                        else f"هدف زمانبندیشده در گامی متوقف شد؛ {goal_result.reasoning[:80]}"
+                    )
+                    from universal_mind.speech_tool import SpeechTool
+
+                    SpeechTool().speak(spoken)
+                except Exception:  # noqa: BLE001 — the voice is a bonus, never fatal
+                    pass
                 if len(goal_result.steps) >= 2:
                     entry["contest"] = goal_run_report(goal_result).replace("\n", " ")[:100]
                 mark_run(schedule.schedule_id)

@@ -63,6 +63,38 @@ def _ensure_goals_table(db: DatabaseSuite) -> None:
         "goal TEXT, steps TEXT, next_step INTEGER DEFAULT 0, "
         "outcomes TEXT DEFAULT '[]', state TEXT DEFAULT 'active')"
     )
+    # GOAL ARCHIVE: finished/stopped goals older than the newest 100 move to
+    # goals_archive (the live table stays fast; nothing is ever DELETED —
+    # history is append-only, the archive is where it lives).
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS goals_archive ("
+        "id INTEGER PRIMARY KEY, goal TEXT, steps TEXT, next_step INTEGER, "
+        "outcomes TEXT, state TEXT, archived_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+    )
+    try:
+        q = db.query("SELECT COUNT(*) AS n FROM goals")
+        total = int(q["rows"][0]["n"]) if q.get("ok") else 0
+        if total > 100:
+            # Newest 100 stay live; older FINISHED goals move to the archive.
+            # The candidate set is computed in Python (one honest query) — the
+            # INSERT/DELETE then use a simple id list (no nested NOT-IN SQL,
+            # which silently matched nothing through this suite's executor).
+            finished = db.query(
+                "SELECT id FROM goals WHERE state IN ('done', 'stopped') ORDER BY id DESC"
+            )
+            if finished.get("ok"):
+                all_done = [int(r["id"]) for r in finished["rows"]]
+                to_archive = all_done[100:]  # everything past the newest 100
+                if to_archive:
+                    id_list = ",".join(str(i) for i in to_archive)
+                    db.execute(
+                        "INSERT OR IGNORE INTO goals_archive "
+                        "(id, goal, steps, next_step, outcomes, state) "
+                        f"SELECT id, goal, steps, next_step, outcomes, state FROM goals WHERE id IN ({id_list})"
+                    )
+                    db.execute(f"DELETE FROM goals WHERE id IN ({id_list})")
+    except Exception:  # noqa: BLE001 — archival is housekeeping, never fatal
+        pass
 
 
 def start_goal(goal_text: str, steps: tuple[str, ...]) -> dict[str, Any]:

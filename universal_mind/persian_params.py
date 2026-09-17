@@ -242,6 +242,10 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "speak", "text": text}
         return {"operation": "speak"}  # OPEN: the flow speaks the chain's summary
 
+    # (goal speech is handled by the agent layer itself: the goal's report IS
+    # the spoken text — «هدف را بلند بخوان» routes to speech with the last
+    # goal report as its text, filled by the flow layer)
+
     if capability == "clipboard":
         # «بگذار/کپی کن» = write (the flow layer fills the text with what was
         # made); «بخوان/کپی چی توشه» = read. Default stays read (honest no-op
