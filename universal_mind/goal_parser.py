@@ -41,11 +41,15 @@ def parse_goal(sentence: str) -> Goal | None:
     as a normal command) — the agent never hijacks ordinary commands.
     """
     normalized = sentence.translate(_FA_DIGITS).strip()
-    marker = re.search(r"^هدف\s*[:：]\s*(.+)$", normalized, re.IGNORECASE)
+    # A goal sentence may carry a LEADING schedule clause («هر روز ساعت ۸
+    # هدف: ...») — the schedule layer parses it; here we only need the goal
+    # body, so strip any leading «هر ...» clause before matching.
+    stripped = re.sub(r"^هر\s+(?:روز\s+ساعت\s+\d{1,2}|\d+\s+(?:دقیقه|ساعت))\s+", "", normalized)
+    marker = re.search(r"هدف\s*[:：]\s*(.+)$", stripped, re.IGNORECASE)
     body = marker.group(1).strip() if marker else None
     if body is None:
         # also accept «هدفم ... است»
-        marker2 = re.match(r"^هدفم\s+(.+?)\s*است$", normalized)
+        marker2 = re.match(r"^هدفم\s+(.+?)\s*است$", stripped)
         body = marker2.group(1).strip() if marker2 else None
     if not body:
         return None

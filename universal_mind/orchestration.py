@@ -233,6 +233,46 @@ def _flow_params(
             )
         return params, None
 
+    # WEB→EXCEL flow — a fetched page's text becomes a REAL spreadsheet:
+    # the page title as a header, the preview as content rows. The web
+    # content, as a workbook the operator can open in Excel.
+    if consumer == "excel" and isinstance(last_output, dict) and "preview" in last_output:
+        if params.get("operation") == "read_table":
+            return params, None  # the operator asked to READ a workbook
+        import re as _re
+
+        from xml.sax.saxutils import escape as _xml_escape  # noqa: F401
+
+        raw = str(last_output.get("preview") or "")[:1500]
+        plain = _re.sub(r"<[^>]+>", " ", raw)
+        plain = _re.sub(r"\s+", " ", plain).strip()[:1000]
+        words = plain.split()[:40] or ["(خالی)"]
+        rows = [[w] for w in words[1:20]] or [["(محتوایی نبود)"]]
+        headers = [str(last_output.get("title") or "صفحهی وب")[:30]]
+        return (
+            {**params, "operation": "write_table", "headers": headers, "rows": rows},
+            "webfetch → excel (محتوای صفحه در اکسل)",
+        )
+
+    # OCR→DATABASE flow — the text READ from an image persisted as memory:
+    # «اسکرینشات بگیر، بخوان و ذخیره کن» — what the platform read, kept.
+    if consumer == "database" and isinstance(last_output, dict) and "text" in last_output:
+        text = str(last_output.get("text", "")).strip()
+        if text:
+            if params.get("operation") and params["operation"] not in ("query", "insert_many"):
+                return params, None  # explicit non-store intent wins
+            words = text.split()[:20]
+            ocr_rows: list[dict[str, str]] = [
+                {"metric": f"ocr_{i}", "value": w} for i, w in enumerate(words)
+            ]
+            return (
+                {**{k: v for k, v in params.items() if k != "rows"},
+                 "operation": "insert_many", "table": "chain_results",
+                 "rows": ocr_rows, "persistent": True},
+                f"ocr → database ({len(ocr_rows)} واژهی خواندهشده ذخیره شد)",
+            )
+        return params, None
+
     # EXCEL flow — the chain's computed numbers become a REAL .xlsx table:
     # the stats/metrics the chain produced, styled headers, typed cells.
     # Explicit headers/rows in the params always win.

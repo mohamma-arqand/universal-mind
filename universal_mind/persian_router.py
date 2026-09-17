@@ -280,9 +280,44 @@ def route_and_run(
 ) -> dict[str, Any]:
     """Route a Persian command AND execute the resulting chain for real.
 
-    Returns a JSON-ready payload: the route (capabilities, matched words) plus the
-    real per-capability results from orchestrate. A command that matches nothing
-    returns ok=False with the honest reason — never a fabricated chain.
+    A GOAL sentence («هدف: ...») is routed to the AGENT layer instead: the
+    steps are parsed, run under ARETĒ judgment, and the result carries the
+    agent's report (the goal loop with its verdicts). Ordinary commands are
+    never hijacked — the goal marker is explicit intent.
+    """
+    if forced_route is None and "هدف" in command and ":" in command:
+        from universal_mind.goal_parser import parse_goal
+
+        parsed = parse_goal(command)
+        if parsed is not None:
+            from universal_mind.agent_loop import goal_run_report, run_goal, start_goal
+
+            started = start_goal(parsed.text, parsed.steps)
+            result = run_goal(started["goal_id"])
+            report = goal_run_report(result)
+            return {
+                "ok": result.finished,
+                "command": command,
+                "route": ["goal"],
+                "matched_words": ["هدف"],
+                "unknown": [],
+                "extracted_params": {},
+                "result": {"goal": {"finished": result.finished,
+                                    "steps": len(result.steps),
+                                    "report": report}},
+                "errors": {} if result.finished else {"goal": result.reasoning},
+                "durations_ms": {},
+                "flows": [],
+                "judgment": {},
+                "agent_report": report,
+                "_registry": registry or ToolRegistry(),
+            }
+
+        # (the ordinary command path)
+    """
+    Returns a JSON-ready payload: the route (capabilities, matched words) plus
+    the real per-capability results from orchestrate. A command that matches
+    nothing returns ok=False with the honest reason — never a fabricated chain.
 
     ``forced_route`` overrides the vocabulary-derived route (used by contested
     execution to run a specific candidate chain through the SAME real engine —

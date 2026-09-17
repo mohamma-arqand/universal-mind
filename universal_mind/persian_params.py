@@ -222,7 +222,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     if capability == "excel":
         # «در اکسل بریز» — the flow fills headers/rows from the chain's real
         # numbers; an explicit path means reading an existing workbook back.
-        if path:
+        # A URL is NEVER a workbook path (the webfetch flow handles pages) —
+        # treating 's://example.com' as an xlsx path was a live bug.
+        if path and not path.lower().startswith(("http://", "https://", "s://")):
             return {"operation": "read_table", "path": path}
         return {"operation": "write_table"}  # OPEN: the flow fills the table
 

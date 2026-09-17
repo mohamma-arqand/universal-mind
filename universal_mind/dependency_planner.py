@@ -33,11 +33,11 @@ _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 
 # Which capabilities produce which resource. The planner reorders a CONSUMER
 # of a resource after its PRODUCER — nothing else moves.
-_SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute", "webfetch")  # numbers/tables/web content
+_SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute", "webfetch", "ocr")  # numbers/tables/web/read text
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf", "excel")  # a report/sheet can tabulate real numbers
-_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "clipboard")  # run last, consume anything
+_SINK_CONSUMERS: tuple[str, ...] = ("notify", "archive", "clipboard", "database")  # run last, consume anything
 # database is a CONDITIONAL sink: it runs last when WRITING (a computing
 # producer feeds it), but it runs BEFORE pdf when READING — «چی ذخیره کردی؟
 # و گزارشش کن» is database(read) → pdf(report). The planner distinguishes by
@@ -105,7 +105,15 @@ def _capability_order(caps: list[str]) -> list[str]:
                     if p in remaining
                 ]
             elif cap in _SINK_CONSUMERS:
-                blockers = [p for p in remaining if p != cap]
+                # database as a sink waits on everything EXCEPT when it is
+                # the chain's SOURCE: a pure memory read («گزارش از ذخیرهشدهها»
+                # → [database, pdf]) feeds the report — it must run FIRST.
+                is_source_read = (
+                    cap == "database"
+                    and not any(p in _SERIES_PRODUCERS for p in remaining if p != cap)
+                    and any(p in ("pdf", "excel", "speech", "notify", "clipboard") for p in remaining if p != cap)
+                )
+                blockers = [] if is_source_read else [p for p in remaining if p != cap]
             elif (
                 cap in _READABLE_SINKS
                 and not any(p in remaining for p in _SERIES_PRODUCERS)

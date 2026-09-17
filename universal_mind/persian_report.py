@@ -39,6 +39,7 @@ _CAP_FA: dict[str, str] = {
     "webfetch": "وب",
     "pdfreader": "خوانندهی PDF",
     "screenshot": "عکس صفحه",
+    "goal": "عامل هدف",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -159,6 +160,15 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "pdf":
         return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+    if cap == "goal" and isinstance(result, dict):
+        # The agent's own run report — the step verdicts narrated as one goal.
+        report_text = str(result.get("report", ""))
+        if report_text:
+            steps_done = int(result.get("steps", 0))
+            finished = bool(result.get("finished"))
+            head = "🎯 هدف" if finished else "🎯 هدف (ناتمام)"
+            return f"{head} — {_fa_num(steps_done)} گام داوری شد.\n{report_text}"
+        return "هدف اجرا شد."
     if cap == "screenshot" and isinstance(result, dict):
         if result.get("path"):
             return (

@@ -154,10 +154,40 @@ def _ensure_table(db: DatabaseSuite) -> None:
 
 
 def register(command: str) -> dict[str, Any]:
-    """Persist a scheduled task OR a folder watcher from a Persian sentence."""
+    """Persist a scheduled task OR a folder watcher from a Persian sentence.
+
+    A sentence that carries BOTH a goal («هدف: ...») and a schedule clause
+    («هر روز ساعت ۸») becomes a SCHEDULED GOAL: at each firing, the agent
+    loop pursues the goal's steps fresh (the operator's objectives become
+    part of the proactive routine).
+    """
     watcher = parse_folder_watcher(command)
     if watcher is not None:
         return _register_watcher(watcher["folder"], watcher["action"])
+    if "هدف" in command:
+        spec = parse_schedule(command)
+        if spec is not None:
+            from universal_mind.goal_parser import parse_goal
+
+            goal = parse_goal(command)
+            if goal is not None and goal.steps:
+                db = _store()
+                _ensure_table(db)
+                action = " | ".join(goal.steps)
+                db.insert_many(
+                    "schedules",
+                    [{
+                        "command": f"__goal__{action}",
+                        "every_minutes": str(spec["every_minutes"]),
+                        "hour_of_day": str(spec["hour_of_day"]),
+                        "last_run": "", "active": "1",
+                    }],
+                )
+                return {"ok": True, "scheduled_goal": True,
+                        "steps": list(goal.steps),
+                        "every_minutes": spec["every_minutes"],
+                        "hour_of_day": spec["hour_of_day"], "error": ""}
+        return {"ok": False, "error": "هدفِ زمانبندیشده بند زمان ندارد — «هر روز ساعت ۸» یا «هر ۳۰ دقیقه» اضافه کن"}
     spec = parse_schedule(command)
     if spec is None:
         return {
@@ -293,17 +323,35 @@ def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
     fired: list[dict[str, Any]] = []
     for schedule in due_schedules()[:max_runs]:
         try:
+            if schedule.command.startswith("__goal__"):
+                # A SCHEDULED GOAL: the agent pursues the steps afresh.
+                from universal_mind.agent_loop import goal_run_report, run_goal, start_goal
+
+                steps = tuple(schedule.command.removeprefix("__goal__").split(" | "))
+                started = start_goal(f"زمانبندی: {' و '.join(steps)}", steps)
+                goal_result = run_goal(started["goal_id"])
+                entry: dict[str, Any] = {
+                    "schedule_id": schedule.schedule_id,
+                    "command": schedule.command.removeprefix("__goal__"),
+                    "ok": goal_result.finished,
+                    "route": ["goal"],
+                }
+                if len(goal_result.steps) >= 2:
+                    entry["contest"] = goal_run_report(goal_result).replace("\n", " ")[:100]
+                mark_run(schedule.schedule_id)
+                fired.append(entry)
+                continue
             payload: dict[str, Any] = route_and_run(schedule.command)
-            entry: dict[str, Any] = {
+            cmd_entry: dict[str, Any] = {
                 "schedule_id": schedule.schedule_id,
                 "command": schedule.command,
                 "ok": payload.get("ok") is True,
                 "route": payload.get("route", []),
             }
-            if contest and len(entry["route"]) >= 2:
-                entry["contest"] = _contest_for(schedule.command, payload)
+            if contest and len(str(cmd_entry.get("route", []))) >= 2:
+                cmd_entry["contest"] = _contest_for(schedule.command, payload)
             mark_run(schedule.schedule_id)
-            fired.append(entry)
+            fired.append(cmd_entry)
         except Exception as exc:  # noqa: BLE001 — one bad task never stops the rest
             fired.append({
                 "schedule_id": schedule.schedule_id,

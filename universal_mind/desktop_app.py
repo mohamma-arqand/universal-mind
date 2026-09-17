@@ -162,6 +162,24 @@ class MindDesktopApp:
         self._sched_text.pack(fill=tk.BOTH, expand=True)
         self._refresh_schedules()
 
+        # --- Tab: goals (اهداف — the agent layer) ---
+        goals_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(goals_tab, text="اهداف")
+        goals_top = ttk.LabelFrame(goals_tab, text="هدف جدید", padding=6)
+        goals_top.pack(fill=tk.X)
+        self._goal_entry = ttk.Entry(goals_top, font=("Segoe UI", 11))
+        self._goal_entry.pack(fill=tk.X, side=tk.LEFT, expand=True)
+        self._goal_entry.insert(tk.END, "هدف: میانگین ۱۰ و ۲۰ را حساب کن و نمودارش کن و گزارش کامل بساز")
+        ttk.Button(goals_top, text="🎯 ثبت و اجرا", command=self._run_new_goal).pack(side=tk.LEFT, padx=6)
+        ttk.Button(
+            goals_tab, text="▶ ادامهی همهی هدفهای متوقفشده", command=self._resume_goals,
+        ).pack(anchor=tk.W, pady=6)
+        self._goals_text = scrolledtext.ScrolledText(
+            goals_tab, font=("Segoe UI", 12), wrap=tk.WORD
+        )
+        self._goals_text.pack(fill=tk.BOTH, expand=True)
+        self._refresh_goals()
+
         # --- Tab 2: Persian command (فارسی بگو، سیستم اجرا کند) ---
         fa_tab = ttk.Frame(self._notebook, padding=6)
         self._notebook.add(fa_tab, text="فرمان فارسی")
@@ -300,6 +318,63 @@ class MindDesktopApp:
                     tk.END,
                     f"• [{state}] {w['folder']}\n  فرمان: {w['action']}\n\n",
                 )
+
+    def _refresh_goals(self) -> None:
+        """Render the operator's real goals with their state and next step."""
+
+        from universal_mind.agent_loop import _ensure_goals_table
+        from universal_mind.database_suite import DatabaseSuite
+
+        self._goals_text.delete("1.0", tk.END)
+        db = DatabaseSuite(persistent=True)
+        _ensure_goals_table(db)
+        q = db.query("SELECT id, goal, next_step, state FROM goals ORDER BY id DESC LIMIT 20")
+        rows = q["rows"] if q.get("ok") else []
+        if not rows:
+            self._goals_text.insert(tk.END, "هنوز هدفی ثبت نشده. یک جمله با «هدف:» بنویس.\n")
+            return
+        state_fa = {"done": "✅ تمام", "stopped": "⏸ متوقف", "active": "▶ فعال"}
+        for g in rows:
+            self._goals_text.insert(
+                tk.END,
+                f"• [{state_fa.get(g['state'], str(g['state']))}] {g['goal']}\n"
+                f"  گام بعدی: {g['next_step']} | شناسه: {g['id']}\n\n",
+            )
+
+    def _run_new_goal(self) -> None:
+        """Parse the entry's goal, persist it, run it, and narrate."""
+        from universal_mind.agent_loop import goal_run_report, run_goal, start_goal
+        from universal_mind.goal_parser import parse_goal
+
+        sentence = self._goal_entry.get().strip()
+        parsed = parse_goal(sentence)
+        if parsed is None:
+            messagebox.showinfo("Universal Mind", "قالب هدف: هدف: گام اول و گام دوم ...")
+            return
+        started = start_goal(parsed.text, parsed.steps)
+        result = run_goal(started["goal_id"])
+        self._refresh_goals()
+        self._goals_text.insert(tk.END, "\n" + goal_run_report(result) + "\n")
+
+    def _resume_goals(self) -> None:
+        """Resume every stopped goal from its exact failing step."""
+        from universal_mind.agent_loop import goal_run_report, run_goal
+        from universal_mind.database_suite import DatabaseSuite
+        from universal_mind.agent_loop import _ensure_goals_table
+
+        db = DatabaseSuite(persistent=True)
+        _ensure_goals_table(db)
+        q = db.query("SELECT id FROM goals WHERE state = 'stopped' ORDER BY id")
+        stopped = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []
+        if not stopped:
+            messagebox.showinfo("Universal Mind", "هدف متوقفشدهای نیست")
+            return
+        reports = []
+        for goal_id in stopped[:3]:
+            result = run_goal(goal_id)
+            reports.append(goal_run_report(result))
+        self._refresh_goals()
+        self._goals_text.insert(tk.END, "\n" + "\n\n".join(reports) + "\n")
 
     def _scan_watchers(self) -> None:
         """Sweep every active folder watcher; report what genuinely fired."""

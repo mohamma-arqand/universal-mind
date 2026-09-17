@@ -56,6 +56,8 @@ class TestMemoryToReportFlow:
         from universal_mind.persian_router import route_and_run
 
         payload = route_and_run("گزارش از ذخیرهشدهها را بساز")
+        # the planner puts the memory read FIRST (database is a sink that
+        # feeds the report flow — the lock-step order this chain needs)
         assert payload["route"] == ["database", "pdf"]
         assert payload["ok"] is True
         flows = payload["flows"]

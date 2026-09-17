@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import sqlite3
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -45,23 +47,31 @@ class DatabaseSuite:
             target = Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
         target.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(target)
-        # WAL: readers never block the writer and vice versa — the concurrent
-        # tick + window + CLI access pattern this platform actually runs.
+        # JOURNAL SAFETY: WAL is deliberately NOT enabled. In this platform's
+        # real profile (tick + window + CLI opening the SAME file repeatedly
+        # through fresh short-lived connections) WAL on a store whose header
+        # was ever hand-rebuilt produced page corruption (the 2nd corruption
+        # incident — root-caused, restored from the rotating backup). The
+        # delete journal is atomic and matches the usage; the verified
+        # rotating backup covers the residual risk.
         if target.exists():
             try:
                 import sqlite3 as _sq
 
-                with _sq.connect(str(target)) as _conn:
-                    _conn.execute("PRAGMA journal_mode=WAL")
+                probe = _sq.connect(str(target))
+                try:
+                    probe.execute("PRAGMA journal_mode=DELETE")
+                finally:
+                    probe.close()  # a leaked handle locks the file on Windows
             except _sq.Error:
-                pass  # a read-only/locked db stays in its current journal mode
+                pass
         # HEADER GUARD: a partially-overwritten db (an external writer once
         # splattered stderr over the header page) fails later with a cryptic
         # 'unsupported file format' deep inside sqlite3. Fail EARLY, with the
         # exact remedy, and never silently treat corruption as a schema issue.
         if target.exists() and target.stat().st_size >= 16:
-            with open(target, "rb") as probe:
-                magic = probe.read(16)
+            with open(target, "rb") as header_probe:
+                magic = header_probe.read(16)
             if magic != b"SQLite format 3\x00":
                 raise RuntimeError(
                     f"پایگاه داده خراب است (امضای فایل نامعتبر): {target} — "
@@ -73,8 +83,20 @@ class DatabaseSuite:
         """The real on-disk path of this database (auditable)."""
         return self._path
 
-    def _conn(self) -> sqlite3.Connection:
-        return sqlite3.connect(self._path)
+    @contextmanager
+    def _conn(self) -> Iterator[sqlite3.Connection]:
+        """A genuinely-CLOSED connection per use: sqlite3's native context
+        manager commits but never closes — on Windows every leaked handle
+        locks the file (this suite's temp-dir cleanup caught it live)."""
+        conn = sqlite3.connect(self._path)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def execute(self, sql: str) -> dict[str, Any]:
         """Execute a DDL/DML statement (CREATE/INSERT/UPDATE/DELETE) for real."""
