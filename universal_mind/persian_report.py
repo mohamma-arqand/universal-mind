@@ -36,6 +36,9 @@ _CAP_FA: dict[str, str] = {
     "speech": "گفتار",
     "ocr": "متنخوان",
     "excel": "صفحهگسترده",
+    "webfetch": "وب",
+    "pdfreader": "خوانندهی PDF",
+    "screenshot": "عکس صفحه",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -156,6 +159,27 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
     if cap == "pdf":
         return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+    if cap == "screenshot" and isinstance(result, dict):
+        if result.get("path"):
+            return (
+                f"از صفحه عکس گرفته شد ({_fa_num(int(result.get('width') or 0))}×"
+                f"{_fa_num(int(result.get('height') or 0))} "
+                f"پیکسل، {_kb(result.get('bytes'))})."
+            )
+        return None
+    if cap == "webfetch" and isinstance(result, dict):
+        title = str(result.get("title", ""))
+        status = result.get("status")
+        if title:
+            return f"صفحهی وب گرفته شد (کد {status}): «{title}» ({_kb(result.get('bytes'))})."
+        return f"صفحهی وب گرفته شد (کد {status})."
+    if cap == "pdfreader" and isinstance(result, dict):
+        text = str(result.get("text", "")).strip()
+        pages = result.get("pages", 0)
+        if text:
+            preview = text[:50] + ("…" if len(text) > 50 else "")
+            return f"PDF خوانده شد ({_fa_num(pages)} صفحه): «{preview}»"
+        return f"PDF خوانده شد ({_fa_num(pages)} صفحه) — لایهی متنی ندارد (اسکن است؟)"
     if cap == "excel" and isinstance(result, dict):
         if "rows" in result:  # a write: a real workbook was made
             return (

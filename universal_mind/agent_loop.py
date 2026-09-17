@@ -1,0 +1,184 @@
+"""The agent loop — a GOAL executed as judged steps, with honest persistence.
+
+The layer above commands: the operator states an objective («هدف: ...»),
+the parser cuts it into steps, and this loop runs each step through the
+REAL engine under ARETĒ judgment:
+
+  for each step:
+    run → ARETĒ judges the step's own run
+      strong → record, next step
+      weak   → ONE honest repair attempt (the step re-run through the
+               quality gate's rival search); if still weak, the goal STOPS
+               with the exact failure — never a blind march through a
+               broken chain of steps.
+
+Honest rules:
+- Progress is PERSISTED (the goals table): a goal interrupted mid-run can
+  be resumed from the exact step («ادامه بده» at the CLI).
+- Every step's outcome (ok, excellence, repaired) is recorded — the goal's
+  own history is auditable.
+- An already-finished step is never re-run on resume.
+- max_steps bounds the loop (a goal with no honest steps fails, not loops).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from universal_mind.database_suite import DatabaseSuite
+
+
+@dataclass(frozen=True)
+class StepOutcome:
+    """One step's real result inside the goal run."""
+
+    index: int
+    command: str
+    ok: bool
+    excellence: float
+    repaired: bool
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class GoalRunResult:
+    """The whole goal run: every step, where it stands, and why."""
+
+    goal: str
+    steps: tuple[StepOutcome, ...]
+    finished: bool           # all steps ran (each honestly)
+    stopped_at: int          # -1 when finished; else the failing step index
+    reasoning: str
+
+
+def _store() -> DatabaseSuite:
+    return DatabaseSuite(persistent=True)
+
+
+def _ensure_goals_table(db: DatabaseSuite) -> None:
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS goals ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "goal TEXT, steps TEXT, next_step INTEGER DEFAULT 0, "
+        "outcomes TEXT DEFAULT '[]', state TEXT DEFAULT 'active')"
+    )
+
+
+def start_goal(goal_text: str, steps: tuple[str, ...]) -> dict[str, Any]:
+    """Persist a new goal (or revive an identical unfinished one)."""
+    db = _store()
+    _ensure_goals_table(db)
+    q = db.query(
+        "SELECT id, next_step FROM goals WHERE goal = ? AND state = 'active'",
+        (goal_text,),
+    )
+    if q.get("ok") and q["rows"]:
+        return {"ok": True, "goal_id": int(q["rows"][0]["id"]), "resumed": True, "error": ""}
+    db.insert_many("goals", [{
+        "goal": goal_text, "steps": "|".join(steps),
+        "next_step": "0", "outcomes": "[]", "state": "active",
+    }])
+    q2 = db.query("SELECT id FROM goals WHERE goal = ? AND state = 'active'", (goal_text,))
+    goal_id = int(q2["rows"][0]["id"]) if q2.get("ok") and q2["rows"] else -1
+    return {"ok": goal_id > 0, "goal_id": goal_id, "resumed": False, "error": ""}
+
+
+def _record_outcome(db: DatabaseSuite, goal_id: int, outcome: StepOutcome) -> None:
+    import json
+
+    q = db.query("SELECT outcomes FROM goals WHERE id = ?", (str(goal_id),))
+    outcomes: list[dict[str, Any]] = json.loads(q["rows"][0]["outcomes"] or "[]") if q.get("ok") and q["rows"] else []
+    outcomes.append({
+        "index": outcome.index, "command": outcome.command,
+        "ok": outcome.ok, "excellence": outcome.excellence,
+        "repaired": outcome.repaired, "detail": outcome.detail,
+    })
+    db.execute(
+        f"UPDATE goals SET outcomes = '{json.dumps(outcomes, ensure_ascii=False).replace(chr(39), chr(39)*2)}' "
+        f"WHERE id = {goal_id}"
+    )
+
+
+def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunResult:
+    """Run the goal from its persisted next_step, honestly and resumably."""
+
+    from universal_mind.arete.run_judgment import judge_run
+    from universal_mind.persian_router import route_and_run
+
+    db = _store()
+    _ensure_goals_table(db)
+    q = db.query("SELECT goal, steps, next_step FROM goals WHERE id = ?", (str(goal_id),))
+    if not q.get("ok") or not q["rows"]:
+        return GoalRunResult(goal="", steps=(), finished=False, stopped_at=-1,
+                             reasoning="چنین هدفی ثبت نشده است")
+    row = q["rows"][0]
+    goal_text = str(row["goal"])
+    steps = tuple(str(row["steps"]).split("|"))
+    next_step = int(row["next_step"] or 0)
+
+    outcomes: list[StepOutcome] = []
+    for index in range(next_step, min(len(steps), next_step + max_steps)):
+        command = steps[index]
+        payload = route_and_run(command)
+        judgment = judge_run(payload)
+        excellence = float(judgment.get("excellence", 0.0))
+        repaired = False
+        if payload.get("ok") is not True or excellence < bar:
+            # ONE honest repair pass: the quality gate's rival search.
+            from universal_mind.quality_gate import run_with_quality_gate
+
+            def _run_candidate(candidate: tuple[str, ...]) -> dict[str, Any]:
+                return route_and_run(command, forced_route=list(candidate))
+
+            gate = run_with_quality_gate(command, tuple(payload.get("route", [])), _run_candidate, bar=bar)
+            if gate.shipped.excellence > excellence:
+                payload = gate.shipped.payload
+                excellence = gate.shipped.excellence
+                repaired = True
+        step_ok = payload.get("ok") is True
+        outcome = StepOutcome(
+            index=index, command=command, ok=step_ok,
+            excellence=excellence, repaired=repaired,
+            detail=str(payload.get("errors") or ""),
+        )
+        outcomes.append(outcome)
+        _record_outcome(db, goal_id, outcome)
+        if not step_ok:
+            db.execute(f"UPDATE goals SET next_step = {index}, state = 'stopped' WHERE id = {goal_id}")
+            return GoalRunResult(
+                goal=goal_text, steps=tuple(outcomes), finished=False,
+                stopped_at=index,
+                reasoning=f"گام {index + 1} شکست خورد ({outcome.detail[:60]}) — هدف متوقف شد",
+            )
+        db.execute(f"UPDATE goals SET next_step = {index + 1} WHERE id = {goal_id}")
+
+    db.execute(f"UPDATE goals SET state = 'done' WHERE id = {goal_id}")
+    return GoalRunResult(
+        goal=goal_text, steps=tuple(outcomes), finished=True, stopped_at=-1,
+        reasoning=f"همهی گامها اجرا شد ({len(outcomes)} گام)",
+    )
+
+
+def goal_run_report(result: GoalRunResult) -> str:
+    """The goal run rendered as fluent Persian."""
+    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+    lines = [f"🎯 {result.goal}"]
+    for step in result.steps:
+        mark = "✅" if step.ok else "❌"
+        note = " (ترمیم شد)" if step.repaired else ""
+        lines.append(
+            f"  {mark} گام {str(step.index + 1).translate(fa)}: {step.command}"
+            f" — داوری {str(round(step.excellence, 2)).translate(fa)}{note}"
+        )
+    lines.append(f"→ {result.reasoning}")
+    return "\n".join(lines)
+
+
+__all__ = [
+    "GoalRunResult",
+    "StepOutcome",
+    "goal_run_report",
+    "run_goal",
+    "start_goal",
+]

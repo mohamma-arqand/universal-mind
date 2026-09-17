@@ -23,6 +23,8 @@ from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.excel_suite import ExcelSuiteConnector
+from universal_mind.pdfreader_tool import PdfReaderToolConnector
+from universal_mind.screenshot_tool import ScreenshotToolConnector
 from universal_mind.webfetch_tool import WebFetchToolConnector
 from universal_mind.ocr_tool import OcrToolConnector
 from universal_mind.speech_tool import SpeechToolConnector
@@ -45,6 +47,8 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "ocr": OcrToolConnector,              # real Windows.Media.Ocr — the platform READS images
     "excel": ExcelSuiteConnector,         # real openpyxl workbooks (the 15th program)
     "webfetch": WebFetchToolConnector,    # real urllib fetch — the 16th program
+    "pdfreader": PdfReaderToolConnector, # real pypdf — the 17th: reads PDFs
+    "screenshot": ScreenshotToolConnector,  # real ImageGrab — the 18th: sees the screen
     "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)
     "pdf": PdfSuiteConnector,          # full reportlab surface (documents/tables/images)
     "chart": ChartSuiteConnector,      # full matplotlib surface (line/bar/pie/hist/scatter)

@@ -129,6 +129,40 @@ def _flow_params(
             return enriched, f"{last_producer} → pdf (گزارش فارسی با نمودار درونش)"
         return params, None
 
+    # WEB→REPORT flow — a fetched page becomes a REAL Persian pdf: the
+    # platform's own perception of the web, as a document. The page's real
+    # title and text preview are the content; explicit pdf intent wins.
+    if consumer == "pdf" and isinstance(last_output, dict) and "preview" in last_output:
+        if params.get("operation") and params["operation"] not in ("persian_rtl", "persian_report"):
+            return params, None  # explicit intent wins
+        title = str(last_output.get("title") or "صفحهی وب")
+        # HTML must never enter a Paragraph (reportlab parses tags) — strip to
+        # plain text honestly: tags out, visible words kept.
+        import re as _re
+
+        raw = str(last_output.get("preview") or "")[:1500]
+        preview = _re.sub(r"<[^>]+>", " ", raw)
+        preview = _re.sub(r"\s+", " ", preview).strip()[:800]
+        # XML-escape whatever remains (<, >, & must never reach a Paragraph).
+        from xml.sax.saxutils import escape as _xml_escape
+
+        preview = _xml_escape(preview)
+        title = _xml_escape(title)
+        paragraphs = [
+            f"عنوان صفحه: {title}",
+            "آدرس: نمونهی واقعی بازدید در همین اجرا",
+            f"پیشنمایش متن: {preview[:800]}",
+        ]
+        return (
+            {
+                **params,
+                "operation": "persian_rtl",
+                "title": f"گزارش وب — {title[:60]}",
+                "paragraphs": paragraphs,
+            },
+            "webfetch → pdf (صفحهی وب در گزارش فارسی)",
+        )
+
     # STATS flow — the previous program computed real numbers; a pdf report
     # renders them as a real table (the numbers ARE the content). Both shapes
     # are honored: the suite's raw flat result (mean/std/... directly) and the
@@ -182,6 +216,21 @@ def _flow_params(
                     {**params, "operation": "write", "text": summary},
                     f"{last_producer} → clipboard ({summary})",
                 )
+        return params, None
+
+    # PDF-READ flow — the chain's own PDF read back: the platform WROTE a
+    # document and now READS it (the document loop closed end to end).
+    if consumer == "pdfreader":
+        if params.get("path"):
+            return params, None  # an explicit target wins
+        pdf_paths = [p2 for p2 in produced_paths if p2.lower().endswith(".pdf")]
+        if pdf_paths:
+            target = pdf_paths[-1]
+            name = target.rsplit("/", 1)[-1].rsplit(chr(92), 1)[-1]
+            return (
+                {**params, "operation": "read_text", "path": target},
+                f"آخرین سند زنجیره → خواندن PDF ({name})",
+            )
         return params, None
 
     # EXCEL flow — the chain's computed numbers become a REAL .xlsx table:
@@ -444,7 +493,7 @@ def orchestrate(
                 # results, not just the last program's). Only COMPUTING
                 # capabilities contribute metrics: an artifact producer's
                 # bytes/size is evidence ABOUT the artifact, not content.
-                if capability in ("data", "ai", "compute", "vision"):
+                if capability in ("data", "ai", "compute", "vision") and capability != "webfetch":
                     for k, v in result.output.items():
                         if (
                             isinstance(v, (int, float))

@@ -64,6 +64,23 @@ class RunHistory:
             import sys
 
             print(f"[history] مهاجرت ستون excellence ناموفق بود: {exc}", file=sys.stderr)
+        # Query-acceleration indexes: the advisor and analytics filter by
+        # succeeded+route constantly; a covering index keeps them O(log n)
+        # on a store that grows with every run.
+        try:
+            self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_history_succeeded ON run_history (succeeded)"
+            )
+            self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_history_route ON run_history (route)"
+            )
+            self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lessons_capability ON planner_lessons (capability)"
+            )
+        except Exception as exc:  # noqa: BLE001 — indexes are speed, never correctness
+            import sys
+
+            print(f"[history] ساخت ایندکسها ناموفق بود: {exc}", file=sys.stderr)
 
     def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None) -> None:
         """Append one real run to the history (with its ARETĒ excellence)."""

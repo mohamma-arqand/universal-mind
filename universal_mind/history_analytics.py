@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
+from typing import Any
 
 from universal_mind.run_history import RunHistory
 
@@ -91,6 +92,35 @@ def analyze_history(history: RunHistory | None = None) -> HistoryAnalytics:
         per_capability_success=per_cap,
         mean_excellence=round(mean_excellence, 4),
     )
+
+
+def standing_chain() -> dict[str, Any]:
+    """The chain that has won REPEATEDLY with high excellence — a candidate
+    for a standing standard (the bridge to the seed-core's StandardKeeper).
+
+    Honest bar: 3+ successes, mean excellence >= 0.90. Nothing forced —
+    when no chain qualifies, None is returned, never a crowned default.
+    """
+    from universal_mind.run_history import RunHistory
+
+    history = RunHistory()
+    counts: dict[tuple[str, ...], list[float]] = {}
+    for record in history.successful_runs():
+        if record.excellence >= 0.90:
+            counts.setdefault(record.route, []).append(record.excellence)
+    best_route: tuple[str, ...] | None = None
+    best_mean = 0.0
+    for route, excs in counts.items():
+        if len(excs) >= 3:
+            mean = sum(excs) / len(excs)
+            if mean > best_mean:
+                best_route, best_mean = route, mean
+    if best_route is None:
+        return {"ok": False, "error": "هیچ زنجیرهای هنوز سزاوار استاندارد نشده"}
+    return {
+        "ok": True, "route": list(best_route), "wins": len(counts[best_route]),
+        "mean_excellence": round(best_mean, 4), "error": "",
+    }
 
 
 def analytics_report(stats: HistoryAnalytics) -> str:

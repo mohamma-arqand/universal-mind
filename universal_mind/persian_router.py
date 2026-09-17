@@ -110,6 +110,14 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("صفحه وب", "webfetch"),
     ("سایت", "webfetch"),
     ("آدرسش را بگیر", "webfetch"),
+    # screenshot (ImageGrab) — the platform captures the screen
+    ("اسکرینشات", "screenshot"),
+    ("از صفحه عکس بگیر", "screenshot"),
+    ("صفحه را بگیر", "screenshot"),
+    # pdfreader (pypdf) — the platform reads PDFs
+    ("متن پی دی اف", "pdfreader"),
+    ("pdf را بخوان", "pdfreader"),
+    ("پی دی افش را بخوان", "pdfreader"),
     # excel (openpyxl) — real spreadsheets
     ("اکسل", "excel"),
     ("در اکسل", "excel"),

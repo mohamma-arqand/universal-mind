@@ -359,7 +359,6 @@ def backup_database(keep: int = 3) -> dict[str, Any]:
     ``keep`` copies. An honest failure (db busy, disk full) reports why —
     never a silent skip: the backup IS the recovery path, its health matters.
     """
-    import shutil
     from datetime import datetime as _dt
 
     src = DatabaseSuite.DEFAULT_DB_DIR / "mind.db"
@@ -368,9 +367,23 @@ def backup_database(keep: int = 3) -> dict[str, Any]:
     stamp = _dt.now().strftime("%Y%m%d-%H%M%S")
     dst = src.parent / f"mind.db.bak-{stamp}"
     try:
-        shutil.copy2(src, dst)
-    except OSError as exc:
+        # SQLite's own backup API — consistent even under concurrent writes
+        # (a raw file copy can catch a half-written page: the corruption lesson).
+        import sqlite3
+
+        with sqlite3.connect(str(src)) as source, sqlite3.connect(str(dst)) as target:
+            source.backup(target)
+    except (OSError, sqlite3.Error) as exc:
         return {"ok": False, "error": str(exc), "backups": []}
+    # VERIFY: a backup that cannot be read is not a backup.
+    try:
+        probe = sqlite3.connect(str(dst))
+        check = probe.execute("PRAGMA integrity_check").fetchone()[0]
+        probe.close()
+    except sqlite3.Error as exc:
+        return {"ok": False, "error": f"backup verify failed: {exc}", "backups": []}
+    if check != "ok":
+        return {"ok": False, "error": f"backup corrupt: {check}", "backups": []}
     # prune: keep the newest `keep` timestamped backups
     backups = sorted(
         (f for f in src.parent.glob("mind.db.bak-2*") if f.is_file()),

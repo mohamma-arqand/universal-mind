@@ -28,12 +28,12 @@ from typing import Any
 # producers: capabilities that (can) produce that resource.
 # ---------------------------------------------------------------------------
 
-_IMAGE_PRODUCERS: tuple[str, ...] = ("chart", "media", "image", "vision")
+_IMAGE_PRODUCERS: tuple[str, ...] = ("chart", "media", "image", "vision", "screenshot")
 _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 
 # Which capabilities produce which resource. The planner reorders a CONSUMER
 # of a resource after its PRODUCER — nothing else moves.
-_SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute")  # numbers/tables
+_SERIES_PRODUCERS: tuple[str, ...] = ("data", "ai", "compute", "webfetch")  # numbers/tables/web content
 _PLOT_CONSUMERS: tuple[str, ...] = ("chart",)  # need a series
 _IMAGE_CONSUMERS: tuple[str, ...] = ("pdf", "image", "vision")  # need an image
 _STATS_CONSUMERS: tuple[str, ...] = ("pdf", "excel")  # a report/sheet can tabulate real numbers

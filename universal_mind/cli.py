@@ -211,6 +211,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub.add_parser("install-tick", help="نصب tick در Task Scheduler ویندوز — پلتفرم هر ساعت خودش را بیدار میکند")
     sub.add_parser("uninstall-tick", help="حذف tick از Task Scheduler")
 
+    goal = sub.add_parser("goal", help="هدف: «...» — اجرای هدف چندگامی با داوری ARETĒ و قابلیت ادامه")
+    goal.add_argument("sentence", nargs="+", help="the goal sentence (quote it)")
+
     sch = sub.add_parser("schedule", help="زمانبندی: «هر روز ساعت ۸ گزارش کامل بده» را ثبت میکند")
     sch.add_argument("command", nargs="+", help="the Persian sentence WITH the schedule clause (quote it)")
     sub.add_parser("schedule-list", help="لیست زمانبندیهای ثبتشده")
@@ -248,6 +251,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_install_tick(args)
     if args.verb == "uninstall-tick":
         return _cmd_uninstall_tick(args)
+    if args.verb == "goal":
+        return _cmd_goal(args)
     if args.verb == "schedule":
         return _cmd_schedule(args)
     if args.verb == "schedule-list":
@@ -407,6 +412,22 @@ def _cmd_uninstall_tick(args: argparse.Namespace) -> int:
     result = uninstall()
     print(json.dumps(result, ensure_ascii=False))
     return 0 if result.get("ok") else 1
+
+
+def _cmd_goal(args: argparse.Namespace) -> int:
+    """Parse a goal, persist it, run it step by step under ARETĒ judgment."""
+    from universal_mind.agent_loop import goal_run_report, run_goal, start_goal
+    from universal_mind.goal_parser import parse_goal
+
+    sentence = " ".join(args.sentence)
+    parsed = parse_goal(sentence)
+    if parsed is None:
+        print(json.dumps({"ok": False, "error": "قالب هدف: هدف: گام اول و گام دوم ..."}, ensure_ascii=False))
+        return 1
+    started = start_goal(parsed.text, parsed.steps)
+    result = run_goal(started["goal_id"])
+    print(goal_run_report(result))
+    return 0 if result.finished else 1
 
 
 def _cmd_schedule(args: argparse.Namespace) -> int:

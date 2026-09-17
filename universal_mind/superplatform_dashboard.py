@@ -63,6 +63,29 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 
     daily = _daily_runs(db)
 
+    # The excellence TREND: mean ARETĒ verdict per day (the learning curve).
+    try:
+        trend_q = db.query(
+            "SELECT date(created_at) AS d, AVG(excellence) AS m FROM run_history "
+            "WHERE excellence IS NOT NULL AND succeeded = 1 "
+            "GROUP BY d ORDER BY d DESC LIMIT 14"
+        )
+        trend = list(reversed(trend_q["rows"])) if trend_q.get("ok") else []
+    except Exception:  # noqa: BLE001 — a view, never fatal
+        trend = []
+
+    # The AGENT's goals: the proactive objectives and where they stand.
+    try:
+        from universal_mind.agent_loop import _ensure_goals_table
+
+        _ensure_goals_table(db)
+        goals_q = db.query(
+            "SELECT goal, next_step, state FROM goals ORDER BY id DESC LIMIT 8"
+        )
+        goals_rows = goals_q["rows"] if goals_q.get("ok") else []
+    except Exception:  # noqa: BLE001
+        goals_rows = []
+
     # The proactive layer: the operator's real schedules (what runs itself).
     try:
         from universal_mind.scheduler import list_schedules, list_watchers
@@ -85,6 +108,15 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
         f"<td>{_persian_digits(s.last_run[:16]) or '—'}</td></tr>"
         for s in schedules
     ) or "<tr><td colspan='4'>هنوز زمانبندیای ثبت نشده</td></tr>"
+    trend_rows = "".join(
+        f"<tr><td dir='ltr'>{t['d']}</td><td>{_persian_digits(str(round(float(t['m'] or 0) * 100)))}٪</td></tr>"
+        for t in trend
+    ) or "<tr><td colspan='2'>هنوز داوریای ثبت نشده</td></tr>"
+    agent_rows = "".join(
+        f"<tr><td>{g['goal']}</td><td>{_persian_digits(str(g['next_step']))}</td>"
+        f"<td>{'✅ تمام' if g['state'] == 'done' else ('⏸ متوقف' if g['state'] == 'stopped' else '▶ فعال')}</td></tr>"
+        for g in goals_rows
+    ) or "<tr><td colspan='3'>هدفی ثبت نشده</td></tr>"
     watcher_rows = "".join(
         f"<tr><td dir='ltr'>{w['folder']}</td>"
         f"<td>{w['action']}</td>"
@@ -107,6 +139,7 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 <head>
 <meta charset="utf-8">
 <title>داشبورد ذهن یکپارچه</title>
+<meta http-equiv="refresh" content="60">
 <style>
   body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #0e1117; color: #e6e6e6; margin: 0; padding: 24px; }}
   h1 {{ font-size: 22px; color: #7aa2f7; margin: 0 0 4px; }}
@@ -163,6 +196,16 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
   <table><tr><th>فرمان</th><th>فاصله</th><th>وضعیت</th><th>آخرین اجرا</th></tr>{schedule_rows}</table>
   <h2 style="margin-top:14px">📁 پوشههای تحت نظر (رویداد فایل)</h2>
   <table><tr><th>پوشه</th><th>فرمان</th><th>وضعیت</th></tr>{watcher_rows}</table>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>📈 روند داوری ARETĒ (روزانه)</h2>
+  <table><tr><th>روز</th><th>میانگین داوری</th></tr>{trend_rows}</table>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>🎯 اهداف عامل</h2>
+  <table><tr><th>هدف</th><th>گام بعدی</th><th>وضعیت</th></tr>{agent_rows}</table>
 </div>
 
 <div class="card" style="margin-top:16px">

@@ -95,6 +95,7 @@ PROBES = [
     "probe_full_report.py",
     "probe_autonomous_loop.py",
     "probe_reading_loop.py",
+    "probe_agent_loop.py",
 ]
 
 

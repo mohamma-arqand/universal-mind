@@ -214,6 +214,11 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "fetch", "url": "https://" + m2.group(1)}
         return {}  # no URL found — the connector will refuse honestly
 
+    if capability == "pdfreader":
+        if path:
+            return {"operation": "read_text", "path": path}
+        return {"operation": "read_text"}  # OPEN: the flow picks the chain's pdf
+
     if capability == "excel":
         # «در اکسل بریز» — the flow fills headers/rows from the chain's real
         # numbers; an explicit path means reading an existing workbook back.

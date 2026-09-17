@@ -45,6 +45,16 @@ class DatabaseSuite:
             target = Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
         target.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(target)
+        # WAL: readers never block the writer and vice versa — the concurrent
+        # tick + window + CLI access pattern this platform actually runs.
+        if target.exists():
+            try:
+                import sqlite3 as _sq
+
+                with _sq.connect(str(target)) as _conn:
+                    _conn.execute("PRAGMA journal_mode=WAL")
+            except _sq.Error:
+                pass  # a read-only/locked db stays in its current journal mode
         # HEADER GUARD: a partially-overwritten db (an external writer once
         # splattered stderr over the header page) fails later with a cryptic
         # 'unsupported file format' deep inside sqlite3. Fail EARLY, with the
