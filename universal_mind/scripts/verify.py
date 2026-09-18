@@ -102,6 +102,7 @@ PROBES = [
     "probe_operator_experience.py",
     "probe_audit_holds.py",
     "probe_the_leaps.py",
+    "probe_quantum_leaps_2.py",
 ]
 
 

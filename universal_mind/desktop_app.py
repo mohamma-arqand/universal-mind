@@ -180,6 +180,18 @@ class MindDesktopApp:
         self._goals_text.pack(fill=tk.BOTH, expand=True)
         self._refresh_goals()
 
+        # --- Tab: session (نشست — this sitting, live) ---
+        session_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(session_tab, text="نشست")
+        ttk.Button(
+            session_tab, text="🪪 بهروزرسانی نشست", command=self._refresh_session_tab,
+        ).pack(anchor=tk.W, pady=(0, 6))
+        self._session_text = scrolledtext.ScrolledText(
+            session_tab, font=("Segoe UI", 12), wrap=tk.WORD
+        )
+        self._session_text.pack(fill=tk.BOTH, expand=True)
+        self._refresh_session_tab()
+
         # --- Tab 2: Persian command (فارسی بگو، سیستم اجرا کند) ---
         fa_tab = ttk.Frame(self._notebook, padding=6)
         self._notebook.add(fa_tab, text="فرمان فارسی")
@@ -375,6 +387,35 @@ class MindDesktopApp:
             reports.append(goal_run_report(result))
         self._refresh_goals()
         self._goals_text.insert(tk.END, "\n" + "\n\n".join(reports) + "\n")
+
+    def _refresh_session_tab(self) -> None:
+        """This sitting live: session counters + prediction + health + verdict."""
+        self._session_text.delete("1.0", tk.END)
+        from universal_mind.session_core import SessionCore
+
+        self._session_text.insert(tk.END, SessionCore.current().report() + "\n\n")
+        try:
+            from universal_mind.history_analytics import session_verdict
+            from universal_mind.task_install import tick_health
+
+            sv = session_verdict()
+            line = (
+                f"⭐ داوری نشست (۲۴ ساعت): {sv['verdict']}"
+                if sv.get("ok") else f"⭐ {sv.get('verdict', '—')}"
+            )
+            self._session_text.insert(tk.END, line + "\n")
+            th = tick_health()
+            sig = th.get("signals", {}) or {}
+            health = "زنده" if th.get("verdict") == "alive" else (
+                "نصب نیست" if not sig.get("task_installed") else "خاموش"
+            )
+            self._session_text.insert(
+                tk.END,
+                f"🩺 حلقهی خودکار: {health}"
+                + (" — اجرا کن: universal-mind install-tick\n" if health == "نصب نیست" else "\n"),
+            )
+        except Exception as exc:  # noqa: BLE001 — views never fatal
+            self._session_text.insert(tk.END, f"(نماها ناموفق: {exc})\n")
 
     def _scan_watchers(self) -> None:
         """Sweep every active folder watcher; report what genuinely fired."""

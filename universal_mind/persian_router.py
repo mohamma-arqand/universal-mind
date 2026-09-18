@@ -505,11 +505,17 @@ def route_and_run(
     # (A forced_route call IS a gate candidate — the gate runs one level only.)
     if forced_route is None:
         from universal_mind.quality_gate import run_with_quality_gate
+        from universal_mind.success_predictor import predict_success
+
+        # THE PRE-RUN VERDICT: the chain's earned expectation sets the bar —
+        # a chain that has failed before is judged stricter, not blindly.
+        prediction = predict_success(tuple(caps))
+        dynamic_bar = prediction.recommended_bar
 
         def _run_candidate(candidate: tuple[str, ...]) -> dict[str, Any]:
             return route_and_run(command, registry=None, params=None, forced_route=list(candidate))
 
-        gate = run_with_quality_gate(command, tuple(caps), _run_candidate)
+        gate = run_with_quality_gate(command, tuple(caps), _run_candidate, bar=dynamic_bar)
         if gate.repaired:
             # The shipped attempt replaces the weak one; the operator sees the truth.
             return {**gate.shipped.payload, "gate_reasoning": gate.reasoning, "attempts": len(gate.attempts)}
@@ -522,6 +528,18 @@ def route_and_run(
         "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
     }
+
+    # THE SESSION counts every real run (one sitting, one core, every face).
+    try:
+        from universal_mind.session_core import SessionCore
+
+        session = SessionCore.current()
+        session.add("runs")
+        if syn.ok:
+            session.add("ok_runs")
+        session.add("flows", len(syn.output.get("flows", [])) if isinstance(syn.output, dict) else 0)
+    except Exception:  # noqa: BLE001 — counting is a lens, never a blocker
+        pass
 
     # Virtue-judge THIS run with ARETĒ (the same arbitrator that judges
     # specialist disputes now judges the platform's own real work).
@@ -561,6 +579,12 @@ def route_and_run(
         import sys
 
         print(f"[planner-learning] آموزش ناموفق بود: {exc}", file=sys.stderr)
+    try:
+        from universal_mind.session_core import SessionCore
+
+        SessionCore.current().add("judged")
+    except Exception:  # noqa: BLE001
+        pass
     return {
         "ok": syn.ok,
         "command": command,

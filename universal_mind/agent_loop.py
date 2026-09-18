@@ -148,6 +148,12 @@ def _record_outcome(db: DatabaseSuite, goal_id: int, outcome: StepOutcome) -> No
 
 def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunResult:
     """Run the goal from its persisted next_step, honestly and resumably."""
+    try:
+        from universal_mind.session_core import SessionCore
+
+        SessionCore.current().add("goals_started")
+    except Exception:  # noqa: BLE001
+        pass
 
     from universal_mind.arete.run_judgment import judge_run
     from universal_mind.persian_router import route_and_run
@@ -255,6 +261,12 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
         db.execute(f"UPDATE goals SET next_step = {index + 1} WHERE id = {goal_id}")
 
     db.execute(f"UPDATE goals SET state = 'done' WHERE id = {goal_id}")
+    try:
+        from universal_mind.session_core import SessionCore
+
+        SessionCore.current().add("goals_finished")
+    except Exception:  # noqa: BLE001
+        pass
     return GoalRunResult(
         goal=goal_text, steps=tuple(outcomes), finished=True, stopped_at=-1,
         reasoning=f"همهی گامها اجرا شد ({len(outcomes)} گام)",

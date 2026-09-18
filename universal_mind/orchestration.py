@@ -129,6 +129,30 @@ def _flow_params(
             return enriched, f"{last_producer} → pdf (گزارش فارسی با نمودار درونش)"
         return params, None
 
+    # SPREADSHEET→CHART flow — a REAL read-back (excel/csv rows) becomes the
+    # chart's data series: the operator's own stored numbers, plotted.
+    if (
+        consumer == "chart"
+        and isinstance(last_output, dict)
+        and isinstance(last_output.get("rows"), list)
+    ):
+        if params.get("operation") and params["operation"] != "line":
+            return params, None  # the operator named the chart kind
+        matrix_rows = [
+            r for r in last_output["rows"][:50]
+            if isinstance(r, list) and len(r) >= 2
+        ]
+        numeric_rows = [r for r in matrix_rows if isinstance(r[1], (int, float))]
+        if numeric_rows:
+            series_values = [r[1] for r in numeric_rows]
+            return (
+                {**params, "operation": "line",
+                 "series": {"ذخیرهشده": series_values},
+                 "title": params.get("title") or "نمودار از دادههای ذخیرهشده"},
+                f"{last_producer} → chart ({len(series_values)} نقطهی واقعی رسم شد)",
+            )
+        return params, None
+
     # WEB→REPORT flow — a fetched page becomes a REAL Persian pdf: the
     # platform's own perception of the web, as a document. The page's real
     # title and text preview are the content; explicit pdf intent wins.

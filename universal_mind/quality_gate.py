@@ -127,6 +127,13 @@ def run_with_quality_gate(
     else:
         reasoning = f"داوری {best.excellence:.2f} — از دروازهی کیفیت گذشت"
 
+    try:
+        from universal_mind.session_core import SessionCore
+
+        if repaired:
+            SessionCore.current().add("repairs")
+    except Exception:  # noqa: BLE001
+        pass
     return GateOutcome(
         attempts=tuple(attempts), shipped=best, repaired=repaired, reasoning=reasoning,
     )

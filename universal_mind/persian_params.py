@@ -137,7 +137,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # Chart KIND words name the operation explicitly (میلهای/دایرهای/خطی/...);
         # the default remains the line chart.
         kind = "line"
-        if "میلهای" in command or "ستونی" in command or "میله" in command:
+        if "هیستوگرام" in command or "هیستوگرامش" in command:
+            kind = "histogram"
+        elif "میلهای" in command or "ستونی" in command or "میله" in command:
             kind = "bar"
         elif "دایرهای" in command or "دایره" in command or "پایهای" in command:
             kind = "pie"
@@ -146,7 +148,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         elif "هیستوگرام" in command or "هیستوگرامش" in command:
             kind = "histogram"
         params: dict[str, Any] = {"operation": kind}
-        if kind == "bar":
+        if kind == "histogram":
+            params["data"] = data          # the real series from the sentence
+        elif kind == "bar":
             params["categories"] = ["الف", "ب", "ج"][:len(data)] if data else None
             params["values"] = data
         elif kind == "pie":
