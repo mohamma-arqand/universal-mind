@@ -208,7 +208,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--capabilities", help="comma-separated multi-capability synthesis (overrides single capability)")
     run.add_argument("--list", action="store_true", help="list every registered capability with its real operations")
 
+    sub.add_parser("health-tick", help="آیا حلقهی خودکار زنده است؟ (task + heartbeat)")
+
     sub.add_parser("install-tick", help="نصب tick در Task Scheduler ویندوز — پلتفرم هر ساعت خودش را بیدار میکند")
+    sub.add_parser("tick-health", help="ضربان پیشرو: آیا tick زنده است؟ سه سیگنال واقعی")
+
     sub.add_parser("uninstall-tick", help="حذف tick از Task Scheduler")
 
     goal = sub.add_parser("goal", help="هدف: «...» — اجرای هدف چندگامی با داوری ARETĒ و قابلیت ادامه")
@@ -247,6 +251,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_dashboard(args)
     if args.verb == "cycle":
         return _cmd_cycle(args)
+    if args.verb == "tick-health":
+        return _cmd_tick_health(args)
+    if args.verb == "health-tick":
+        return _cmd_health_tick(args)
     if args.verb == "install-tick":
         return _cmd_install_tick(args)
     if args.verb == "uninstall-tick":
@@ -393,6 +401,27 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
         "evolution_summary": report.summary,
     }
     print(json.dumps(summary, indent=None if args.compact else 2, sort_keys=True))
+    return 0
+
+
+def _cmd_tick_health(args: argparse.Namespace) -> int:
+    """The proactive heartbeat, honestly classified."""
+    from universal_mind.task_install import tick_health
+
+    result = tick_health()
+    verdict_fa = {
+        "alive": "زنده ✅", "silent": "نصب است اما ساکت ⏸", "dead": "نصب نیست ❌",
+    }
+    result["verdict_fa"] = verdict_fa.get(result["verdict"], result["verdict"])
+    print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
+def _cmd_health_tick(args: argparse.Namespace) -> int:
+    """Is the proactive loop alive? Task + heartbeat, each verbatim."""
+    from universal_mind.task_install import tick_health
+
+    print(json.dumps(tick_health(), indent=2, ensure_ascii=False))
     return 0
 
 

@@ -182,6 +182,36 @@ def crown_standing_chain() -> dict[str, Any]:
     }
 
 
+def session_verdict() -> dict[str, Any]:
+    """ARETĒ over the whole recent session — not each run, the DAY as one work.
+
+    The mean excellence of the last 24h's judged runs, with an honest
+    threshold reading: above bar the session is 'درخشان', below it the
+    operator is TOLD (this is the layer above per-run judgment).
+    """
+    from datetime import datetime, timedelta
+
+    from universal_mind.database_suite import DatabaseSuite
+
+    bar = 0.75
+    try:
+        db = DatabaseSuite(persistent=True)
+        cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+        q = db.query(
+            "SELECT AVG(excellence) AS m, COUNT(*) AS n FROM run_history "
+            "WHERE excellence IS NOT NULL AND succeeded = 1 AND created_at >= ?",
+            (cutoff,),
+        )
+        if not q.get("ok") or not q["rows"] or q["rows"][0]["m"] is None:
+            return {"ok": False, "verdict": "هنوز داوریای در ۲۴ ساعت اخیر ثبت نشده", "mean": None}
+        mean = float(q["rows"][0]["m"])
+        n = int(q["rows"][0]["n"])
+        verdict = "درخشان" if mean >= bar else "نیازمند توجه"
+        return {"ok": True, "mean": round(mean, 4), "runs": n, "bar": bar, "verdict": verdict}
+    except Exception as exc:  # noqa: BLE001 — a view, never fatal
+        return {"ok": False, "verdict": f"خطا در داوری نشست: {exc}", "mean": None}
+
+
 def analytics_report(stats: HistoryAnalytics) -> str:
     """The analytics rendered as fluent Persian."""
     from universal_mind.persian_report import _CAP_FA

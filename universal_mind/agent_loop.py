@@ -189,10 +189,14 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
         repaired = False
         if payload.get("ok") is not True or excellence < bar:
             # ONE honest repair pass: the quality gate's rival search.
+            # The command is BOUND NOW (a late-binding closure over the loop
+            # variable would repair the WRONG step's command — B023 caught it).
             from universal_mind.quality_gate import run_with_quality_gate
 
-            def _run_candidate(candidate: tuple[str, ...]) -> dict[str, Any]:
-                return route_and_run(command, forced_route=list(candidate))
+            step_command = command
+
+            def _run_candidate(candidate: tuple[str, ...], _cmd: str = step_command) -> dict[str, Any]:
+                return route_and_run(_cmd, forced_route=list(candidate))
 
             gate = run_with_quality_gate(command, tuple(payload.get("route", [])), _run_candidate, bar=bar)
             if gate.shipped.excellence > excellence:

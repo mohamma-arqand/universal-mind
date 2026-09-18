@@ -293,7 +293,7 @@ def route_and_run(
     never hijacked — the goal marker is explicit intent.
     """
     # «وضعیت» — the agent's status board: every goal, its state and verdict.
-    if forced_route is None and command.strip() in ("وضعیت", "وضعیت عامل", "چی شد؟", "چه خبر"):
+    if forced_route is None and (command.strip().startswith("وضعیت") or command.strip() in ("چی شد؟", "چه خبر")):
         from universal_mind.agent_loop import _ensure_goals_table
         from universal_mind.database_suite import DatabaseSuite
 
@@ -343,7 +343,7 @@ def route_and_run(
 
     # «ادامه بده» — the shortest possible resume: every STOPPED goal is
     # resumed from its exact failing step. The human phrasing of recovery.
-    if forced_route is None and command.strip() in ("ادامه بده", "ادامه", "برو ادامه"):
+    if forced_route is None and command.strip().startswith("ادامه"):
         from universal_mind.agent_loop import _ensure_goals_table
         from universal_mind.database_suite import DatabaseSuite
 
@@ -381,6 +381,24 @@ def route_and_run(
         from universal_mind.goal_parser import parse_goal
 
         parsed = parse_goal(command)
+        # NESTED-GOAL GUARD: a step that is itself «هدف: ...» would re-enter
+        # the agent layer recursively (goal-in-goal-in-goal...). The guard
+        # flattens it ONCE — the inner goal's steps join the outer goal's
+        # steps — and the recursion ends. (Caught live: the error text was
+        # literally 'the goal of the goal of the goal' one level per retry.)
+        if parsed is not None:
+            flat: list[str] = []
+            for step in parsed.steps:
+                if "هدف" in step and ":" in step:
+                    inner = parse_goal(step)
+                    if inner is not None:
+                        flat.extend(inner.steps)
+                        continue
+                flat.append(step)
+            if flat and flat != list(parsed.steps):
+                from dataclasses import replace as _dc_replace
+
+                parsed = _dc_replace(parsed, steps=tuple(flat))
         if parsed is not None:
             from universal_mind.agent_loop import goal_run_report, run_goal, start_goal
 

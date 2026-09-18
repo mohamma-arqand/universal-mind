@@ -86,6 +86,38 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         goals_rows = []
 
+    # The TICK HEALTH: is the proactive loop alive? (task + heartbeat)
+    try:
+        from universal_mind.task_install import tick_health
+
+        th = tick_health()
+        sig = th.get("signals", {}) or {}
+        installed = bool(sig.get("task_installed"))
+        recent = bool(sig.get("recent_run"))
+        if installed and recent:
+            tick_html = "✅ نصب است و ضربان دارد (اجرای اخیر ثبت شده)"
+        elif installed:
+            tick_html = "⚠️ نصب است ولی در ۲۴ ساعت اخیر اجرایی ثبت نشده"
+        elif recent:
+            tick_html = "⏸ Task Scheduler نصب نیست (موتور فعال است) — universal-mind install-tick"
+        else:
+            tick_html = "⏸ حلقهی خودکار نصب نیست — universal-mind install-tick"
+    except Exception:  # noqa: BLE001
+        tick_html = "—"
+
+    # The SESSION verdict: ARETĒ over the whole last-24h as ONE work.
+    try:
+        from universal_mind.history_analytics import session_verdict
+
+        sv = session_verdict()
+        session_html = (
+            f"{sv['verdict']} — میانگین {_persian_digits(str(round(sv['mean'] * 100)))}٪ "
+            f"روی {_persian_digits(str(sv['runs']))} اجرا"
+            if sv.get("ok") else str(sv.get("verdict", "—"))
+        )
+    except Exception:  # noqa: BLE001
+        session_html = "—"
+
     # The CROWN: the currently-standing standard chain (the ARETĒ-elected best).
     try:
         from universal_mind.history_analytics import crown_standing_chain
@@ -226,6 +258,16 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 <div class="card" style="margin-top:16px">
   <h2>📈 روند داوری ARETĒ (روزانه)</h2>
   <table><tr><th>روز</th><th>میانگین داوری</th></tr>{trend_rows}</table>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>⭐ داوری نشست (۲۴ ساعت، یک اثر)</h2>
+  <div style="font-size:15px">{session_html}</div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>🩺 سلامت حلقهی خودکار</h2>
+  <div style="font-size:15px">{tick_html}</div>
 </div>
 
 <div class="card" style="margin-top:16px">

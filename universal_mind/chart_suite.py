@@ -195,7 +195,7 @@ class ChartSuite:
         hi = upper or [2, 3, 2.5, 4, 3.5]
         fig, ax = plt.subplots()
         ax.fill_between(x, lo, hi, alpha=0.4)
-        ax.plot(x, [(a + b) / 2 for a, b in zip(lo, hi)], label="mean")
+        ax.plot(x, [(a + b) / 2 for a, b in zip(lo, hi, strict=False)], label="mean")  # paired bands
         ax.legend()
         ax.set_title(title)
         return self._save(fig, self._out_path("fill_between.png"))

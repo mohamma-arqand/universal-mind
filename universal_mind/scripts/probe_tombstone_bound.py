@@ -106,7 +106,7 @@ def run_tombstone_bound_probe() -> tuple[bool, dict[str, object]]:
         print(f"Phase 2: Deleting {N_OPERATIONS // 2} records...")
         # Get all record IDs
         records = list(store.read_all())
-        for i, record in enumerate(records[:N_OPERATIONS // 2]):
+        for _i, record in enumerate(records[:N_OPERATIONS // 2]):
             store.delete(record['id'])
 
         # Count after deletes (before compaction)

@@ -118,7 +118,7 @@ class AISuite:
             return {"ok": False, "error": "need >= 4 samples"}
         spectrum = np.abs(np.fft.rfft(arr))
         freqs = np.fft.rfftfreq(arr.size)
-        top = sorted(zip(spectrum.tolist(), freqs.tolist()), reverse=True)[:3]
+        top = sorted(zip(spectrum.tolist(), freqs.tolist(), strict=False), reverse=True)[:3]  # same-length by construction
         return {
             "ok": True,
             "dominant_frequencies": [round(f, 6) for _, f in top],

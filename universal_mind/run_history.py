@@ -130,6 +130,38 @@ class ChainAdvisor:
     def __init__(self, history: RunHistory | None = None) -> None:
         self._history = history if history is not None else RunHistory()
 
+    def advise_semantic(self, command: str) -> ChainAdvice | None:
+        """TF-IDF similarity advising: the NEAREST past command by MEANING.
+
+        Falls back to the vocabulary-overlap advise when sklearn is missing,
+        the history is tiny, or the semantic winner's similarity is 0 —
+        the honest chain of fallbacks, each labeled.
+        """
+        records = self._history.successful_runs()
+        if len(records) < 2:
+            return self.advise(command)
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+
+            commands = [r.command for r in records]
+            vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4))
+            matrix = vectorizer.fit_transform(commands + [command])
+            sims = cosine_similarity(matrix[-1], matrix[:-1]).ravel()
+            best = int(sims.argmax())
+            if sims[best] <= 0.0:
+                return self.advise(command)  # nothing semantically near — vocab
+            route = records[best].route
+            return ChainAdvice(
+                route=route,
+                similar_command=records[best].command,
+                similarity=int(sims[best] * 100),  # a 0..100 semantic score
+                succeeded_runs=1,
+                mean_excellence=records[best].excellence,
+            )
+        except ImportError:
+            return self.advise(command)
+
     def advise(self, command: str) -> ChainAdvice | None:
         """The best chain for this command, learned from past successes.
 
@@ -215,7 +247,11 @@ class ChainAdvisor:
                 if record.route == completed:
                     return (
                         f"💡 میتوانی کاملش کنی: {' → '.join(completed)} "
-                        f"(سنتزِ نمودار درون گزارش، {record.excellence or 1.0:.0%} داوری)"
+                        + (
+                            f"(سنتزِ نمودار درون گزارش، {record.excellence:.0%} داوری)"
+                            if record.excellence
+                            else "(سنتزِ نمودار درون گزارش — ردیفهای قدیمی بدون داوری)"
+                        )
                     )
         return None
 

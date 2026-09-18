@@ -75,6 +75,45 @@ def uninstall() -> dict[str, Any]:
     return {"ok": True, "task": TASK_NAME, "error": ""}
 
 
+def tick_health() -> dict[str, Any]:
+    """The proactive heartbeat: is the tick ALIVE?
+
+    Three real signals, honestly combined:
+    - TASK: the Task Scheduler task exists (schtasks read-back);
+    - LAST SCHEDULE FIRE: the newest schedule row's last_run in the store;
+    - RECENT RUN: any run_history row inside the last 25 hours (a tick or
+      any operator command — evidence the platform is alive at all).
+    Verdict: alive (task+evidence) / silent (task but no evidence) / dead.
+    """
+    from datetime import datetime, timedelta
+
+    signals: dict[str, Any] = {}
+
+    task = _query()
+    signals["task_installed"] = bool(task.get("ok"))
+
+    try:
+        from universal_mind.database_suite import DatabaseSuite
+
+        db = DatabaseSuite(persistent=True)
+        q = db.query(
+            "SELECT MAX(created_at) AS last FROM run_history"
+        )
+        last_row = q["rows"][0]["last"] if q.get("ok") and q["rows"] else None
+        cutoff = (datetime.now() - timedelta(hours=25)).isoformat(timespec="seconds")
+        signals["recent_run"] = bool(last_row and str(last_row) >= cutoff)
+    except Exception:  # noqa: BLE001 — a health probe never crashes
+        signals["recent_run"] = False
+
+    if signals["task_installed"] and signals["recent_run"]:
+        verdict = "alive"
+    elif signals["task_installed"]:
+        verdict = "silent"  # installed but nothing ran — the silence failure
+    else:
+        verdict = "dead"
+    return {"ok": True, "verdict": verdict, "signals": signals, "error": ""}
+
+
 def _query() -> dict[str, Any]:
     """The real Task Scheduler read-back for our task."""
     cmd = ["schtasks.exe", "/Query", "/TN", TASK_NAME]

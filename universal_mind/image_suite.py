@@ -290,7 +290,7 @@ class ImageSuite:
             with Image.open(src) as im:
                 channels = im.convert("RGB").split()
                 paths = []
-                for ch, band in zip("rgb", channels):
+                for ch, band in zip("rgb", channels, strict=False):  # 3 letters, 3 channels
                     out = out_dir / f"channel_{ch}.png"
                     band.save(out)
                     paths.append(str(out))

@@ -21,7 +21,7 @@ PAGE = 4096
 
 def read_varint(buf: bytes, i: int) -> tuple[int, int]:
     result = 0
-    for n in range(8):
+    for _ in range(8):
         b = buf[i]
         i += 1
         result = (result << 7) | (b & 0x7F)

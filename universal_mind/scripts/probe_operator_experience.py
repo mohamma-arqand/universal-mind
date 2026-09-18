@@ -41,7 +41,7 @@ def check_read_and_understand() -> bool:
     from universal_mind.persian_router import route_and_run
 
     payload = route_and_run("نمودار خطی بساز و ساختارش را بخوان")
-    ok = payload["ok"] is True and any("ساختار" in str(payload.get("result", {}).get("vision", "")) or True for _ in [0])
+    ok = payload["ok"] is True
     # the vision result carries the structure dict
     vision = payload.get("result", {}).get("vision", {})
     ok = isinstance(vision, dict) and ("dominant_colors" in vision or "shape" in vision)

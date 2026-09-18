@@ -200,8 +200,8 @@ def main() -> int:
             if len(r) < cols:
                 continue
             db.insert_many(table, [dict(zip(
-                _COLUMNS[table], [_norm(v) for v in r[:cols]]
-            ))])
+                _COLUMNS[table], [_norm(v) for v in r[:cols]], strict=True
+            ))])  # r is trimmed to cols — the lengths match by construction
             count += 1
         return count
 

@@ -170,9 +170,7 @@ def test_persian_tab_present_and_routed(tk_root: tk.Tk) -> None:
     tab_count: int = app._notebook.index(tk.END)  # type: ignore[no-untyped-call]
     tabs = [app._notebook.tab(i, "text") for i in range(tab_count)]  # type: ignore[no-untyped-call]
     assert "فرمان فارسی" in tabs
-    # Set a Persian command and run it for real.
-    for w in app._fa_entry.master.winfo_children():
-        pass  # the entry already holds the default command
+    # The entry already holds the default command — run it for real.
     app._do_persian_work("محاسبه کن و نمودار بکش")
     tk_root.update()
     payload = json.loads(app._fa_result_text.get("1.0", tk.END))
