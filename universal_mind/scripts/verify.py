@@ -100,6 +100,7 @@ PROBES = [
     "probe_honesty_pressure.py",
     "probe_crown_cycle.py",
     "probe_operator_experience.py",
+    "probe_audit_holds.py",
 ]
 
 
