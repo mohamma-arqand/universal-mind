@@ -321,7 +321,25 @@ def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
     from universal_mind.persian_router import route_and_run
 
     fired: list[dict[str, Any]] = []
+    # POISON-DOWN: goals that halted 3+ times at the same step are NOT
+    # re-spawned by the tick — the self-inspection reports them instead.
+    try:
+        from universal_mind.agent_loop import _poisoned_goals
+
+        poison_names: set[str] = set()
+        db = _store()
+        _ensure_table(db)
+        for gid in _poisoned_goals():
+            gq = db.query("SELECT goal FROM goals WHERE id = ?", (str(gid),))
+            if gq.get("ok") and gq["rows"]:
+                poison_names.add(str(gq["rows"][0]["goal"]))
+    except Exception:  # noqa: BLE001
+        poison_names = set()
+
     for schedule in due_schedules()[:max_runs]:
+        if schedule.command.removeprefix("__goal__") in poison_names or schedule.command in poison_names:
+            mark_run(schedule.schedule_id)  # the clock advances; the poison stays visible
+            continue
         try:
             if schedule.command.startswith("__goal__"):
                 # A SCHEDULED GOAL: the agent pursues the steps afresh.

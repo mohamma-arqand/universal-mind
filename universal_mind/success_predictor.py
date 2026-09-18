@@ -41,7 +41,9 @@ def predict_success(route: tuple[str, ...]) -> Prediction:
     key = _route_key(route)
     try:
         chain_q = db.query(
-            "SELECT succeeded FROM run_history WHERE route = ? ORDER BY id DESC LIMIT 200",
+            "SELECT succeeded FROM run_history WHERE route = ? "
+            "AND (outcome_class IS NULL OR outcome_class != 'blocked_env') "
+            "ORDER BY id DESC LIMIT 200",
             (key,),
         )
         rows = chain_q.get("rows", []) if chain_q.get("ok") else []

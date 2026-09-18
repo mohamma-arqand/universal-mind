@@ -106,6 +106,44 @@ def _ensure_goals_table(db: DatabaseSuite) -> None:
         pass
 
 
+POISON_THRESHOLD = 3  # the same step stopping 3+ times = the step is poisoned
+
+
+def _poisoned_goals() -> list[int]:
+    """Goals whose FIRST step has halted POISON_THRESHOLD+ times.
+
+    A goal that keeps stopping at the same broken step is POISONED: re-running
+    it hourly is a blind retry loop, not intelligence. The tick must refuse to
+    re-spawn it; «ادامه بده» warns; the operator fixes or archives it.
+    """
+    db = _store()
+    _ensure_goals_table(db)
+    try:
+        q = db.query(
+            "SELECT id, outcomes FROM goals WHERE state = 'stopped'"
+        )
+        poisoned: list[int] = []
+        if not q.get("ok"):
+            return []
+        import json as _json
+
+        for row in q["rows"]:
+            try:
+                outcomes = _json.loads(row["outcomes"] or "[]")
+            except (ValueError, TypeError):
+                continue
+            fails_by_index: dict[int, int] = {}
+            for o in outcomes:
+                if not o.get("ok") and o.get("detail", "") != "":
+                    idx = int(o.get("index", -1))
+                    fails_by_index[idx] = fails_by_index.get(idx, 0) + 1
+            if any(n >= POISON_THRESHOLD for n in fails_by_index.values()):
+                poisoned.append(int(row["id"]))
+        return poisoned
+    except Exception:  # noqa: BLE001 — a lens, never fatal
+        return []
+
+
 def start_goal(
     goal_text: str,
     steps: tuple[str, ...],

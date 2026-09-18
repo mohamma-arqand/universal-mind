@@ -117,6 +117,24 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("متن پی دی اف", "pdfreader"),
     ("pdf را بخوان", "pdfreader"),
     ("پی دی افش را بخوان", "pdfreader"),
+    # == واژههای روزمرهی نزدیک به قابلیتهای موجود (نه قابلیت جدید — نقش) ==
+    # چاپ/پرینت → سند (pdf)؛ ترجمه → گرفتن وب + سند؛ جستجو/شبکه → وب؛
+    # تقویم/زمان → داده؛ یادداشت → کلیپبورد؛ دانلود/اسکن/آپلود → وب؛ هشدار → اعلان
+    ("چاپ کن", "pdf"),
+    ("پرینت", "pdf"),
+    ("ترجمه", "webfetch"),
+    ("جستجو", "webfetch"),
+    ("سرچ", "webfetch"),
+    ("تقویم", "data"),
+    ("یادداشت", "clipboard"),
+    ("نوت کن", "clipboard"),
+    ("دانلود", "webfetch"),
+    ("اسکن", "image"),
+    ("آپلود", "webfetch"),
+    ("هشدار", "notify"),
+    ("یادآوری کن", "notify"),
+    ("شبکه", "webfetch"),
+
     # zip (stdlib) — the world's archive format
     ("زیپش کن", "zip"),
     ("در زیپ", "zip"),
@@ -351,6 +369,28 @@ def route_and_run(
         _ensure_goals_table(db)
         q = db.query("SELECT id FROM goals WHERE state = 'stopped' ORDER BY id")
         stopped = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []
+        # POISONED goals are refused with the warning — a blind re-run of a
+        # 3x-failed step is a retry loop, not recovery.
+        try:
+            from universal_mind.agent_loop import _poisoned_goals
+
+            poisoned = set(_poisoned_goals())
+        except Exception:  # noqa: BLE001
+            poisoned = set()
+        safe = [gid for gid in stopped if gid not in poisoned]
+        if poisoned and not safe:
+            fa_p = str(len(poisoned)).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+            return {
+                "ok": True, "command": command, "route": ["goal"],
+                "matched_words": ["ادامه"], "unknown": [],
+                "extracted_params": {},
+                "result": {"goal": {"finished": True, "steps": 0,
+                                    "report": f"⚠️ {fa_p} هدف زهرآلود است (گامی ۳+ بار شکست خورده) — گام را اصلاح کن یا هدف را آرشیو کن"}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": f"⚠️ {fa_p} هدف زهرآلود است (گامی ۳+ بار شکست خورده) — گام را اصلاح کن یا هدف را آرشیو کن",
+                "_registry": registry or ToolRegistry(),
+            }
+        stopped = safe
         if not stopped:
             return {
                 "ok": True, "command": command, "route": ["goal"],
@@ -554,11 +594,20 @@ def route_and_run(
         print(f"[arete] داوری اجرا ناموفق بود: {exc}", file=sys.stderr)
 
     # Record the real run to the persistent history (the advisor learns from it).
+    # An honest ENVIRONMENT refusal (e.g. Persian speech with no fa voice) is
+    # 'blocked_env', not a failure — the predictor must not learn pessimism
+    # from the environment's missing pieces.
     try:
         from universal_mind.run_history import RunHistory
 
+        outcome_class = ""
+        if not syn.ok:
+            err_text = " ".join(str(e) for e in syn.output.get("errors", {}).values()) if isinstance(syn.output, dict) else ""
+            if "صدای فارسی" in err_text:
+                outcome_class = "blocked_env"
         RunHistory().record(command, caps, syn.ok,
-                            excellence=judgment.get("excellence"))
+                            excellence=judgment.get("excellence"),
+                            outcome_class=outcome_class)
     except Exception as exc:  # noqa: BLE001 — a failed history write never breaks the run
         import sys
 
