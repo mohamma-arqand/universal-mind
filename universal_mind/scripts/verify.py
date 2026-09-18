@@ -101,6 +101,7 @@ PROBES = [
     "probe_crown_cycle.py",
     "probe_operator_experience.py",
     "probe_audit_holds.py",
+    "probe_the_leaps.py",
 ]
 
 

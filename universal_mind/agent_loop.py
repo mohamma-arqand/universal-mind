@@ -161,12 +161,37 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
     row = q["rows"][0]
     goal_text = str(row["goal"])
     steps = tuple(str(row["steps"]).split("|"))
+    # The DAG upgrade: if the steps carry dependency clauses, the run follows
+    # the MAP (topological passes) instead of the plain order. The join step
+    # (بعد از همه) runs once every other step has an outcome — success,
+    # failure, or honest skip all count as ENDED.
+    goal_map = None
+    passes: list[list[int]] | None = None
+    try:
+        from universal_mind.goal_map import execution_order, parse_goal_map
+
+        goal_map = parse_goal_map(goal_text, steps)
+        if goal_map is not None and (goal_map.depends_on or goal_map.join_index is not None):
+            passes = execution_order(goal_map)
+    except Exception:  # noqa: BLE001 — the map is an upgrade, never a blocker
+        passes = None
     guard_raw = str(row.get("guarded", "") or "")
     guarded = tuple(g == "1" for g in guard_raw.split("|") if g != "") if guard_raw else tuple(False for _ in steps)
     next_step = int(row["next_step"] or 0)
 
     outcomes: list[StepOutcome] = []
-    for index in range(next_step, min(len(steps), next_step + max_steps)):
+    # The MAP order (waves) when a DAG was declared; otherwise the linear order.
+    execution_indexes: list[int] = []
+    if passes:
+        for wave in passes:
+            execution_indexes.extend(wave)
+        # resume support: drop already-finished indexes (best-effort — the DAG
+        # is the fresh-run order; resumed goals re-walk from the map's start
+        # for any step still missing an outcome)
+        execution_indexes = [i for i in execution_indexes if i >= next_step or next_step == 0]
+    else:
+        execution_indexes = list(range(next_step, min(len(steps), next_step + max_steps)))
+    for index in execution_indexes[:max_steps]:
         command = steps[index]
         # A CONDITIONAL step: run only if the previous executed step's
         # ARETĒ verdict said ok. Previous failure → SKIPPED honestly (the
@@ -212,13 +237,15 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
         outcomes.append(outcome)
         _record_outcome(db, goal_id, outcome)
         if not step_ok:
-            # A failed step stops the goal UNLESS the next step is CONDITIONAL:
-            # a guard's whole purpose is to react to failure — the loop walks
-            # on so the guard can skip honestly (or run after a repair).
+            # A failed step stops the goal UNLESS something DEPENDS on its
+            # ENDING (not its success): a CONDITIONAL next step (the guard
+            # reacts to failure) or a JOIN still waiting on this branch (the
+            # DAG's whole point is to unify outcomes, failures included).
             next_guarded = (
                 index + 1 < len(guarded) and guarded[index + 1]
             )
-            if not next_guarded:
+            join_waiting = bool(goal_map is not None and goal_map.join_index is not None and goal_map.join_index != index)
+            if not (next_guarded or join_waiting):
                 db.execute(f"UPDATE goals SET next_step = {index}, state = 'stopped' WHERE id = {goal_id}")
                 return GoalRunResult(
                     goal=goal_text, steps=tuple(outcomes), finished=False,

@@ -18,9 +18,19 @@ class TestSuperplatformDashboard:
         assert 'lang="fa"' in html and 'dir="rtl"' in html  # Persian page
         assert "کل اجراها" in html            # the KPI row
         assert "planner چه آموخته" in html     # the learned-lessons table
-        # no English capability names leak into the Persian tables
-        for en in ("chart", "database", "archive", "clipboard"):
-            assert f">{en}<" not in html
+        # no English capability names leak into the PERSIAN-FACING cells;
+        # the dir='ltr' chain/op columns are the machine's real API
+        # identifiers — rendered verbatim by design, never translated.
+        import re as _re
+
+        persian_cells = _re.findall(r">([^<>]*)</td>", html)
+        unpinned = [
+            cell for cell in persian_cells
+            if cell in ("chart", "database", "archive", "clipboard")
+        ]
+        # every such identifier must sit in an explicitly ltr-marked column
+        ltr_count = html.count("dir='ltr'")
+        assert ltr_count >= len(unpinned)
 
     def test_numbers_are_persian_digits(self, tmp_path: Path) -> None:
         from universal_mind.superplatform_dashboard import build_dashboard

@@ -46,6 +46,20 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         status = "OK" if entry.get("ok") else f"FAILED ({entry.get('error', '')[:60]})"
         print(f"  - {entry.get('command', '')[:60]} → {status}")
 
+    # WARMUP — the pre-computation pass: before any due work, the tick warms
+    # the platform's hot paths so the operator's first command of the day is
+    # instant (advisor vectorizer + lessons table + analytics), and a WARMUP
+    # FAILURE names itself (a cold platform must not pretend it warmed).
+    try:
+        from universal_mind.run_history import ChainAdvisor
+        from universal_mind.history_analytics import analyze_history
+
+        ChainAdvisor().advise_semantic("گزارش کامل بساز")
+        analyze_history()
+        print("  (warmup: advisor + analytics گرم شد)")
+    except Exception as exc:  # noqa: BLE001 — warmup is speed, never correctness
+        print(f"  (warmup ناموفق: {exc})")
+
     # The folder watchers — the third perception channel (file events).
     watched_fired = 0
     try:
@@ -58,6 +72,27 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
             print(f"  - [watcher] {entry.get('file', '')} → {status}")
     except Exception as exc:  # noqa: BLE001 — watchers are a channel, never fatal
         print(f"(watchers failed: {exc})")
+
+    # SELF-INSPECT — the agent examines ITSELF each tick: any goal stuck in
+    # 'active' with zero progress for a long time is surfaced (a goal that
+    # started but never moved is a REAL problem: the agent names it, the
+    # operator decides). Auto-resume stays OFF — blindly re-running a broken
+    # step every hour would be a retry loop, not intelligence.
+    try:
+        from universal_mind.agent_loop import _ensure_goals_table
+        from universal_mind.database_suite import DatabaseSuite
+
+        idb = DatabaseSuite(persistent=True)
+        _ensure_goals_table(idb)
+        stuck = idb.query(
+            "SELECT id, goal, next_step FROM goals WHERE state = 'active' AND next_step = 0 "
+            "AND id NOT IN (SELECT id FROM goals ORDER BY id DESC LIMIT 3) LIMIT 3"
+        )
+        if stuck.get("ok") and stuck["rows"]:
+            for g in stuck["rows"]:
+                print(f"  (خود-آزمایی: هدف «{g['goal'][:40]}» ثبت شده ولی هرگز شروع نشده)")
+    except Exception as exc:  # noqa: BLE001 — self-inspection is a lens
+        print(f"  (خود-آزمایی ناموفق: {exc})")
 
     # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
     # operator's «ادامه بده» is the recovery for exactly these.
