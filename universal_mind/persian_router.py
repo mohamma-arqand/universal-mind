@@ -620,9 +620,11 @@ def route_and_run(
             err_text = " ".join(str(e) for e in syn.output.get("errors", {}).values()) if isinstance(syn.output, dict) else ""
             if "صدای فارسی" in err_text:
                 outcome_class = "blocked_env"
+        flows = syn.output.get("flows") if isinstance(syn.output, dict) else None
         RunHistory().record(command, caps, syn.ok,
                             excellence=judgment.get("excellence"),
-                            outcome_class=outcome_class)
+                            outcome_class=outcome_class,
+                            flows=list(flows) if flows else None)
     except Exception as exc:  # noqa: BLE001 — a failed history write never breaks the run
         import sys
 

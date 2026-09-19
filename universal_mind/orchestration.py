@@ -129,6 +129,35 @@ def _flow_params(
             return enriched, f"{last_producer} → pdf (گزارش فارسی با نمودار درونش)"
         return params, None
 
+    # COMPUTE→CHART flow — the previous program computed real numbers; the
+    # chart plots THE COMPUTED SERIES (the flow layer), not the sentence's
+    # raw input: plotting what was computed beats re-stating the input.
+    if (
+        consumer == "chart"
+        and last_producer in ("data", "ai", "compute")
+        and isinstance(last_output, dict)
+        and not params.get("seeded")
+    ):
+        # The stats output carries its metrics (mean/min/max/...) — the raw
+        # input series only when the suite echoes it. Both are real computes.
+        raw = last_output.get("data")
+        computed = (
+            [float(v) for v in raw if isinstance(v, (int, float))]
+            if isinstance(raw, list)
+            else [
+                float(last_output[k])
+                for k in ("mean", "median", "max", "min")
+                if isinstance(last_output.get(k), (int, float))
+            ]
+        )
+        if computed:
+            return (
+                {**params, "operation": "line",
+                 "series": {"محاسبهشده": computed},
+                 "title": params.get("title") or "نمودار از محاسبه"},
+                f"{last_producer} → chart ({len(computed)} نقطهی محاسبهشده رسم شد)",
+            )
+
     # SPREADSHEET→CHART flow — a REAL read-back (excel/csv rows) becomes the
     # chart's data series: the operator's own stored numbers, plotted.
     if (

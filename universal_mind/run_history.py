@@ -62,6 +62,10 @@ class RunHistory:
                 self._db.execute("ALTER TABLE run_history ADD COLUMN excellence REAL")
             if cols.get("ok") and "outcome_class" not in {str(c["name"]) for c in cols.get("rows", [])}:
                 self._db.execute("ALTER TABLE run_history ADD COLUMN outcome_class TEXT DEFAULT ''")
+            # Migrate the FLOWS column too: the intent lens reads it for its
+            # flow-evidence signal; without it the signal is always zero.
+            if cols.get("ok") and "flows" not in {str(c["name"]) for c in cols.get("rows", [])}:
+                self._db.execute("ALTER TABLE run_history ADD COLUMN flows TEXT DEFAULT ''")
         except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
             import sys
 
@@ -84,7 +88,7 @@ class RunHistory:
 
             print(f"[history] ساخت ایندکسها ناموفق بود: {exc}", file=sys.stderr)
 
-    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "") -> None:
+    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None) -> None:
         """Append one real run to the history.
 
         ``outcome_class`` separates an HONEST ENVIRONMENT-REFUSAL from a real
@@ -98,7 +102,8 @@ class RunHistory:
             [{"command": command, "route": ",".join(route),
               "succeeded": "1" if succeeded else "0",
               "excellence": "" if excellence is None else f"{excellence:.4f}",
-              "outcome_class": outcome_class}],
+              "outcome_class": outcome_class,
+              "flows": "; ".join(flows) if flows else ""}],
         )
 
     def successful_runs(self) -> list[RunRecord]:
