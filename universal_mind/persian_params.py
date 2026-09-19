@@ -64,11 +64,23 @@ def extract_text(command: str) -> str | None:
         r"«([^»]+)»",           # Persian guillemets
         r'"([^"]+)"',           # double quotes
         r"'([^']+)'",           # single quotes
+        # «با عنوان X» — the title ends at a trailing command VERB («بساز»,
+        # «بکش», «ذخیره کن»...), which is the sentence's instruction, never
+        # part of the title itself.
         r"(?:با متن|به نام|با عنوان)\s+(.+?)(?:\s+و\s+|$)",
     ):
         m = re.search(pattern, command)
         if m and m.group(1).strip():
-            return m.group(1).strip()
+            title = m.group(1).strip()
+            # The trailing VERB is the sentence's instruction, not the title:
+            # «با عنوان فروش فصل بساز» → «فروش فصل».
+            for verb in (
+                " بساز", " بکش", " بده", " بگو", " بخوان", " بگیر",
+                " ذخیره کن", " چاپ کن", " پاک کن", " حساب کن",
+            ):
+                if title.endswith(verb) and len(title) > len(verb) + 2:
+                    title = title[: -len(verb)].strip()
+            return title
     return None
 
 
@@ -355,6 +367,17 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # BUT when a computing capability is also routed (data/ai), the rows
         # must come from the COMPUTED results (the flow layer), not the raw
         # numbers — storing what was computed beats re-stating the input.
+        # A spoken COUNT («با سه سطر») is real data too: Persian number
+        # words the extractor never turned into values.
+        _FA_COUNTS = {"یک": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج": 5,
+                      "شش": 6, "هفت": 7, "هشت": 8, "نه": 9, "ده": 10}
+        if not data and "ذخیره" in command:
+            import re as _re
+
+            m = _re.search(r"با\s+(یک|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده)\s+سطر", command)
+            if m:
+                n = _FA_COUNTS[m.group(1)]
+                data = [float(i + 1) for i in range(n)]  # seeded series 1..n
         if "ذخیره" in command and data:
             return {
                 "operation": "insert_many",
