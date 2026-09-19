@@ -106,6 +106,7 @@ PROBES = [
     "probe_deep_debug_holds.py",
     "probe_intelligence_layer.py",
     "probe_reflexive.py",
+    "probe_honest_ask.py",
 ]
 
 

@@ -92,7 +92,13 @@ class WebFetchToolConnector:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
         url = str(params.get("url", "")).strip()
         if not url:
-            return ConnectorResult(ok=False, output=None, error="no url given")
+            # Persian with the remedy — the operator asked to summarize a
+            # site but named none: which site? (the honest ask, not a
+            # bare English error).
+            return ConnectorResult(
+                ok=False, output=None,
+                error="کدام سایت؟ آدرس را بده — مثلا: سایت example.com را بخوان",
+            )
         result = self._tool.fetch(url)
         if result.get("ok") is not True:
             return ConnectorResult(ok=False, output=None, error=result.get("error", "failed"))
