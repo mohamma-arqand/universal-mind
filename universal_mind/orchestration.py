@@ -512,7 +512,13 @@ def _flow_params(
                         {**params, "operation": "speak", "text": spoken},
                         "goal → speech (گزارش آخرین گام بلند گفته شد)",
                     )
-        if not params.get("text") or params.get("text") == command:
+        # A SEED text is a stand-in, not the operator's explicit words: the
+        # chain's own summary outranks it (the flow speaks what was made).
+        if (
+            not params.get("text")
+            or params.get("text") == command
+            or params.get("seeded")
+        ):
             summary = _artifact_summary(last_output)
             if summary:
                 spoken_text = (

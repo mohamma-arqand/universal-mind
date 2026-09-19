@@ -84,6 +84,26 @@ def run_with_quality_gate(
         if rotated not in candidates:
             candidates.append(rotated)
 
+    # THE FARTHEST-FIRST RIVAL: when the command names no order, a
+    # best-scoring alternative from the intent lens joins the set — a rival
+    # that is genuinely DIFFERENT, not a reshuffle of the same words. It
+    # never runs when it loses the lens or the sentence is explicit.
+    try:
+        from universal_mind.intent_lens import rank_routes
+
+        if len(route) >= 2 and len(candidates) < max_attempts:
+            # every acceptable permutation the planner already knows
+            import itertools
+
+            perms = list(itertools.permutations(route))
+            lens_ranked = rank_routes(perms, command)
+            for alt in lens_ranked:
+                if alt.route not in candidates and alt.score > 0.30:
+                    candidates.append(alt.route)
+                    break
+    except Exception:  # noqa: BLE001 — the gate never blocks on a lens
+        pass
+
     for candidate in candidates[:max(1, max_attempts)]:
         if candidate in seen:
             continue

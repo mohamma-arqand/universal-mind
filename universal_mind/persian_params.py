@@ -251,9 +251,25 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
 
     if capability == "speech":
         # «بلند بخوان» says: read ALOUD what was made. With no explicit text in
-        # the sentence, the flow layer fills the body with the chain's summary.
+        # the sentence, the flow layer fills the body with the chain's summary;
+        # alone in the sentence, the SEED memory speaks the last real success.
+        spoken_tail = None
         if text and len(text) > 2:
-            return {"operation": "speak", "text": text}
+            spoken_tail = text
+        else:
+            # «بلند بخوان که X» / «بلند بخوان X» — the natural spoken tail.
+            import re as _re
+
+            m = _re.search(r"بلند\s+بخوان(?:\s+که)?\s+(.+)$", command, _re.DOTALL)
+            if m and len(m.group(1).strip()) > 2:
+                spoken_tail = m.group(1).strip()
+        if spoken_tail:
+            return {"operation": "speak", "text": spoken_tail}
+        from universal_mind.seed_memory import seed_for_capability
+
+        seed = seed_for_capability("speech")
+        if seed and seed.get("proven"):
+            return {"operation": "speak", "text": seed["text"], "seeded": True}
         return {"operation": "speak"}  # OPEN: the flow speaks the chain's summary
 
     # (goal speech is handled by the agent layer itself: the goal's report IS

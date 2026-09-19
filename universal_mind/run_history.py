@@ -172,6 +172,31 @@ class ChainAdvisor:
         except ImportError:
             return self.advise(command)
 
+    def advise_with_seeds(self, command: str) -> tuple[ChainAdvice | None, dict[str, dict[str, object]] | None]:
+        """The advice, PLUS the winning run's real params — speech-ready.
+
+        The operator asks «بلند بخوان» and the platform already KNOWS the
+        last successful sentence's full parameter set. This returns the
+        plain advice plus a seed map {capability: params} taken from the
+        winning representative command — proven material, never invented.
+        """
+        advice = self.advise_semantic(command) or self.advise(command)
+        if advice is None:
+            return None, None
+        # Re-run the extraction on the winning representative command so the
+        # seeds carry the SAME params that run actually used.
+        try:
+            from universal_mind.persian_params import extract_params
+
+            seeds: dict[str, dict[str, object]] = {}
+            for cap in advice.route:
+                extracted = extract_params(advice.similar_command, cap)
+                if extracted:
+                    seeds[cap] = extracted
+            return advice, (seeds or None)
+        except Exception:  # noqa: BLE001 — seeds are a courtesy
+            return advice, None
+
     def advise(self, command: str) -> ChainAdvice | None:
         """The best chain for this command, learned from past successes.
 
