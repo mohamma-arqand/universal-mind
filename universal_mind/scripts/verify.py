@@ -105,6 +105,7 @@ PROBES = [
     "probe_quantum_leaps_2.py",
     "probe_deep_debug_holds.py",
     "probe_intelligence_layer.py",
+    "probe_reflexive.py",
 ]
 
 

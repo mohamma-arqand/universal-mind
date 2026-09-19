@@ -109,6 +109,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("صفحه وب", "webfetch"),
     ("سایت", "webfetch"),
     ("آدرسش را بگیر", "webfetch"),
+    ("لینک", "webfetch"),
+    ("باز کن", "webfetch"),
     # screenshot (ImageGrab) — the platform captures the screen
     ("اسکرینشات", "screenshot"),
     ("از صفحه عکس بگیر", "screenshot"),
@@ -310,6 +312,19 @@ def route_and_run(
     agent's report (the goal loop with its verdicts). Ordinary commands are
     never hijacked — the goal marker is explicit intent.
     """
+    # THE REFLEXIVE CLASS — self-questions answered from the REAL store
+    # (never a capability run, never a guess). The marker is a question
+    # about the platform itself, and it precedes every other route.
+    if forced_route is None:
+        from universal_mind.reflexive import answer_reflexive
+
+        reflex = answer_reflexive(command)
+        if reflex is not None:
+            return {
+                **reflex,
+                "_registry": registry or ToolRegistry(),
+            }
+
     # «وضعیت» — the agent's status board: every goal, its state and verdict.
     if forced_route is None and (command.strip().startswith("وضعیت") or command.strip() in ("چی شد؟", "چه خبر")):
         from universal_mind.agent_loop import _ensure_goals_table
