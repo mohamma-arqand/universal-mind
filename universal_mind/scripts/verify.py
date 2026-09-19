@@ -103,6 +103,7 @@ PROBES = [
     "probe_audit_holds.py",
     "probe_the_leaps.py",
     "probe_quantum_leaps_2.py",
+    "probe_deep_debug_holds.py",
 ]
 
 

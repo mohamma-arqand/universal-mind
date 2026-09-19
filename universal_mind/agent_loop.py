@@ -276,7 +276,10 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
         outcome = StepOutcome(
             index=index, command=command, ok=step_ok,
             excellence=excellence, repaired=repaired,
-            detail=str(payload.get("errors") or ""),
+            # THE POISON-FEED BUG: the router's key is 'error' (singular);
+            # reading 'errors' left detail empty forever, so no goal was
+            # EVER detected as poisoned. Both keys, honest fallback.
+            detail=str(payload.get("error") or payload.get("errors") or ""),
         )
         outcomes.append(outcome)
         _record_outcome(db, goal_id, outcome)
