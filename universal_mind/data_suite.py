@@ -42,6 +42,32 @@ class DataSuite:
     DEFAULT_SERIES: tuple[float, ...] = (2, 4, 4, 4, 5, 5, 7, 9)
 
     @staticmethod
+    def scalar_op(a: float, b: float, op: str) -> dict[str, Any]:
+        """Real arithmetic on TWO numbers — ضرب/تقسیم/جذر/درصد/توان.
+
+        The operator says «ضرب ۳ در ۴» and gets 12, not the stats of [3,4]:
+        word-matching routed it here, the operation does the REAL math.
+        """
+        try:
+            if op == "multiply":
+                return {"ok": True, "result": a * b, "error": ""}
+            if op == "divide":
+                if b == 0:
+                    return {"ok": False, "error": "تقسیم بر صفر تعریف نشده"}
+                return {"ok": True, "result": a / b, "error": ""}
+            if op == "power":
+                return {"ok": True, "result": a ** b, "error": ""}
+            if op == "sqrt":
+                if a < 0:
+                    return {"ok": False, "error": "جذر عدد منفی تعریف نشده"}
+                return {"ok": True, "result": a ** 0.5, "error": ""}
+            if op == "percent":
+                return {"ok": True, "result": a * b / 100.0, "error": ""}
+        except (OverflowError, ValueError) as exc:
+            return {"ok": False, "error": f"محاسبه ناموفق: {exc}"}
+        return {"ok": False, "error": f"عملیات ناشناخته: {op!r}"}
+
+    @staticmethod
     def _array(data: Any) -> np.ndarray:
         return np.asarray(data, dtype=float)
 
@@ -244,6 +270,10 @@ class DataSuiteConnector:
             "rounded": lambda: suite.rounded(data, int(params.get("decimals", 1))),
             # linear algebra
             "matrix_multiply": lambda: suite.matrix_multiply(params.get("a", []), params.get("b", [])),
+            "scalar_op": lambda: suite.scalar_op(
+                float(params.get("a", 0)), float(params.get("b", 0)),
+                str(params.get("scalar", "multiply")),
+            ),
             "solve": lambda: suite.solve(params.get("coefficients", []), params.get("constants", [])),
             "determinant": lambda: suite.determinant(params.get("matrix", [])),
             "eigenvalues": lambda: suite.eigenvalues(params.get("matrix", [])),

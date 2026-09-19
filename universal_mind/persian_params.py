@@ -142,6 +142,23 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     data = numbers_between or numbers
 
     if capability == "data":
+        # REAL ARITHMETIC on two numbers — the operator said ضرب/تقسیم/
+        # جذر/درصد/توان and gets the RESULT, not the stats of the pair.
+        _matched_scalar = next(
+            (op for w, op in (
+                ("ضرب", "multiply"), ("تقسیم", "divide"), ("جذر", "sqrt"),
+                ("درصد", "percent"), ("توان", "power"),
+            ) if w in command),
+            None,
+        )
+        if _matched_scalar and numbers:
+            a_val = data[0]
+            b_val = data[1] if len(data) >= 2 else 100.0  # «درصد X از Y» needs the base
+            return {
+                "operation": "scalar_op",
+                "a": a_val, "b": b_val,
+                "scalar": _matched_scalar,
+            }
         if numbers:
             return {"operation": "stats", "data": data}
         return {"operation": "stats"}

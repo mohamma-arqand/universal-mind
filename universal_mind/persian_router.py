@@ -50,6 +50,13 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("همبستگی", "data"),
     ("معادله", "data"),
     ("درصد", "data"),
+    ("ضرب", "data"),
+    ("تقسیم", "data"),
+    ("جذر", "data"),
+    ("مدیان", "data"),
+    ("میانه", "data"),
+    ("توان", "data"),
+    ("تبدیل", "data"),
     ("نرمال", "data"),
     ("ماتریس", "data"),
     # chart (matplotlib) — formal AND colloquial
