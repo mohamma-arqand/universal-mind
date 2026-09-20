@@ -166,17 +166,24 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # Chart KIND words name the operation explicitly (میلهای/دایرهای/خطی/...);
         # the default remains the line chart.
         kind = "line"
+        kind_explicit = "خطی" in command  # the word names it explicitly
         if "هیستوگرام" in command or "هیستوگرامش" in command:
             kind = "histogram"
+            kind_explicit = True
         elif "میلهای" in command or "ستونی" in command or "میله" in command:
             kind = "bar"
+            kind_explicit = True
         elif "دایرهای" in command or "دایره" in command or "پایهای" in command:
             kind = "pie"
+            kind_explicit = True
         elif "پراکنده" in command or "اسکتر" in command:
             kind = "scatter"
-        elif "هیستوگرام" in command or "هیستوگرامش" in command:
-            kind = "histogram"
+            kind_explicit = True
         params: dict[str, Any] = {"operation": kind}
+        if kind_explicit:
+            # R37-L4: marks that the OPERATOR named this kind — a stored
+            # preference must never override it (explicit intent wins).
+            params["kind_explicit"] = True
         if kind == "histogram":
             params["data"] = data          # the real series from the sentence
         elif kind == "bar":

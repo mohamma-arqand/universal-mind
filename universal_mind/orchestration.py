@@ -158,6 +158,45 @@ def _flow_params(
                 f"{last_producer} → chart ({len(computed)} نقطهی محاسبهشده رسم شد)",
             )
 
+    # DATABASE→CHART flow — the operator's OWN STORED numbers, plotted:
+    # a query returns [{metric, value}, ...] (list of dicts); each numeric
+    # value becomes a plotted point. «چی ذخیره کردی را نشانم بده، به‌صورت نمودار».
+    if (
+        consumer == "chart"
+        and last_producer in ("database", "csv")
+        and isinstance(last_output, list)
+        and last_output
+        and all(isinstance(r, dict) for r in last_output)
+    ):
+        def _num(v: object) -> float | None:
+            if isinstance(v, bool):
+                return None
+            if isinstance(v, (int, float)):
+                return float(v)
+            if isinstance(v, str):
+                try:
+                    return float(v)
+                except ValueError:
+                    return None
+            return None
+
+        numeric_rows: list[tuple[dict[str, Any], float]] = []
+        for r in last_output:
+            v = _num(r.get("value"))
+            if v is not None:
+                numeric_rows.append((r, v))
+        if numeric_rows and not params.get("seeded"):
+            labels = [str(r.get("metric", i)) for i, (r, _) in enumerate(numeric_rows)]
+            series_values = [v for _, v in numeric_rows]
+            return (
+                {**params, "operation": "bar",
+                 "categories": labels,
+                 "values": series_values,
+                 "title": params.get("title") or "نمودار از دادههای ذخیرهشده"},
+                f"{last_producer} → chart ({len(series_values)} رکورد ذخیرهشده رسم شد)",
+            )
+        return params, None
+
     # SPREADSHEET→CHART flow — a REAL read-back (excel/csv rows) becomes the
     # chart's data series: the operator's own stored numbers, plotted.
     if (
@@ -167,13 +206,15 @@ def _flow_params(
     ):
         if params.get("operation") and params["operation"] != "line":
             return params, None  # the operator named the chart kind
-        matrix_rows = [
+        matrix_rows: list[list[Any]] = [
             r for r in last_output["rows"][:50]
             if isinstance(r, list) and len(r) >= 2
         ]
-        numeric_rows = [r for r in matrix_rows if isinstance(r[1], (int, float))]
-        if numeric_rows:
-            series_values = [r[1] for r in numeric_rows]
+        cell_numeric_rows: list[list[Any]] = [
+            r for r in matrix_rows if isinstance(r[1], (int, float))
+        ]
+        if cell_numeric_rows:
+            series_values = [r[1] for r in cell_numeric_rows]
             return (
                 {**params, "operation": "line",
                  "series": {"ذخیرهشده": series_values},
@@ -307,22 +348,28 @@ def _flow_params(
             "webfetch → excel (محتوای صفحه در اکسل)",
         )
 
-    # OCR→DATABASE flow — the text READ from an image persisted as memory:
-    # «اسکرینشات بگیر، بخوان و ذخیره کن» — what the platform read, kept.
-    if consumer == "database" and isinstance(last_output, dict) and "text" in last_output:
-        text = str(last_output.get("text", "")).strip()
+    # READ→DATABASE flow — text the platform READ (OCR from an image, a web
+    # page's preview, a pdf's body) persisted as memory:
+    # «اسکرینشات بگیر، بخوان و ذخیره کن» / «صفحه وب رو ذخیره کن» — kept.
+    if (
+        consumer == "database"
+        and last_producer in ("ocr", "webfetch", "pdfreader", "vision")
+        and isinstance(last_output, dict)
+        and (last_output.get("text") or last_output.get("preview"))
+    ):
+        text = str(last_output.get("text") or last_output.get("preview") or "").strip()
         if text:
             if params.get("operation") and params["operation"] not in ("query", "insert_many"):
                 return params, None  # explicit non-store intent wins
             words = text.split()[:20]
             ocr_rows: list[dict[str, str]] = [
-                {"metric": f"ocr_{i}", "value": w} for i, w in enumerate(words)
+                {"metric": f"read_{i}", "value": w} for i, w in enumerate(words)
             ]
             return (
                 {**{k: v for k, v in params.items() if k != "rows"},
                  "operation": "insert_many", "table": "chain_results",
                  "rows": ocr_rows, "persistent": True},
-                f"ocr → database ({len(ocr_rows)} واژهی خواندهشده ذخیره شد)",
+                f"{last_producer} → database ({len(ocr_rows)} واژهی خواندهشده ذخیره شد)",
             )
         return params, None
 
@@ -513,6 +560,16 @@ def _flow_params(
     # voice (fa-preferred, honest when no Persian voice is installed).
     # Explicit text always wins; the command echo is treated as empty.
     if consumer == "speech":
+        # READ→SPEECH flow — the document the platform just READ becomes the
+        # spoken text: «سند را بلند بخوان» (pdfreader/ocr/pdf text → voice).
+        # The Persian reader: the document, aloud.
+        if not params.get("text") and last_producer in ("pdfreader", "ocr", "pdf", "vision") and isinstance(last_output, dict):
+            doc_text = str(last_output.get("text") or last_output.get("preview") or "").strip()
+            if doc_text:
+                return (
+                    {**params, "operation": "speak", "text": doc_text[:500]},
+                    f"{last_producer} → speech (متن سند بلند گفته شد)",
+                )
         # The AGENT's own narration: when the run just CAME FROM the goal
         # layer (its command carries the goal marker), the goal's report is
         # the worthiest text to speak — the platform narrates its own pursuit.

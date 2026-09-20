@@ -100,7 +100,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("پرس‌وجو", "database"),
     # media (ffmpeg)
     ("ویدیو", "media"),
-    ("فریم", "media"),
+    ("رسانه", "media"),
+    ("فیلم", "media"),
     ("تبدیل ویدیو", "media"),
     # archive (gzip)
     ("فشرده", "archive"),
@@ -115,6 +116,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # vision (OpenCV) — تحلیل تصویر واقعی
     ("بینایی", "vision"),
     ("تحلیل تصویر", "vision"),
+    ("این صفحه را ببین", "vision"),
+    ("ببین و بگو", "vision"),
     ("ساختارش را بخوان", "vision"),
     ("ساختار تصویر", "vision"),
     ("ساختارش", "vision"),
@@ -173,6 +176,10 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # speech (SAPI) — the platform speaks its results aloud
     ("بگو", "speech"),
     ("بلند بخوان", "speech"),
+    ("گوش کن", "speech"),
+    ("موسیقی", "speech"),
+    ("پخش کن", "speech"),
+    ("صدا", "speech"),
     ("بخوان بلند", "speech"),
     ("با صدا", "speech"),
     ("صدا کن", "speech"),
@@ -216,6 +223,10 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("یادآوری کن", "notify"),
     # clipboard
     ("کلیپبورد", "clipboard"),
+    ("بفرست", "clipboard"),
+    ("بنویس", "clipboard"),
+    ("تایپ کن", "clipboard"),
+    ("متن بنویس", "clipboard"),
     ("کپی کن", "clipboard"),
     ("بفرست به کلیپبورد", "clipboard"),
 )
@@ -351,6 +362,22 @@ def route_and_run(
         if chat is not None:
             return {
                 **chat,
+                "_registry": registry or ToolRegistry(),
+            }
+
+    # OPERATOR PREFERENCES — «همیشه نمودار میله‌ای دوست دارم» is stored,
+    # acknowledged, and shapes every FUTURE chart. The system gets personal.
+    if forced_route is None:
+        from universal_mind import operator_preferences as prefs
+
+        if prefs.remember_from_command(command):
+            return {
+                "ok": True, "command": command, "route": ["preference"],
+                "matched_words": ["همیشه"], "unknown": [],
+                "extracted_params": {},
+                "result": {"preference": {"stored": True}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": "یاد گرفتم! از این به بعد پیشفرضت را اعمال میکنم.",
                 "_registry": registry or ToolRegistry(),
             }
 
@@ -571,6 +598,15 @@ def route_and_run(
         cap: {**planned_params.get(cap, {}), **extracted.get(cap, {})}
         for cap in caps
     }
+    # R37-L4: remembered operator preferences shape the params — the
+    # command's own words already won above; a preference fills only
+    # what the sentence did NOT say.
+    try:
+        from universal_mind import operator_preferences as _prefs
+
+        capability_params = _prefs.apply_to(capability_params)
+    except Exception:  # noqa: BLE001 — preferences are a courtesy, never a blocker
+        pass
 
     # A chain of 2+ capabilities flows by default: one program's real output
     # becomes the next program's input (chart → pdf embeds the real chart).

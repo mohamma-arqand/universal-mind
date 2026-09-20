@@ -243,6 +243,23 @@ class MindDesktopApp:
         chain_tab = ttk.Frame(self._notebook, padding=6)
         self._notebook.add(chain_tab, text="زنجیره")
 
+        # --- Tab: گفتگو (the conversation tab — sit and TALK, not command) ---
+        chat_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(chat_tab, text="گفتگو")
+        self._chat_log = scrolledtext.ScrolledText(
+            chat_tab, font=("Segoe UI", 12), wrap=tk.WORD, state=tk.DISABLED,
+        )
+        self._chat_log.pack(fill=tk.BOTH, expand=True)
+        chat_bar = ttk.Frame(chat_tab)
+        chat_bar.pack(fill=tk.X, pady=(6, 0))
+        self._chat_entry = ttk.Entry(chat_bar, font=("Segoe UI", 12))
+        self._chat_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._chat_entry.bind("<Return>", self._chat_send)
+        ttk.Button(chat_bar, text="ارسال", command=self._chat_send).pack(side=tk.RIGHT, padx=(6, 0))
+        self._chat_append(
+            "🧠 سلام! اینجا میتوانی آزادانه حرف بزنی — هر جمله را اجرا میکنم و جواب میدهم.",
+        )
+
         chain_left = ttk.LabelFrame(chain_tab, text="زنجیرههای آماده", padding=6)
         chain_left.pack(side=tk.LEFT, fill=tk.Y)
         self._chain_list = tk.Listbox(chain_left, width=40, height=24, font=("Segoe UI", 10))
@@ -416,6 +433,40 @@ class MindDesktopApp:
             )
         except Exception as exc:  # noqa: BLE001 — views never fatal
             self._session_text.insert(tk.END, f"(نماها ناموفق: {exc})\n")
+
+    def _chat_append(self, text: str, who: str = "سیستم") -> None:
+        """Append one line to the conversation log (thread-safe-ish, simple)."""
+        self._chat_log.configure(state=tk.NORMAL)
+        tag = "me" if who == "من" else "mind"
+        self._chat_log.tag_configure("me", foreground="#0a6c2f")
+        self._chat_log.insert(tk.END, f"{who}: ", tag)
+        self._chat_log.insert(tk.END, f"{text}\n\n")
+        self._chat_log.see(tk.END)
+        self._chat_log.configure(state=tk.DISABLED)
+
+    def _chat_send(self, event: object | None = None) -> None:
+        """One chat line = one REAL route_and_run — the conversation IS the platform."""
+        text = self._chat_entry.get().strip()
+        if not text:
+            return
+        self._chat_entry.delete(0, tk.END)
+        self._chat_append(text, who="من")
+        try:
+            from universal_mind.persian_router import route_and_run
+
+            payload = route_and_run(text)
+            answer = payload.get("agent_report") or ""
+            if not answer:
+                # a capability run narrates through persian_report instead
+                from universal_mind.persian_report import persian_report
+
+                answer = persian_report(payload)
+            ok = payload.get("ok") is True
+            verdict = payload.get("judgment", {}).get("excellence")
+            verdict_txt = f" — داوری {round(verdict * 100)}٪" if isinstance(verdict, (int, float)) else ""
+            self._chat_append((answer or "انجام شد.") + verdict_txt, who="سیستم" if ok else "خطا")
+        except Exception as exc:  # noqa: BLE001 — the chat never dies
+            self._chat_append(f"اجرای فرمان ناموفق بود: {exc}", who="خطا")
 
     def _scan_watchers(self) -> None:
         """Sweep every active folder watcher; report what genuinely fired."""

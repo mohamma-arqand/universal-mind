@@ -68,7 +68,7 @@ class TestAgentLoop:
         with _isolated():
             started = start_goal(
                 "هدف: نامفهوم",
-                ("چیزی که هیچ قابلیتی ندارد بفرست", "نمودارش کن"),
+                ("zzqx بیقابلیت zzqx", "نمودارش کن"),
             )
             result = run_goal(started["goal_id"])
             assert result.finished is False

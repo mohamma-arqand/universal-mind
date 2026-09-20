@@ -108,6 +108,7 @@ PROBES = [
     "probe_reflexive.py",
     "probe_honest_ask.py",
     "probe_conversational.py",
+    "probe_r37_upgrade.py",
 ]
 
 
