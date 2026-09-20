@@ -91,8 +91,28 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             f"موفقترین زنجیره: {rows[0]['route']} با {_fa_num(rows[0]['n'])} برد.",
         )
 
-    # «آخرین چیزی که ساختی؟» — the newest real success.
-    if "آخرین" in c and ("ساختی" in c or "کردی" in c):
+    # «ترندها رو نشون بده» — the session's REAL trend, not a guess: the
+    # daily excellence verdict already computed by history_analytics.
+    if "ترند" in c or "روند" in c:
+        try:
+            from universal_mind.history_analytics import session_verdict
+
+            sv = session_verdict()
+            if sv.get("ok"):
+                mean_raw = sv.get("mean_excellence", sv.get("mean", 0))
+                mean_pct = _fa_num(round(float(mean_raw) * 100))
+                runs_n = _fa_num(sv.get("runs", 0))
+                return _reflex_answer(
+                    c,
+                    f"روند داوری نشست: {sv['verdict']} — میانگین {mean_pct}٪ روی {runs_n} اجرا.",
+                )
+        except Exception:  # noqa: BLE001 — a reflex never crashes
+            pass
+        return _reflex_answer(c, "هنوز دادهی روندی ندارم — چند فرمان بده تا روند شکل بگیرد.")
+
+    # «آخرین چیزی که ساختی؟» / «چیزی که دیروز ساختی رو نشونم بده» — the
+    # newest real success, in ANY spoken shape (دیروز/قبلا/این چند روز).
+    if ("آخرین" in c or "دیروز" in c or "قبلا" in c) and ("ساختی" in c or "کردی" in c or "ساخت" in c):
         rows = _query(
             db,
             "SELECT command, route FROM run_history WHERE succeeded = 1 AND route != '' ORDER BY id DESC LIMIT 1",

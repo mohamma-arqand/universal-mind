@@ -75,6 +75,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # pdf (reportlab)
     ("پی دی اف", "pdf"),
     ("پی‌دی‌اف", "pdf"),
+    ("pdf", "pdf"),
+    ("فایل pdf", "pdf"),
     ("گزارش", "pdf"),
     ("سند", "pdf"),
     ("فاکتور", "pdf"),
@@ -102,6 +104,11 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("تبدیل ویدیو", "media"),
     # archive (gzip)
     ("فشرده", "archive"),
+    ("زیپ کن", "archive"),
+    ("تحلیل کن", "data"),
+    ("تحلیل بده", "data"),
+    ("آنالیز", "data"),
+    ("رابطه بین", "data"),
     ("آرشیو", "archive"),
     ("بایگانی", "archive"),
     ("بایگانیش کن", "archive"),
@@ -142,6 +149,9 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("آپلود", "webfetch"),
     ("هشدار", "notify"),
     ("یادآوری کن", "notify"),
+    ("زمان بگیر", "notify"),
+    ("یادم بندی", "notify"),
+    ("یادم بیاور", "notify"),
     ("شبکه", "webfetch"),
 
     # zip (stdlib) — the world's archive format
@@ -329,6 +339,18 @@ def route_and_run(
         if reflex is not None:
             return {
                 **reflex,
+                "_registry": registry or ToolRegistry(),
+            }
+
+    # THE CONVERSATIONAL CLASS — small talk gets a warm SHORT answer, never
+    # silence. «سلام» answering with a hole is a broken first impression.
+    if forced_route is None:
+        from universal_mind.conversational import answer_conversational
+
+        chat = answer_conversational(command)
+        if chat is not None:
+            return {
+                **chat,
                 "_registry": registry or ToolRegistry(),
             }
 

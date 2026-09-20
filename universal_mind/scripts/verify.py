@@ -107,6 +107,7 @@ PROBES = [
     "probe_intelligence_layer.py",
     "probe_reflexive.py",
     "probe_honest_ask.py",
+    "probe_conversational.py",
 ]
 
 

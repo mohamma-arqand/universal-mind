@@ -368,9 +368,13 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                        "ORDER BY rowid DESC LIMIT 20",
                 "persistent": True,
             }
-        # «گزارش از ذخیرهشدهها» — the MEMORY becomes a DOCUMENT: the pdf
-        # renders the stored chain_results as a real table (the read-back flow).
-        if "گزارش از" in command and "ذخیره" in command:
+        # «گزارش از ذخیرهشدهها» / «PDF از نتایج» — the MEMORY becomes a
+        # DOCUMENT: the pdf renders the stored chain_results as a real table
+        # (the read-back flow). «نتایج» is the operator's word for the same
+        # thing: what the runs actually produced.
+        if ("گزارش از" in command and "ذخیره" in command) or (
+            "نتایج" in command and ("pdf" in command.lower() or "پی دی اف" in command)
+        ):
             return {
                 "operation": "query",
                 "sql": "SELECT metric, value FROM chain_results "
