@@ -223,10 +223,15 @@ def _flow_params(
             )
         return params, None
 
-    # WEB→REPORT flow — a fetched page becomes a REAL Persian pdf: the
-    # platform's own perception of the web, as a document. The page's real
-    # title and text preview are the content; explicit pdf intent wins.
-    if consumer == "pdf" and isinstance(last_output, dict) and "preview" in last_output:
+    # READ→REPORT flow — what the platform READ becomes a REAL Persian pdf:
+    # a web page (preview), a pdf body, OCR text. «سند را بخوان و گزارشش کن».
+    # Explicit pdf intent (a non-report operation) always wins.
+    if (
+        consumer == "pdf"
+        and last_producer in ("webfetch", "pdfreader", "ocr")
+        and isinstance(last_output, dict)
+        and (last_output.get("preview") or last_output.get("text"))
+    ):
         if params.get("operation") and params["operation"] not in ("persian_rtl", "persian_report"):
             return params, None  # explicit intent wins
         title = str(last_output.get("title") or "صفحهی وب")
@@ -234,7 +239,7 @@ def _flow_params(
         # plain text honestly: tags out, visible words kept.
         import re as _re
 
-        raw = str(last_output.get("preview") or "")[:1500]
+        raw = str(last_output.get("preview") or last_output.get("text") or "")[:1500]
         preview = _re.sub(r"<[^>]+>", " ", raw)
         preview = _re.sub(r"\s+", " ", preview).strip()[:800]
         # XML-escape whatever remains (<, >, & must never reach a Paragraph).
@@ -254,7 +259,7 @@ def _flow_params(
                 "title": f"گزارش وب — {title[:60]}",
                 "paragraphs": paragraphs,
             },
-            "webfetch → pdf (صفحهی وب در گزارش فارسی)",
+            f"{last_producer} → pdf (خواندهشده در گزارش فارسی)",
         )
 
     # STATS flow — the previous program computed real numbers; a pdf report
@@ -563,7 +568,7 @@ def _flow_params(
         # READ→SPEECH flow — the document the platform just READ becomes the
         # spoken text: «سند را بلند بخوان» (pdfreader/ocr/pdf text → voice).
         # The Persian reader: the document, aloud.
-        if not params.get("text") and last_producer in ("pdfreader", "ocr", "pdf", "vision") and isinstance(last_output, dict):
+        if not params.get("text") and last_producer in ("pdfreader", "ocr", "pdf", "vision", "webfetch") and isinstance(last_output, dict):
             doc_text = str(last_output.get("text") or last_output.get("preview") or "").strip()
             if doc_text:
                 return (

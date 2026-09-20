@@ -365,6 +365,46 @@ def route_and_run(
                 "_registry": registry or ToolRegistry(),
             }
 
+    # CONVERSATION MEMORY — «و حالا نمودارش را بکش» speaks of the LAST run.
+    # The rule: a command whose ONLY subject is the anaphora («نمودارش» — the
+    # possessive bound to the previous thing) reuses the previous route. A
+    # command with its OWN numbers/data («نمودار ۱ و ۵») names its subject
+    # and routes normally.
+    if forced_route is None:
+        from universal_mind.conversation_memory import context_params_for, refers_to_last
+
+        if refers_to_last(command):
+            # TWO anaphora shapes:
+            #  «همان را دوباره بکن» — the command's own words carry NO
+            #    capability → reuse the prior run wholesale (route + result).
+            #  «نمودارش را بکش» — the command names its OWN capability (chart);
+            #    it falls through to the normal pipeline (which charts from
+            #    the prior subject surfaced below at the return point).
+            from universal_mind.persian_router import route as _route
+
+            own = set(_route(command).capabilities)
+            ctx = context_params_for(command)
+            if ctx is not None and not own:
+                ctx_caps = ctx["route"]
+                return {
+                    "ok": True, "command": command, "route": ctx_caps,
+                    "matched_words": ["ضمیر"], "unknown": [],
+                    "extracted_params": {},
+                    "result": {"context": {"from_command": ctx["command"],
+                                           "reused_route": ctx_caps,
+                                           "prior_result": ctx["result"]}},
+                    "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                    "agent_report": (
+                        f"همان مورد قبلی را دوباره اجرا کردم: «{ctx['command']}» "
+                        f"({', '.join(ctx_caps)})."
+                    ),
+                    "_registry": registry or ToolRegistry(),
+                }
+            if ctx is not None and own:
+                # The command charts/crafts its own subject — remember WHICH
+                # prior run it is derived from (surface at the return below).
+                _ANAPHORA_SUBJECT["command"] = ctx["command"]
+
     # OPERATOR PREFERENCES — «همیشه نمودار میله‌ای دوست دارم» is stored,
     # acknowledged, and shapes every FUTURE chart. The system gets personal.
     if forced_route is None:
@@ -638,7 +678,13 @@ def route_and_run(
         gate = run_with_quality_gate(command, tuple(caps), _run_candidate, bar=dynamic_bar)
         if gate.repaired:
             # The shipped attempt replaces the weak one; the operator sees the truth.
-            return {**gate.shipped.payload, "gate_reasoning": gate.reasoning, "attempts": len(gate.attempts)}
+            # Surface the anaphora subject too — this is still the OUTER call.
+            _subj = _ANAPHORA_SUBJECT.get("command")
+            shipped = {**gate.shipped.payload, "gate_reasoning": gate.reasoning, "attempts": len(gate.attempts)}
+            if _subj:
+                shipped.setdefault("result", {})["anaphora_of"] = _subj
+                _ANAPHORA_SUBJECT.clear()
+            return shipped
     # The payload the ARETĒ judge reads (the same shape route_and_run returns).
     run_payload_preview = {
         "ok": syn.ok,
@@ -690,6 +736,15 @@ def route_and_run(
                             excellence=judgment.get("excellence"),
                             outcome_class=outcome_class,
                             flows=list(flows) if flows else None)
+        # R38-L3: the conversation's last context — what the NEXT anaphoric
+        # command («نمودارش را بکش») will refer to. Only successful runs.
+        if syn.ok:
+            try:
+                from universal_mind.conversation_memory import save_context
+
+                save_context(command, caps, syn.output.get("synthesized_from") or {})
+            except Exception:  # noqa: BLE001 — the memory is a courtesy
+                pass
     except Exception as exc:  # noqa: BLE001 — a failed history write never breaks the run
         import sys
 
@@ -716,7 +771,7 @@ def route_and_run(
         SessionCore.current().add("judged")
     except Exception:  # noqa: BLE001
         pass
-    return {
+    payload = {
         "ok": syn.ok,
         "command": command,
         "route": caps,
@@ -730,6 +785,26 @@ def route_and_run(
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
         "_registry": reg,  # kept internal: the caller may reuse the registry
     }
+    anaphora_subject = _ANAPHORA_SUBJECT.get("command")
+    if anaphora_subject and forced_route is None:
+        payload["result"]["anaphora_of"] = anaphora_subject
+        _ANAPHORA_SUBJECT.clear()
+    # R38-L1: the fluent report rides IN the payload — CLI, API, the chat tab
+    # and the goal loop all read ONE source instead of re-rendering. Only
+    # when empty (the reflex/conversational classes fill theirs themselves).
+    if not payload.get("agent_report"):
+        try:
+            from universal_mind.persian_report import persian_report
+
+            payload["agent_report"] = persian_report(payload)
+        except Exception:  # noqa: BLE001 — reporting is a courtesy, never a blocker
+            pass
+    return payload
+
+
+# R38-L3: which prior run an anaphoric command is derived from. Set by the
+# consume branch, surfaced on the return payload. Empty = not anaphoric.
+_ANAPHORA_SUBJECT: dict[str, str] = {}
 
 
 __all__ = ["PersianRoute", "route", "route_and_run"]

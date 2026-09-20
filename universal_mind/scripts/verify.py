@@ -109,6 +109,7 @@ PROBES = [
     "probe_honest_ask.py",
     "probe_conversational.py",
     "probe_r37_upgrade.py",
+    "probe_r38_upgrade.py",
 ]
 
 

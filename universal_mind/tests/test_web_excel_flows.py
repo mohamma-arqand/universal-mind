@@ -11,7 +11,7 @@ class TestWebToReportFlow:
         payload = route_and_run("صفحه وب https://example.com را بگیر و گزارشش کن")
         assert payload["route"] == ["webfetch", "pdf"]
         assert payload["ok"] is True
-        assert any("صفحهی وب در گزارش فارسی" in f for f in payload["flows"])
+        assert any("webfetch → pdf (خواندهشده در گزارش فارسی)" in f for f in payload["flows"])
         assert payload["result"]["pdf"]["bytes"] > 20000  # a real document
 
     def test_html_never_reaches_the_paragraph_engine(self) -> None:
