@@ -158,10 +158,13 @@ class StubChatServer:
                 pass
 
             def do_POST(self) -> None:
+                # R41: ALWAYS drain the request body first — answering a POST
+                # before reading its body makes Windows abort the client's
+                # send with WinError 10053 (the notorious localhost flake).
+                body = self._read_json()
                 if self.path != "/chat/completions":
                     _json(self, 404, {"error": {"message": f"unknown path {self.path}"}})
                     return
-                body = self._read_json()
                 messages = body.get("messages", [])
                 content = server._reply(messages, body.get("model", model))
                 server.log.append(

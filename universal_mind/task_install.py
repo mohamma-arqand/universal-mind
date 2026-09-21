@@ -75,6 +75,18 @@ def uninstall() -> dict[str, Any]:
     return {"ok": True, "task": TASK_NAME, "error": ""}
 
 
+def _health_store() -> Any:
+    """The persistent store for health reads (R41).
+
+    The CONSTRUCTOR, not shared_persistent: health must honor a patched
+    DEFAULT_DB_DIR (tests isolate to a temp store that way), and a plain
+    constructor call also survives lambda-mocked classes.
+    """
+    from universal_mind.database_suite import DatabaseSuite
+
+    return DatabaseSuite(persistent=True)
+
+
 def tick_health() -> dict[str, Any]:
     """The proactive heartbeat: is the tick ALIVE?
 
@@ -93,15 +105,21 @@ def tick_health() -> dict[str, Any]:
     signals["task_installed"] = bool(task.get("ok"))
 
     try:
-        from universal_mind.database_suite import DatabaseSuite
 
-        db = DatabaseSuite(persistent=True)
+        db = _health_store()
         q = db.query(
             "SELECT MAX(created_at) AS last FROM run_history"
         )
         last_row = q["rows"][0]["last"] if q.get("ok") and q["rows"] else None
-        cutoff = (datetime.now() - timedelta(hours=25)).isoformat(timespec="seconds")
-        signals["recent_run"] = bool(last_row and str(last_row) >= cutoff)
+        # R41: parse the real datetime — the store writes BOTH 'T'-separated
+        # and space-separated stamps; a naive string compare silently says
+        # "no recent run" for every space-separated row (space < 'T').
+        if last_row is None:
+            signals["recent_run"] = False
+        else:
+            stamp = str(last_row).replace("T", " ").split(".")[0]
+            last_dt = datetime.fromisoformat(stamp)
+            signals["recent_run"] = last_dt >= datetime.now() - timedelta(hours=25)
     except Exception:  # noqa: BLE001 — a health probe never crashes
         signals["recent_run"] = False
 

@@ -26,9 +26,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 
 def check_nested_goal_flattened() -> bool:
-    from universal_mind.persian_router import route_and_run
+    from unittest.mock import patch as mock_patch
 
-    payload = route_and_run("هدف: هدف: تو در تو")
+    import tempfile
+    from pathlib import Path
+
+    from universal_mind.database_suite import DatabaseSuite
+
+    suite = DatabaseSuite(str(Path(tempfile.mkdtemp()) / "probe-goals.db"))
+    with mock_patch(
+        "universal_mind.database_suite.DatabaseSuite.shared_persistent",
+        classmethod(lambda cls: suite),
+    ):
+        from universal_mind.persian_router import route_and_run
+
+        payload = route_and_run("هدف: هدف: تو در تو")
     report = payload.get("agent_report", "") or str(
         payload.get("result", {}).get("goal", {}).get("report", "")
     )

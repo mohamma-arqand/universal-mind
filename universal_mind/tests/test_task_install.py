@@ -1,4 +1,10 @@
-"""Tests: the Task Scheduler tick install — real schtasks, read back."""
+"""Tests: the Task Scheduler tick install — real schtasks, read back.
+
+R41: these tests exercise the REAL machine task. They must leave the tick
+INSTALLED at the end — the suite runs on every release and a test-side
+uninstall was silently KILLING the production heartbeat (caught live: the
+gate's tick probe went dead after every full run).
+"""
 
 from __future__ import annotations
 
@@ -24,12 +30,17 @@ class TestTickInstall:
         assert cmd.startswith('"') and '" "' in cmd  # quoted python and script
         assert "scheduler_tick.py" in cmd
 
-    def test_uninstall_is_idempotent(self) -> None:
-        """Removing twice: the second (missing task) is still a success."""
+    def test_uninstall_is_idempotent_and_leaves_the_tick_installed(self) -> None:
+        """Removing twice: the second (missing task) is still a success —
+        and the tick is REINSTALLED afterward so the suite never kills the
+        production heartbeat."""
         first = uninstall()
         assert first["ok"] is True
         second = uninstall()
         assert second["ok"] is True  # missing task is not an error
+        # RESTORE: the heartbeat must survive the test suite.
+        restore = install()
+        assert restore["ok"] is True, restore.get("error", "")
 
 
 class TestTickCLI:
@@ -38,3 +49,5 @@ class TestTickCLI:
 
         assert main(["install-tick"]) == 0
         assert main(["uninstall-tick"]) == 0
+        # RESTORE: never leave the heartbeat dead behind a passing test.
+        assert install()["ok"] is True

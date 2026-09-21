@@ -233,6 +233,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     fac = sub.add_parser("fa-contest", help="دو زنجیره رقابت میکنند و ARETĒ برنده را انتخاب میکند")
     fac.add_argument("command", help="the Persian command (quote it)")
 
+    faserve = sub.add_parser(
+        "fa-serve", help="چهرهی محلی: یک صفحهی گفتگوی فارسی روی http://127.0.0.1 (پیشفرض 8765)"
+    )
+    faserve.add_argument("--port", type=int, default=8765, help="پورت localhost")
+
     args = parser.parse_args(argv)
 
     if args.verb == "health":
@@ -271,6 +276,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_dashboard_sp(args)
     if args.verb == "fa":
         return _cmd_fa(args)
+    if args.verb == "fa-serve":
+        from universal_mind.remote_face import serve_forever
+
+        serve_forever(port=args.port)
+        return 0
+
     if args.verb == "fa-contest":
         return _cmd_fa_contest(args)
     if args.verb == "run":

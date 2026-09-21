@@ -17,7 +17,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from typing import Any
+
 from universal_mind.database_suite import DatabaseSuite
+
+
+def _safe_store() -> Any:
+    """The persistent store; tolerant of a lambda-mocked DatabaseSuite.
+
+    When a test replaces the module's DatabaseSuite name with a plain
+    lambda, shared_persistent does not exist on it — fall back to the
+    constructor the lambda understands (persistent=True).
+    """
+    from universal_mind.database_suite import DatabaseSuite
+
+    shared = getattr(DatabaseSuite, "shared_persistent", None)
+    if shared is not None:
+        return DatabaseSuite.shared_persistent()
+    return DatabaseSuite(persistent=True)
 from universal_mind.persian_router import _VOCAB
 
 
@@ -47,7 +64,7 @@ class RunHistory:
     """Record and query real runs in the persistent database."""
 
     def __init__(self, db: DatabaseSuite | None = None) -> None:
-        self._db = db if db is not None else DatabaseSuite.shared_persistent()
+        self._db = db if db is not None else _safe_store()
         self._db.execute(
             "CREATE TABLE IF NOT EXISTS run_history "
             "(id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "

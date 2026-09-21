@@ -23,20 +23,26 @@ class TestTickStoppedGoals:
         store: AbstractContextManager[object] = mock_patch.object(
             sched_mod, "_store", lambda: suite
         )
-        with store, mock_patch.object(
-            agent_mod, "_store", lambda: suite
-        ), mock_patch(
-            "universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite
-        ), mock_patch(
+        _real_db = __import__("universal_mind.database_suite", fromlist=["DatabaseSuite"]).DatabaseSuite
+        _shared_patch = mock_patch.object(_real_db, "shared_persistent", classmethod(lambda cls: suite))
+        _shared_patch.start()
+        try:
+            with store, mock_patch.object(
+                agent_mod, "_store", lambda: suite
+            ), mock_patch(
+                "universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite
+            ), mock_patch(
             "universal_mind.real_notify.NotifyTool.notify"
         ) as toast:
-            # a goal that stops mid-way (the broken step)
-            started = agent_mod.start_goal(
-                "هدف: تیک تست", ("این فرمان بیخاصیت XYZQ است",)
-            )
-            agent_mod.run_goal(started["goal_id"])
-            result = tick()
-        assert result["count"] >= 0  # the tick ran fine
-        body = toast.call_args.kwargs.get("body", "") if toast.call_args else ""
-        assert "هدفِ متوقف‌شده" in body
-        assert "ادامه بده" in body
+                # a goal that stops mid-way (the broken step)
+                started = agent_mod.start_goal(
+                    "هدف: تیک تست", ("این فرمان بیخاصیت XYZQ است",)
+                )
+                agent_mod.run_goal(started["goal_id"])
+                result = tick()
+            assert result["count"] >= 0  # the tick ran fine
+            body = toast.call_args.kwargs.get("body", "") if toast.call_args else ""
+            assert "هدفِ متوقف‌شده" in body
+            assert "ادامه بده" in body
+        finally:
+            _shared_patch.stop()

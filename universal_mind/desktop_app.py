@@ -370,7 +370,7 @@ class MindDesktopApp:
         from universal_mind.database_suite import DatabaseSuite
 
         self._goals_text.delete("1.0", tk.END)
-        db = DatabaseSuite(persistent=True)
+        db = DatabaseSuite.shared_persistent()
         _ensure_goals_table(db)
         q = db.query("SELECT id, goal, next_step, state FROM goals ORDER BY id DESC LIMIT 20")
         rows = q["rows"] if q.get("ok") else []
@@ -406,7 +406,7 @@ class MindDesktopApp:
         from universal_mind.database_suite import DatabaseSuite
         from universal_mind.agent_loop import _ensure_goals_table
 
-        db = DatabaseSuite(persistent=True)
+        db = DatabaseSuite.shared_persistent()
         _ensure_goals_table(db)
         q = db.query("SELECT id FROM goals WHERE state = 'stopped' ORDER BY id")
         stopped = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []

@@ -42,9 +42,10 @@ class TestTickNotification:
         suite = DatabaseSuite()
         import universal_mind.agent_loop as agent_mod
 
+        _real_db = DatabaseSuite  # grabbed BEFORE the class-lambda patch
         with mock_patch.object(sched_mod, "_store", lambda: suite), \
              mock_patch.object(agent_mod, "_store", lambda: suite), \
-             mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), \
+             mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch.object(_real_db, "shared_persistent", classmethod(lambda cls: suite)), \
              mock_patch("universal_mind.real_notify.NotifyTool.notify") as toast:
             # fire everything once, then nothing is due (goals store also empty
             # — stopped goals in the LIVE store would rightly toast too)

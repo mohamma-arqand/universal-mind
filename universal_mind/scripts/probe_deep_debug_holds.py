@@ -84,7 +84,10 @@ def check_blocked_env_is_not_failure() -> bool:
 
     suite = DatabaseSuite()
     # the predictor binds DatabaseSuite at ITS import time — patch its own name
-    with mock_patch.object(sp_mod, "DatabaseSuite", lambda persistent=True: suite):
+    with mock_patch.object(sp_mod, "DatabaseSuite", lambda persistent=True: suite), mock_patch.object(
+        __import__("universal_mind.database_suite", fromlist=["DatabaseSuite"]).DatabaseSuite,
+        "shared_persistent", classmethod(lambda cls: suite)
+    ):
         RunHistory(suite).record("بلند بخوان", ["speech"], False, outcome_class="blocked_env")
         RunHistory(suite).record("بلند بخوان", ["speech"], True, excellence=1.0)
         RunHistory(suite).record("بلند بخوان", ["speech"], True, excellence=1.0)

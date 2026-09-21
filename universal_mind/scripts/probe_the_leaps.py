@@ -39,7 +39,11 @@ def _isolated() -> AbstractContextManager[object]:
     stack = ExitStack()
     stack.enter_context(mock_patch.object(agent_mod, "_store", lambda: suite))
     stack.enter_context(
-        mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite)
+        mock_patch.object(
+            DatabaseSuite,
+            "shared_persistent",
+            classmethod(lambda cls: suite),
+        )
     )
     return stack
 
@@ -87,7 +91,7 @@ def check_warmup_and_self_inspect_run() -> bool:
 
     suite = DatabaseSuite()
     buf = io.StringIO()
-    with mock_patch.object(sched_mod, "_store", lambda: suite), mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch("universal_mind.real_notify.NotifyTool.notify"), redirect_stdout(buf):
+    with mock_patch.object(sched_mod, "_store", lambda: suite), mock_patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: suite)), mock_patch("universal_mind.real_notify.NotifyTool.notify"), redirect_stdout(buf):
         tick()
     out = buf.getvalue()
     warm = "warmup" in out

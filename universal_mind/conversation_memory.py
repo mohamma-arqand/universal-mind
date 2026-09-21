@@ -23,6 +23,9 @@ from typing import Any
 from universal_mind.database_suite import DatabaseSuite
 
 # Anaphora markers: the command speaks OF the previous thing.
+# Retention: the table is a sliding window, never a ledger.
+KEEP_ROWS = 50
+
 # Anaphora markers. The possessive «ش» (it) on an ACTION verb is the signal
 # («نمودارش»، «تحلیلش»، «بفرستش»، «بخوانش») — but that suffix is a false
 # positive inside compound words («خورش»), so the RE alone is not enough;
@@ -37,8 +40,13 @@ _POSSESSIVE_ACTION_RE = re.compile(
 
 
 def save_context(command: str, route: list[str], result: dict[str, Any]) -> None:
-    """Persist the newest successful run as the conversation's last context."""
-    db = DatabaseSuite(persistent=True)
+    """Persist the newest successful run as the conversation's last context.
+
+    R41: the table is a WINDOW, not a ledger — only the newest KEEP rows
+    survive (retention GC on every write). Unbounded growth (caught live:
+    3,838 rows when exactly 1 is ever read) wasted the durable store.
+    """
+    db = DatabaseSuite.shared_persistent()
     db.execute(
         "CREATE TABLE IF NOT EXISTS last_context ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
@@ -52,11 +60,17 @@ def save_context(command: str, route: list[str], result: dict[str, Any]) -> None
         f"INSERT INTO last_context (command, route, result) "
         f"VALUES ('{cmd}', '{','.join(route)}', '{res.replace(chr(39), chr(39) * 2)}')"
     )
+    # RETENTION GC: keep the newest window (the newest is what last_context()
+    # reads; a small tail is kept for debugging honesty), trim the rest.
+    db.execute(
+        f"DELETE FROM last_context WHERE id <= "
+        f"(SELECT MAX(id) - {KEEP_ROWS} FROM last_context)"
+    )
 
 
 def last_context() -> dict[str, Any] | None:
     """The newest successful context row, or None (absence is honest)."""
-    db = DatabaseSuite(persistent=True)
+    db = DatabaseSuite.shared_persistent()
     try:
         q = db.query(
             "SELECT command, route, result FROM last_context ORDER BY id DESC LIMIT 1"

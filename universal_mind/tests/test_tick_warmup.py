@@ -19,7 +19,8 @@ class TestTickWarmupAndSelfInspect:
 
         suite = DatabaseSuite()
         ctx = mock_patch.object(sched_mod, "_store", lambda: suite)
-        with ctx, mock_patch("universal_mind.real_notify.NotifyTool.notify"), mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch("universal_mind.run_history.ChainAdvisor.advise_semantic") as warm:
+        _real_db = DatabaseSuite  # grabbed BEFORE the class-lambda patch
+        with ctx, mock_patch("universal_mind.real_notify.NotifyTool.notify"), mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch.object(_real_db, "shared_persistent", classmethod(lambda cls: suite)), mock_patch("universal_mind.run_history.ChainAdvisor.advise_semantic") as warm:
             tick()
         warm.assert_called()  # the advisor was pre-warmed for the day
 
@@ -40,7 +41,8 @@ class TestTickWarmupAndSelfInspect:
 
         suite = DatabaseSuite()
         ctx = mock_patch.object(sched_mod, "_store", lambda: suite)
-        with ctx, mock_patch.object(agent_mod, "_store", lambda: suite), mock_patch("universal_mind.real_notify.NotifyTool.notify"), mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite):
+        _real_db = DatabaseSuite  # grabbed BEFORE the class-lambda patch
+        with ctx, mock_patch.object(agent_mod, "_store", lambda: suite), mock_patch("universal_mind.real_notify.NotifyTool.notify"), mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch.object(_real_db, "shared_persistent", classmethod(lambda cls: suite)):
             agent_mod.start_goal("هدف: هرگز شروع نشده", ("گامیک",))
             tick()
         # the goal stayed active-never-started (auto-resume is OFF by design)

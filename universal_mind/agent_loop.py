@@ -53,6 +53,15 @@ class GoalRunResult:
 
 
 def _store() -> DatabaseSuite:
+    # R41: the shared persistent suite — tests/probes patch shared_persistent
+    # to isolate the goal store; a fresh DatabaseSuite(persistent=True) here
+    # bypassed every patch and littered the durable DB (14 junk rows after
+    # one gate run). When the CLASS itself is a mock lambda (the older
+    # isolation style) it has no shared_persistent — the constructor is the
+    # fallthrough, so both isolation styles keep working.
+    shared = getattr(DatabaseSuite, "shared_persistent", None)
+    if shared is not None:
+        return DatabaseSuite.shared_persistent()
     return DatabaseSuite(persistent=True)
 
 

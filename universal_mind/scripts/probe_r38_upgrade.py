@@ -42,22 +42,48 @@ def main() -> int:
     reports = bool(reports)
     _ok("L2 readers become reports", reports)
 
-    # L3 — the conversation's anaphora resolves to the last run.
-    route_and_run("میانگین ۱ و ۲ را حساب کن")
-    anaphora = route_and_run("و همان را دوباره بکن")
+    # L3/L4 — the conversation-memory probes ride an ISOLATED context store
+    # too: probes run back-to-back in the gate and the LIVE last_context left
+    # by an earlier probe must not decide this probe's answer (caught live:
+    # 'vague action inherits' failed because r37 had left a stale subject).
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import patch as mock_patch
+
+    from universal_mind.database_suite import DatabaseSuite
+
+    _suite = DatabaseSuite(str(Path(tempfile.mkdtemp()) / "probe-r38.db"))
+    with mock_patch(
+        "universal_mind.database_suite.DatabaseSuite.shared_persistent",
+        classmethod(lambda cls: _suite),
+    ):
+        # L3 — the conversation's anaphora resolves to the last run.
+        route_and_run("میانگین ۱ و ۲ را حساب کن")
+        anaphora = route_and_run("و همان را دوباره بکن")
+        own = route_and_run("و حالا نمودارش را بکش")
     _ok("L3 anaphora reuses prior", bool(anaphora.get("ok")) and "همان" in str(anaphora.get("agent_report", "")),
         f"route={anaphora.get('route')}")
-    own = route_and_run("و حالا نمودارش را بکش")
     _ok("L3 own-capability marks subject",
         own.get("route") == ["chart"] and own["result"].get("anaphora_of"))
 
-    # L4 — a vague goal step inherits the prior subject.
-    vague = route_and_run("حالا تحلیلش کن")
+    # L4 — a vague goal step inherits the prior subject. The goal store is
+    # ISOLATED (same _suite): the probe runs on every release and must never
+    # litter the durable DB (caught live: 21 duplicate rows across runs).
+    with mock_patch(
+        "universal_mind.database_suite.DatabaseSuite.shared_persistent",
+        classmethod(lambda cls: _suite),
+    ):
+        vague = route_and_run("حالا تحلیلش کن")
     _ok("L4 vague action inherits", bool(vague.get("ok")) and "همان" in str(vague.get("agent_report", "")),
         f"route={vague.get('route')}")
-    from universal_mind.agent_loop import run_goal, start_goal
-    s = start_goal("هدف: ضمیر زنده", ("نمودار ۱ و ۵ را بکش", "حالا تحلیلش کن", "گزارشش را بساز"))
-    g = run_goal(s["goal_id"])
+    with mock_patch(
+        "universal_mind.database_suite.DatabaseSuite.shared_persistent",
+        classmethod(lambda cls: _suite),
+    ):
+        from universal_mind.agent_loop import run_goal, start_goal
+
+        s = start_goal("هدف: ضمیر زنده", ("نمودار ۱ و ۵ را بکش", "حالا تحلیلش کن", "گزارشش را بساز"))
+        g = run_goal(s["goal_id"])
     _ok("L4 vague goal step completes", g.finished and all(x.ok for x in g.steps))
 
     sys.stderr.write("R38 upgrade map: ALL HOLDS GREEN\n")

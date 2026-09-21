@@ -424,9 +424,8 @@ def route_and_run(
     # «وضعیت» — the agent's status board: every goal, its state and verdict.
     if forced_route is None and (command.strip().startswith("وضعیت") or command.strip() in ("چی شد؟", "چه خبر")):
         from universal_mind.agent_loop import _ensure_goals_table
-        from universal_mind.database_suite import DatabaseSuite
 
-        db = DatabaseSuite(persistent=True)
+        db = _status_store()
         _ensure_goals_table(db)
         q = db.query(
             "SELECT goal, next_step, state, outcomes FROM goals "
@@ -474,9 +473,8 @@ def route_and_run(
     # resumed from its exact failing step. The human phrasing of recovery.
     if forced_route is None and command.strip().startswith("ادامه"):
         from universal_mind.agent_loop import _ensure_goals_table
-        from universal_mind.database_suite import DatabaseSuite
 
-        db = DatabaseSuite(persistent=True)
+        db = _status_store()
         _ensure_goals_table(db)
         q = db.query("SELECT id FROM goals WHERE state = 'stopped' ORDER BY id")
         stopped = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []
@@ -831,6 +829,22 @@ def route_and_run(
 # R38-L3: which prior run an anaphoric command is derived from. Set by the
 # consume branch, surfaced on the return payload. Empty = not anaphoric.
 _ANAPHORA_SUBJECT: dict[str, str] = {}
+
+
+def _status_store() -> Any:
+    """The persistent goals store, tolerant of a mocked DatabaseSuite class.
+
+    Old-style test isolation replaces the module's DatabaseSuite name with a
+    plain lambda; that lambda has no shared_persistent. Fall back to the
+    constructor (the lambda accepts persistent=True) — both isolation
+    styles keep working.
+    """
+    from universal_mind.database_suite import DatabaseSuite
+
+    shared = getattr(DatabaseSuite, "shared_persistent", None)
+    if shared is not None:
+        return DatabaseSuite.shared_persistent()
+    return DatabaseSuite(persistent=True)
 
 
 __all__ = ["PersianRoute", "route", "route_and_run"]

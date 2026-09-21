@@ -141,7 +141,8 @@ def _strip_schedule_words(command: str) -> str:
 
 
 def _store() -> DatabaseSuite:
-    return DatabaseSuite(persistent=True)
+    # R41: shared — patches reach it; one hot wrapper.
+    return DatabaseSuite.shared_persistent()
 
 
 def _ensure_table(db: DatabaseSuite) -> None:

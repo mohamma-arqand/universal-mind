@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import AbstractContextManager
+from typing import Any
 from unittest.mock import patch as mock_patch
 
 import universal_mind.agent_loop as agent_mod
@@ -12,7 +13,35 @@ def _isolated() -> AbstractContextManager[object]:
     from universal_mind.database_suite import DatabaseSuite
 
     suite = DatabaseSuite()
-    return mock_patch.object(agent_mod, "_store", lambda: suite)
+    # R41: the router/status read shared_persistent on the REAL class —
+    # patch it to the same suite (before any class-lambda patch runs).
+    ctx = mock_patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: suite))
+    return _StackedPatch(ctx, mock_patch.object(agent_mod, "_store", lambda: suite))
+
+
+def _shared_ctx(cls: Any, suite: Any) -> AbstractContextManager[Any]:
+    """Patch shared_persistent on the REAL class to this suite."""
+    return mock_patch.object(cls, "shared_persistent", classmethod(lambda c: suite))
+
+
+class _StackedPatch:
+    """Two patches entered and exited as one context."""
+
+    def __init__(self, *patches: Any) -> None:
+        self._patches: tuple[Any, ...] = patches
+
+    def __enter__(self) -> Any:
+        for p in self._patches:
+            enter = getattr(p, "__enter__", None)
+            if callable(enter):  # pragma: no cover - defensive only
+                enter()
+        return None
+
+    def __exit__(self, *exc: Any) -> None:
+        for p in reversed(self._patches):
+            exit_ = getattr(p, "__exit__", None)
+            if callable(exit_):  # pragma: no cover - defensive only
+                exit_(*exc)
 
 
 class TestStatusCommand:
@@ -48,7 +77,7 @@ class TestStatusCommand:
             ds_mod, "DatabaseSuite", lambda persistent=True, **kw: suite
         ), mock_patch.object(
             agent_mod, "_store", lambda: suite
-        ):
+        ), _shared_ctx(DatabaseSuite, suite):
             done = start_goal("هدف: نمونه تمام", ("میانگین 4 و 6 را حساب کن",))
             run_goal(done["goal_id"])
             stopped = start_goal(

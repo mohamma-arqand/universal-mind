@@ -34,16 +34,22 @@ class TestOutcomeClass:
         suite = DatabaseSuite()
         # the predictor holds its OWN import-time DatabaseSuite name — patch
         # THAT, not database_suite's (a from-import binds early).
-        with mock_patch.object(sp_mod, "DatabaseSuite", lambda persistent=True: suite):
-            from universal_mind.run_history import RunHistory
+        _real_db = __import__('universal_mind.database_suite', fromlist=['DatabaseSuite']).DatabaseSuite
+        _shared_patch = mock_patch.object(_real_db, 'shared_persistent', classmethod(lambda cls: suite))
+        _shared_patch.start()
+        try:
+            with mock_patch.object(sp_mod, "DatabaseSuite", lambda persistent=True: suite):
+                from universal_mind.run_history import RunHistory
 
-            RunHistory(suite).record("بلند بخوان", ["speech", "data"], False, outcome_class="blocked_env")
-            RunHistory(suite).record("بلند بخوان", ["speech", "data"], True, excellence=1.0)
-            RunHistory(suite).record("بلند بخوان", ["speech", "data"], True, excellence=1.0)
-            p = predict_success(("speech", "data"))
-        # two real wins, zero real failures → Laplace (2+1)/(2+2) = 0.75, tier medium+
-        assert p.success_probability >= 0.75
-        assert p.tier in ("strong", "medium")
+                RunHistory(suite).record("بلند بخوان", ["speech", "data"], False, outcome_class="blocked_env")
+                RunHistory(suite).record("بلند بخوان", ["speech", "data"], True, excellence=1.0)
+                RunHistory(suite).record("بلند بخوان", ["speech", "data"], True, excellence=1.0)
+                p = predict_success(("speech", "data"))
+            # two real wins, zero real failures → Laplace (2+1)/(2+2) = 0.75, tier medium+
+            assert p.success_probability >= 0.75
+            assert p.tier in ("strong", "medium")
+        finally:
+            _shared_patch.stop()
 
 
 class TestPoisonDetection:
@@ -90,14 +96,21 @@ class TestPoisonDetection:
         suite = DatabaseSuite()
         # BOTH lenses must see the SAME suite: the router opens the store
         # through database_suite AND the goal loop through agent._store.
-        with mock_patch.object(agent_mod, "_store", lambda: suite), \
-             mock_patch.object(ds_mod, "DatabaseSuite", lambda persistent=False: suite):
-            started = agent_mod.start_goal("هدف: زهرآلود تست", ("این فرمان هیچ قابلیتی ندارد XYZQ",))
-            from universal_mind.agent_loop import POISON_THRESHOLD
+        # shared_persistent is patched on the REAL class BEFORE the
+        # class-lambda patch (the router reads it since R41).
+        _shared_patch = mock_patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: suite))
+        _shared_patch.start()
+        try:
+            with mock_patch.object(agent_mod, "_store", lambda: suite), \
+                 mock_patch.object(ds_mod, "DatabaseSuite", lambda persistent=False: suite):
+                started = agent_mod.start_goal("هدف: زهرآلود تست", ("این فرمان هیچ قابلیتی ندارد XYZQ",))
+                from universal_mind.agent_loop import POISON_THRESHOLD
 
-            for _ in range(POISON_THRESHOLD):
-                agent_mod.run_goal(started["goal_id"])
-            payload = route_and_run("ادامه بده")
+                for _ in range(POISON_THRESHOLD):
+                    agent_mod.run_goal(started["goal_id"])
+                payload = route_and_run("ادامه بده")
+        finally:
+            _shared_patch.stop()
         assert "زهرآلود" in payload["agent_report"]
         assert "اصلاح" in payload["agent_report"]  # the remedy, stated
 

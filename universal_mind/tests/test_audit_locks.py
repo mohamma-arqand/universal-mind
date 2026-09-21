@@ -2,6 +2,27 @@
 
 from __future__ import annotations
 
+from typing import Any
+from unittest.mock import patch as mock_patch
+
+
+def _isolated_goals() -> Any:
+    """A temp goals store — the probe MUST NOT litter the durable DB.
+
+    (Caught live: the nested-goal test had written 29 junk 'هدف: هدف:'
+    rows into the PERSISTENT store across runs.)
+    """
+    import tempfile
+    from pathlib import Path
+
+    from universal_mind.database_suite import DatabaseSuite
+
+    suite = DatabaseSuite(str(Path(tempfile.mkdtemp()) / "goals.db"))
+    return mock_patch(
+        "universal_mind.database_suite.DatabaseSuite.shared_persistent",
+        classmethod(lambda cls: suite),
+    )
+
 
 class TestNestedGoalIsFlattened:
     def test_goal_of_goal_does_not_recurse(self) -> None:
@@ -9,7 +30,8 @@ class TestNestedGoalIsFlattened:
         the error text is never the goal-of-goal-of-goal chain again."""
         from universal_mind.persian_router import route_and_run
 
-        payload = route_and_run("هدف: هدف: تو در تو")
+        with _isolated_goals():
+            payload = route_and_run("هدف: هدف: تو در تو")
         report = payload.get("agent_report", "") or str(
             payload.get("result", {}).get("goal", {}).get("report", "")
         )
@@ -23,6 +45,7 @@ class TestNestedGoalIsFlattened:
 
 
 class TestOneWordPrefixCommands:
+    # status questions are read-only lenses; no store writes involved
     def test_status_prefix_variants_all_answer(self) -> None:
         from universal_mind.persian_router import route_and_run
 

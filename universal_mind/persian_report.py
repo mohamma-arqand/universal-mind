@@ -213,6 +213,11 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         if result.get("spoken"):
             voice = result.get("voice", "")
             return f"با صدای واقعی گفته شد (صدا: {voice})."
+        # R41: the honest blocked-env answer carries the REMEDY, not just
+        # the refusal — the operator learns the exact fix in the chat.
+        err = str(result.get("error", ""))
+        if "صدای فارسی" in err:
+            return "بلند نشد: صدای فارسی روی این ویندوز نصب نیست. از Settings > Time & Language > Speech صدای fa-IR را نصب کن تا بلندخوانی کار کند."
         return None  # failures render via the honest error line
     if cap == "database" and isinstance(result, list):
         # The read-back: real stored rows narrated as Persian memory.
@@ -261,7 +266,11 @@ def persian_report(payload: dict[str, Any]) -> str:
     failed capability renders its honest failure. Never invents a value.
     """
     if not payload.get("ok") and not payload.get("result"):
-        error = payload.get("error", "علت نامشخص")
+        # R41: the honest answer NAMED — a capability error beats a vague
+        # 'علت نامشخص' (the speech blocked-env refusal was being swallowed).
+        error = payload.get("error") or "; ".join(
+            str(e) for e in (payload.get("errors") or {}).values()
+        ) or "علت نامشخص"
         return f"❌ اجرا ناموفق بود: {error}"
 
     route: list[str] = list(payload.get("route", []))
