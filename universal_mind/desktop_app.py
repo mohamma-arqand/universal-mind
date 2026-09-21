@@ -256,9 +256,24 @@ class MindDesktopApp:
         self._chat_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self._chat_entry.bind("<Return>", self._chat_send)
         ttk.Button(chat_bar, text="ارسال", command=self._chat_send).pack(side=tk.RIGHT, padx=(6, 0))
+        # R40-L2: suggestion chips (filled on an unrecognized command) — one
+        # click puts the fix in the entry and runs it; the operator never
+        # re-types a correction.
+        self._chip_bar = ttk.Frame(chat_tab)
+        self._chip_bar.pack(fill=tk.X, pady=(4, 0))
         self._chat_append(
             "🧠 سلام! اینجا میتوانی آزادانه حرف بزنی — هر جمله را اجرا میکنم و جواب میدهم.",
+            _log=False,
         )
+        # R40-L1: the conversation SURVIVES — replay the newest messages from
+        # the persistent store (once per opening, never re-logged).
+        try:
+            from universal_mind.chat_history_store import recent_messages
+
+            for msg in recent_messages(limit=40):
+                self._chat_append(msg["text"], who=msg["who"], _log=False)
+        except Exception:  # noqa: BLE001 — replay degrades to a fresh chat
+            pass
 
         chain_left = ttk.LabelFrame(chain_tab, text="زنجیرههای آماده", padding=6)
         chain_left.pack(side=tk.LEFT, fill=tk.Y)
@@ -434,7 +449,15 @@ class MindDesktopApp:
         except Exception as exc:  # noqa: BLE001 — views never fatal
             self._session_text.insert(tk.END, f"(نماها ناموفق: {exc})\n")
 
-    def _chat_append(self, text: str, who: str = "سیستم") -> None:
+    def _chat_append(self, text: str, who: str = "سیستم", *, _log: bool = True) -> None:
+        """Append one message; R40: persist it too (the conversation survives)."""
+        if _log:
+            try:
+                from universal_mind.chat_history_store import log_message
+
+                log_message(who, text)
+            except Exception:  # noqa: BLE001 — logging must never kill the chat
+                pass
         """Append one line to the conversation log (thread-safe-ish, simple)."""
         self._chat_log.configure(state=tk.NORMAL)
         tag = "me" if who == "من" else "mind"
@@ -465,8 +488,26 @@ class MindDesktopApp:
             verdict = payload.get("judgment", {}).get("excellence")
             verdict_txt = f" — داوری {round(verdict * 100)}٪" if isinstance(verdict, (int, float)) else ""
             self._chat_append((answer or "انجام شد.") + verdict_txt, who="سیستم" if ok else "خطا")
+            # R40-L2: unrecognized -> clickable chips; one click runs the fix.
+            self._show_suggestion_chips(payload.get("suggestions") or [])
         except Exception as exc:  # noqa: BLE001 — the chat never dies
             self._chat_append(f"اجرای فرمان ناموفق بود: {exc}", who="خطا")
+
+    def _show_suggestion_chips(self, suggestions: list[str]) -> None:
+        """One chip per suggestion; clicking fills the entry and SENDS."""
+        for child in self._chip_bar.winfo_children():
+            child.destroy()
+
+        for word in list(suggestions)[:3]:
+            def _handler(_event: object | None = None, _w: str = str(word)) -> None:
+                self._chat_entry.delete(0, tk.END)
+                self._chat_entry.insert(0, f"{_w} را اجرا کن")
+                self._chat_send()
+
+            chip = ttk.Button(
+                self._chip_bar, text=f"↻ {word}", command=_handler,
+            )
+            chip.pack(side=tk.LEFT, padx=(0, 6))
 
     def _scan_watchers(self) -> None:
         """Sweep every active folder watcher; report what genuinely fired."""

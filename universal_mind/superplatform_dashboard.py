@@ -33,6 +33,62 @@ _CAP_FA: dict[str, str] = {
 }
 
 
+def _jalali_leap(jy: int) -> bool:
+    """The 33-year Jalali leap cycle (the classic remainder test)."""
+    return jy % 33 in (1, 5, 9, 13, 17, 22, 26, 30)
+
+
+# Anchor: Nowruz 1405 = March 21, 2026 (verified calendar fact).
+_ANCHOR_G = (2026, 3, 21)
+_ANCHOR_JY = 1405
+
+
+def _g_to_jalali(gy: int, gm: int, gd: int) -> tuple[int, int, int]:
+    """Gregorian -> Jalali via a KNOWN anchor + day arithmetic.
+
+    The operator reads Persian dates; a Gregorian '2026-09-21' label on a
+    Persian dashboard is a translation debt, not a feature. The anchor is
+    Nowruz (1405-01-01 = 2026-03-21); the 33-year leap cycle carries it
+    across years. Verified live: 2026-09-21 -> 1405/06/30.
+    """
+    import datetime as _dt
+
+    delta = (_dt.date(gy, gm, gd) - _dt.date(*_ANCHOR_G)).days
+    jy = _ANCHOR_JY
+    if delta >= 0:
+        remaining = delta
+        while remaining >= (366 if _jalali_leap(jy) else 365):
+            remaining -= 366 if _jalali_leap(jy) else 365
+            jy += 1
+        doy = remaining + 1
+    else:
+        remaining = -delta
+        while True:
+            jy -= 1
+            ylen = 366 if _jalali_leap(jy) else 365
+            if remaining <= ylen:
+                break
+            remaining -= ylen
+        doy = ylen - remaining + 1
+    # day-of-year -> (month, day): 6x31, 5x30, Esfand 29/30.
+    if doy <= 186:
+        return jy, (doy - 1) // 31 + 1, (doy - 1) % 31 + 1
+    if doy <= 336:
+        return jy, (doy - 187) // 30 + 7, (doy - 187) % 30 + 1
+    return jy, 12, doy - 336
+
+
+def _jalali_day(gregorian_iso: str) -> str:
+    """'2026-09-21' -> '۱۴۰۵/۰۶/۳۰' (Persian digits)."""
+    try:
+        gy, gm, gd = (int(x) for x in gregorian_iso.split("-"))
+        jy, jm, jd = _g_to_jalali(gy, gm, gd)
+    except (ValueError, IndexError):
+        return gregorian_iso
+    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+    return f"{jy}/{jm:02d}/{jd:02d}".translate(fa)
+
+
 def _daily_runs(db: DatabaseSuite, days: int = 14) -> list[dict[str, Any]]:
     """Real runs per day (last N days), oldest first."""
     q = db.query(
@@ -43,12 +99,19 @@ def _daily_runs(db: DatabaseSuite, days: int = 14) -> list[dict[str, Any]]:
     if not q.get("ok"):
         return []
     rows = list(reversed(q["rows"]))  # oldest first for the chart
-    return [{"day": str(r["d"]), "runs": int(r["n"])} for r in rows]
+    # R40-L3: the operator reads JALALI days on the Persian dashboard.
+    return [{"day": _jalali_day(str(r["d"])), "runs": int(r["n"])} for r in rows]
 
 
 def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
-    """Render the real-usage dashboard HTML; returns ok/path/bytes."""
-    db = DatabaseSuite(persistent=True)
+    """Render the real-usage dashboard HTML; returns ok/path/bytes.
+
+    R40-L4: out_path=None falls back to an EXPLICIT documented default
+    (artifacts/superplatform_dashboard.html under the process cwd) and the
+    returned payload always carries the real absolute path — no silent
+    mystery files.
+    """
+    db = DatabaseSuite.shared_persistent()
     stats: HistoryAnalytics = analyze_history()
 
     # The planner's earned table (proven operations only).
@@ -70,7 +133,12 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
             "WHERE excellence IS NOT NULL AND succeeded = 1 "
             "GROUP BY d ORDER BY d DESC LIMIT 14"
         )
-        trend = list(reversed(trend_q["rows"])) if trend_q.get("ok") else []
+        # R40-L3: the operator reads JALALI days here too — every visible
+        # date on the Persian dashboard is Persian.
+        trend = [
+            {"d": _jalali_day(str(r["d"])), "m": r["m"]}
+            for r in reversed(trend_q["rows"])
+        ] if trend_q.get("ok") else []
     except Exception:  # noqa: BLE001 — a view, never fatal
         trend = []
 
@@ -288,7 +356,7 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 </body>
 </html>"""
 
-    target = Path(out_path) if out_path else Path("artifacts") / "superplatform_dashboard.html"
+    target = Path(out_path).resolve() if out_path else (Path.cwd() / "artifacts" / "superplatform_dashboard.html").resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(html, encoding="utf-8")
     return {"ok": True, "path": str(target), "bytes": target.stat().st_size, "error": ""}
