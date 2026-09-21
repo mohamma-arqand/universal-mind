@@ -47,7 +47,7 @@ class RunHistory:
     """Record and query real runs in the persistent database."""
 
     def __init__(self, db: DatabaseSuite | None = None) -> None:
-        self._db = db if db is not None else DatabaseSuite(persistent=True)
+        self._db = db if db is not None else DatabaseSuite.shared_persistent()
         self._db.execute(
             "CREATE TABLE IF NOT EXISTS run_history "
             "(id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "

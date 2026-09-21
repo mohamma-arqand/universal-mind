@@ -47,36 +47,65 @@ class DatabaseSuite:
             target = Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
         target.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(target)
-        # JOURNAL SAFETY: WAL is deliberately NOT enabled. In this platform's
-        # real profile (tick + window + CLI opening the SAME file repeatedly
-        # through fresh short-lived connections) WAL on a store whose header
-        # was ever hand-rebuilt produced page corruption (the 2nd corruption
-        # incident — root-caused, restored from the rotating backup). The
-        # delete journal is atomic and matches the usage; the verified
-        # rotating backup covers the residual risk.
-        if target.exists():
-            try:
-                import sqlite3 as _sq
-
-                probe = _sq.connect(str(target))
+        # R39 HOT PATH: the persistent file is probed and validated ONCE per
+        # process. The router's hot path (history + memory + learning) builds
+        # ~10 suites per run; re-probing each time was half of every run's
+        # wall time (~22ms each on Windows file I/O). Explicit db_path calls
+        # (tests, rebuild flows) still validate every time — only the
+        # shared, already-validated persistent file skips the re-probe.
+        already_validated = persistent and type(self)._persistent_validated
+        if not already_validated:
+            # JOURNAL SAFETY: WAL is deliberately NOT enabled. In this platform's
+            # real profile (tick + window + CLI opening the SAME file repeatedly
+            # through fresh short-lived connections) WAL on a store whose header
+            # was ever hand-rebuilt produced page corruption (the 2nd corruption
+            # incident — root-caused, restored from the rotating backup). The
+            # delete journal is atomic and matches the usage; the verified
+            # rotating backup covers the residual risk.
+            if target.exists():
                 try:
-                    probe.execute("PRAGMA journal_mode=DELETE")
-                finally:
-                    probe.close()  # a leaked handle locks the file on Windows
-            except _sq.Error:
-                pass
-        # HEADER GUARD: a partially-overwritten db (an external writer once
-        # splattered stderr over the header page) fails later with a cryptic
-        # 'unsupported file format' deep inside sqlite3. Fail EARLY, with the
-        # exact remedy, and never silently treat corruption as a schema issue.
-        if target.exists() and target.stat().st_size >= 16:
-            with open(target, "rb") as header_probe:
-                magic = header_probe.read(16)
-            if magic != b"SQLite format 3\x00":
-                raise RuntimeError(
-                    f"پایگاه داده خراب است (امضای فایل نامعتبر): {target} — "
-                    "فایل را با scripts/rebuild_db.py بازسازی کن"
-                )
+                    import sqlite3 as _sq
+
+                    probe = _sq.connect(str(target))
+                    try:
+                        probe.execute("PRAGMA journal_mode=DELETE")
+                    finally:
+                        probe.close()  # a leaked handle locks the file on Windows
+                except _sq.Error:
+                    pass
+            # HEADER GUARD: a partially-overwritten db (an external writer once
+            # splattered stderr over the header page) fails later with a cryptic
+            # 'unsupported file format' deep inside sqlite3. Fail EARLY, with the
+            # exact remedy, and never silently treat corruption as a schema issue.
+            if target.exists() and target.stat().st_size >= 16:
+                with open(target, "rb") as header_probe:
+                    magic = header_probe.read(16)
+                if magic != b"SQLite format 3\x00":
+                    raise RuntimeError(
+                        f"پایگاه داده خراب است (امضای فایل نامعتبر): {target} — "
+                        "فایل را با scripts/rebuild_db.py بازسازی کن"
+                    )
+            if persistent:
+                type(self)._persistent_validated = True
+
+    # R39: one-time per-process validation flag for the persistent file.
+    _persistent_validated: bool = False
+
+    # R39: the persistent store is ONE file; building a fresh suite for it
+    # (journal probe + header guard, ~22ms) on every hot-path call made half
+    # of every run's wall time. The shared suite is stateless between calls
+    # (each op opens/closes its own connection), so caching the WRAPPER is
+    # safe for concurrent callers; the file itself is unchanged.
+    _shared_persistent: dict[str, "DatabaseSuite"] = {}
+
+    @classmethod
+    def shared_persistent(cls) -> "DatabaseSuite":
+        """The process-wide persistent suite (built once, reused hot)."""
+        suite = cls._shared_persistent.get("main")
+        if suite is None:
+            suite = cls(persistent=True)
+            cls._shared_persistent["main"] = suite
+        return suite
 
     @property
     def db_path(self) -> str:

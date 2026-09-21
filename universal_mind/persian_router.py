@@ -598,13 +598,39 @@ def route_and_run(
         ToolRegistry as _Registry,
     )
 
+    # R39: THE EMPTY BAND — «» (nothing typed) is not an error to fail on
+    # silently; the operator gets a warm, honest hand-off instead of a hole.
+    if forced_route is None and not command.strip():
+        return {
+            "ok": False,
+            "command": command,
+            "route": [],
+            "error": "فرمانی نوشته نشده — چی بگم، چی بسازم؟",
+            "unknown": [],
+            "agent_report": "چیزی ننوشتی. یک فرمان کامل بنویس — مثلا: «نمودار ۱ و ۵ را بکش» یا «میانگین ۵ و ۷ را حساب کن».",
+            "_registry": registry or ToolRegistry(),
+        }
+
     route_result = route(command)
     if not route_result.ok and forced_route is None:
+        # R39: THE UNKNOWN BAND — failure with a SUGGESTION. The router never
+        # leaves the operator alone with a bare "nothing recognized": it offers
+        # the nearest known words (edit distance), so a typo is one step from
+        # recovery instead of a dead end.
+        from universal_mind.spelling_recovery import suggest_for
+
+        suggestion = suggest_for(command)
         return {
             "ok": False,
             "command": command,
             "error": "هیچ قابلیتی شناخته نشد",
             "unknown": list(route_result.unknown),
+            "suggestions": suggestion,
+            "agent_report": (
+                "این فرمان را نشناختم. شاید منظورت یکی از اینها بود: "
+                + "، ".join(f"«{s}»" for s in suggestion[:3]) + "؟"
+                if suggestion else "این فرمان را نشناختم."
+            ),
         }
 
     # A forced route (contested execution) runs its OWN candidate chain; the
