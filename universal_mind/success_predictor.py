@@ -35,14 +35,22 @@ def _route_key(route: tuple[str, ...]) -> str:
     return ",".join(route)
 
 
+def _store() -> DatabaseSuite:
+    """The shared persistent store (R43: one truth, isolate-friendly)."""
+    shared = getattr(DatabaseSuite, "shared_persistent", None)
+    if shared is not None:
+        return DatabaseSuite.shared_persistent()
+    return DatabaseSuite(persistent=True)
+
+
 def predict_success(route: tuple[str, ...]) -> Prediction:
     """The chain's earned expectation from the operator's real history."""
-    db = DatabaseSuite(persistent=True)
+    db = _store()
     key = _route_key(route)
     try:
         chain_q = db.query(
             "SELECT succeeded FROM run_history WHERE route = ? "
-            "AND (outcome_class IS NULL OR outcome_class != 'blocked_env') "
+            "AND (outcome_class IS NULL OR outcome_class NOT IN ('blocked_env', 'needs_param')) "
             "ORDER BY id DESC LIMIT 200",
             (key,),
         )

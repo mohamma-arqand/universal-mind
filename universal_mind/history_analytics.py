@@ -195,7 +195,7 @@ def session_verdict() -> dict[str, Any]:
 
     bar = 0.75
     try:
-        db = DatabaseSuite(persistent=True)
+        db = DatabaseSuite.shared_persistent()
         cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
         q = db.query(
             "SELECT AVG(excellence) AS m, COUNT(*) AS n FROM run_history "

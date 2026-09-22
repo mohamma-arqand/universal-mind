@@ -75,20 +75,22 @@ class TestLivingMemoryFlows:
 
 
 class TestSpokenVocabulary:
-    def test_write_routes_to_clipboard(self) -> None:
+    def test_write_text_is_a_document(self) -> None:
+        """R43: «متن بنویس» = a durable pdf, NOT the momentary clipboard."""
         from universal_mind.persian_router import route_and_run
 
-        assert "clipboard" in route_and_run("متن بنویس که سلام دنیا")["route"]
+        assert route_and_run("متن بنویس که سلام دنیا")["route"] == ["pdf"]
 
     def test_send_routes_to_clipboard(self) -> None:
         from universal_mind.persian_router import route_and_run
 
         assert "clipboard" in route_and_run("این متن را برایم بفرست")["route"]
 
-    def test_music_routes_to_speech(self) -> None:
+    def test_music_routes_to_media(self) -> None:
+        """R43: playing a music FILE is media, not reading text aloud."""
         from universal_mind.persian_router import route_and_run
 
-        assert "speech" in route_and_run("موسیقی پخش کن")["route"]
+        assert route_and_run("موسیقی پخش کن")["route"] == ["media"]
 
     def test_look_routes_to_vision(self) -> None:
         from universal_mind.persian_router import route_and_run

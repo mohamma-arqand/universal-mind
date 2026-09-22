@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 class TestSessionCore:
     def test_one_process_one_session(self) -> None:
@@ -50,7 +52,9 @@ class TestSessionCore:
 
 
 class TestSuccessPredictor:
+    @pytest.mark.live_store  # type: ignore[untyped-decorator]
     def test_a_frequent_chain_is_strong(self) -> None:
+        """The operator's real history — chart→pdf ran 100+ real times."""
         from universal_mind.success_predictor import predict_success
 
         p = predict_success(("chart", "pdf"))

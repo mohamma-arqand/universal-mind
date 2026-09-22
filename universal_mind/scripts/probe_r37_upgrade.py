@@ -52,9 +52,11 @@ def check_spoken_vocabulary() -> bool:
 
     ok = True
     cases = [
-        ("متن بنویس که سلام دنیا", "clipboard"),
+        # R43: «متن بنویس» = a durable document (pdf), «موسیقی پخش کن» =
+        # playing a real file (media) — the old pins locked the BUGS.
+        ("متن بنویس که سلام دنیا", "pdf"),
         ("این متن را برایم بفرست", "clipboard"),
-        ("موسیقی پخش کن", "speech"),
+        ("موسیقی پخش کن", "media"),
         ("این صفحه را ببین و بگو چه میبینی", "vision"),
     ]
     for c, cap in cases:

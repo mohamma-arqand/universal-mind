@@ -146,7 +146,7 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             db,
             "SELECT COUNT(*) AS n, COALESCE(SUM(succeeded), 0) AS ok_n FROM run_history "
             "WHERE date(created_at) = date('now', 'localtime') "
-            "AND (outcome_class IS NULL OR outcome_class != 'blocked_env')",
+            "AND (outcome_class IS NULL OR outcome_class NOT IN ('blocked_env', 'needs_param'))",
         )
         n = int(today[0]["n"]) if today else 0
         n_ok = int(today[0]["ok_n"]) if today else 0
@@ -164,7 +164,7 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             db,
             "SELECT command FROM run_history "
             "WHERE succeeded = 1 AND route != '' "
-            "AND (outcome_class IS NULL OR outcome_class != 'blocked_env') "
+            "AND (outcome_class IS NULL OR outcome_class NOT IN ('blocked_env', 'needs_param')) "
             "AND date(created_at) = date('now', 'localtime') ORDER BY id DESC LIMIT 5",
         )
         if not rows:

@@ -8,7 +8,15 @@ import pytest
 class TestIntentLens:
     def test_scoring_ranks_fluent_over_reverse(self) -> None:
         """(data, chart, pdf) — the chain that really fires — must outrank
-        a reshuffle the operator never ran."""
+        a reshuffle the operator never ran. Seeded in the ISOLATED store
+        (the old test leaned on leaked live rows)."""
+        from universal_mind.database_suite import DatabaseSuite
+        from universal_mind.run_history import RunHistory
+
+        hist = RunHistory(DatabaseSuite.shared_persistent())
+        for _ in range(3):
+            hist.record("نمودار خطی بساز و گزارشش کن", ["data", "chart", "pdf"], True, excellence=1.0)
+
         from universal_mind.intent_lens import rank_routes
 
         ranked = rank_routes(

@@ -177,12 +177,18 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("بگو", "speech"),
     ("بلند بخوان", "speech"),
     ("گوش کن", "speech"),
-    ("موسیقی", "speech"),
-    ("پخش کن", "speech"),
     ("صدا", "speech"),
     ("بخوان بلند", "speech"),
     ("با صدا", "speech"),
     ("صدا کن", "speech"),
+    # media (ffmpeg) — PLAYING a real audio/video file is media, not speech
+    ("موسیقی", "media"),
+    ("پخش کن", "media"),
+    ("فایل صوتی", "media"),
+    ("فایل ویدیو", "media"),
+    # متن بنویس = a durable TEXT artifact (a written document), not the clipboard
+    ("متن بنویس", "pdf"),
+
     # گزارش کامل: the EVERYTHING chain — numbers → chart → report → archive
     ("گزارش کامل", "data"),
     ("گزارش کامل", "chart"),
@@ -226,7 +232,6 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("بفرست", "clipboard"),
     ("بنویس", "clipboard"),
     ("تایپ کن", "clipboard"),
-    ("متن بنویس", "clipboard"),
     ("کپی کن", "clipboard"),
     ("بفرست به کلیپبورد", "clipboard"),
 )
@@ -296,6 +301,11 @@ def route(command: str) -> PersianRoute:
     )
     if analysis_intent:
         matched.pop("image", None)
+
+    # «متن بنویس» = WRITE a text document (pdf) — the explicit intent wins
+    # over the bare «بنویس» (clipboard paste). Explicit > inference, always.
+    if "متن بنویس" in lowered:
+        matched.pop("clipboard", None)
 
     if not matched:
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))
@@ -752,9 +762,23 @@ def route_and_run(
 
         outcome_class = ""
         if not syn.ok:
-            err_text = " ".join(str(e) for e in syn.output.get("errors", {}).values()) if isinstance(syn.output, dict) else ""
+            # R43: read the errors where they really live — sub_outputs'
+            # error fields (syn.output carries no "errors" key, so the old
+            # read was ALWAYS empty and every refusal landed as a failure).
+            err_text = " ".join(
+                str(s.error) for s in syn.sub_outputs if not s.ok and s.error
+            )
             if "صدای فارسی" in err_text:
                 outcome_class = "blocked_env"
+            # A missing-parameter refusal («کدام سایت؟ آدرس را بده») is the
+            # operator being asked, NOT the chain failing — the predictor must
+            # not learn pessimism from a question (176 rows of it were recorded
+            # as failures from «جستجو کن» alone).
+            elif any(
+                marker in err_text
+                for marker in ("کدام ", "را بده", "بده —", "؟", "نام فایل", "مسیر")
+            ):
+                outcome_class = "needs_param"
         flows = syn.output.get("flows") if isinstance(syn.output, dict) else None
         RunHistory().record(command, caps, syn.ok,
                             excellence=judgment.get("excellence"),
