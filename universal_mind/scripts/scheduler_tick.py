@@ -94,6 +94,23 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — self-inspection is a lens
         print(f"  (خود-آزمایی ناموفق: {exc})")
 
+    # R44-6 — THE NIGHTLY RED TEAM: the platform attacks ITSELF with the
+    # hostile corpus (typos, bare anaphora, boundaries, injection). Every
+    # dishonest answer is a CAUGHT BUG: a finding row + a self-repair goal,
+    # so the platform wakes with its own weaknesses as work items. The
+    # sweep prints its honest count — never silently clean.
+    try:
+        from universal_mind.red_team import run_red_team
+
+        sweep = run_red_team()
+        fa = str(sweep["honest"]).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+        fa_t = str(sweep["total"]).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+        print(f"  (red-team شبانه: {fa} از {fa_t} پاسخِ خصمانه صادق بود)")
+        for f in sweep["findings"]:
+            print(f"  (شکارِ red-team: {f['kind']} روی «{f['command'][:40]}» → هدفِ ترمیم ثبت شد)")
+    except Exception as exc:  # noqa: BLE001 — the sweep is a lens, never fatal
+        print(f"  (red-team ناموفق: {exc})")
+
     # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
     # operator's «ادامه بده» is the recovery for exactly these.
     stopped_goals = 0

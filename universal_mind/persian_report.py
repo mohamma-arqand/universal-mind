@@ -319,6 +319,18 @@ def persian_report(payload: dict[str, Any]) -> str:
         if sentence:
             lines.append(f"• {sentence}")
 
+    # R44-5 — THE CROSS-EXAMINER'S VOICE: when a numeric verdict ran twice
+    # (numpy + independent pure-Python), the report SAYS SO — agreement is a
+    # second signature; disagreement is a caught bug, named.
+    for cap in route:
+        res = results.get(cap)
+        if isinstance(res, dict) and isinstance(res.get("cross_exam"), dict):
+            from universal_mind.cross_examiner import persian_note
+
+            note = persian_note(res["cross_exam"])
+            if note:
+                lines.append(f"• {note}")
+
     # The fusion detail for pdf: WHAT flowed into the report (chart or stats table).
     pdf_flows = [f for f in flows if "→ pdf" in f]
     if pdf_flows and "نمودار درونش" in pdf_flows[0]:

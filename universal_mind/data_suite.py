@@ -86,6 +86,9 @@ class DataSuite:
                 "median": float(np.median(arr)),
                 "count": int(arr.size),
             },
+            # R44-5: the series echoed for the CROSS-EXAMINER (independent
+            # pure-Python second verdict over the same numbers).
+            "_series": [float(v) for v in arr.tolist()],
             "error": "",
         }
 
@@ -296,6 +299,12 @@ class DataSuiteConnector:
         output: Any = result.get("stats") if operation == "stats" else {
             k: v for k, v in result.items() if k not in ("ok", "error")
         }
+        # R44-5: the echoed series rides along on stats — the cross-examiner
+        # (independent pure-Python second verdict) reads it from the payload.
+        if operation == "stats" and isinstance(output, dict):
+            series = result.get("_series")
+            if series is not None:
+                output = {**output, "_series": series}
         return ConnectorResult(ok=True, output=output)
 
 

@@ -32,20 +32,35 @@ _PAGE = """<!DOCTYPE html>
  .m{margin:6px 0;padding:8px 12px;border-radius:10px;max-width:80%;white-space:pre-wrap}
  .me{background:#23304d;align-self:flex-start}
  .sys{background:#1d2a22;align-self:flex-end}
- form{display:flex;padding:10px;background:#101219}
+ .vbar{display:flex;gap:8px;padding:2px 16px}
+form{display:flex;padding:10px;background:#101219}
  input{flex:1;font-size:16px;padding:10px;border-radius:8px;border:1px solid #333;background:#1b1e2b;color:#eee}
  button{margin-right:8px;font-size:16px;padding:10px 18px;border-radius:8px;border:0;background:#3d5af1;color:#fff;cursor:pointer}
 </style></head><body>
 <div id="log"></div>
 <form onsubmit="return send()"><input id="t" autofocus placeholder="بنویس..."><button>بفرست</button></form>
 <script>
+let lastOkCommand=null;
 async function send(){
  const t=document.getElementById('t');const v=t.value.trim();if(!v)return false;
  t.value='';add(v,'me');
  const r=await fetch('/ask?text='+encodeURIComponent(v));
  const j=await r.json();
  add(j.agent_report||(j.ok?'انجام شد':'ناموفق'),'sys');
+ if(j.ok===true&&j.planned!==true){lastOkCommand=v;verdictRow()}
  return false}
+function verdictRow(){
+ const bar=document.createElement('div');bar.className='vbar';
+ const g=document.createElement('button');g.textContent='👍 عالی بود';g.onclick=()=>vote('good',bar);
+ const b=document.createElement('button');b.textContent='👎 بد بود';b.onclick=()=>vote('bad',bar);
+ bar.appendChild(g);bar.appendChild(b);
+ document.getElementById('log').appendChild(bar)}
+async function vote(v,bar){
+ if(!lastOkCommand)return;
+ const r=await fetch('/verdict?text='+encodeURIComponent(lastOkCommand)+'&v='+v);
+ const j=await r.json();
+ add(j.answer||'رأیت ثبت شد.','sys');
+ bar.remove()}
 function add(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;
  document.getElementById('log').appendChild(d)}
 </script></body></html>"""
@@ -67,6 +82,18 @@ def make_handler() -> type[BaseHTTPRequestHandler]:
                 return
             if url.path == "/health":
                 body = json.dumps({"ok": True}, ensure_ascii=False).encode("utf-8")
+                self._send(200, body, "application/json; charset=utf-8")
+                return
+            if url.path == "/verdict":
+                # R44-4: the operator's one-click verdict — the SAME store-bound
+                # record as «عالی بود»/«بد بود» in the chat, from the web face.
+                q = parse_qs(url.query)
+                cmd = unquote((q.get("text") or [""])[0]).strip()
+                v = (q.get("v") or ["good"])[0]
+                from universal_mind.operator_verdicts import record_verdict
+
+                out: dict[str, Any] = record_verdict(cmd, v)
+                body = json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
                 self._send(200, body, "application/json; charset=utf-8")
                 return
             if url.path == "/ask":

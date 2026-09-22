@@ -252,6 +252,7 @@ class MindDesktopApp:
         self._chat_log.pack(fill=tk.BOTH, expand=True)
         chat_bar = ttk.Frame(chat_tab)
         chat_bar.pack(fill=tk.X, pady=(6, 0))
+        self._chat_tab_bar = chat_bar  # R44-4: verdict buttons pack here
         self._chat_entry = ttk.Entry(chat_bar, font=("Segoe UI", 12))
         self._chat_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self._chat_entry.bind("<Return>", self._chat_send)
@@ -488,10 +489,37 @@ class MindDesktopApp:
             verdict = payload.get("judgment", {}).get("excellence")
             verdict_txt = f" — داوری {round(verdict * 100)}٪" if isinstance(verdict, (int, float)) else ""
             self._chat_append((answer or "انجام شد.") + verdict_txt, who="سیستم" if ok else "خطا")
+            # R44-4: THE HUMAN'S ONE-CLICK VERDICT — 👍/👎 under the answer.
+            # A click is «عالی بود»/«بد بود» for real (the same store-bound
+            # verdict), and the acknowledgment shows the weight moved.
+            if ok and payload.get("planned") is not True:
+                self._show_verdict_buttons(text)
             # R40-L2: unrecognized -> clickable chips; one click runs the fix.
             self._show_suggestion_chips(payload.get("suggestions") or [])
         except Exception as exc:  # noqa: BLE001 — the chat never dies
             self._chat_append(f"اجرای فرمان ناموفق بود: {exc}", who="خطا")
+
+    def _show_verdict_buttons(self, command: str) -> None:
+        """👍/👎 — one click records the operator's verdict for THIS run."""
+        from universal_mind.operator_verdicts import record_verdict
+
+        bar = ttk.Frame(self._chat_tab_bar)
+        bar.pack(fill=tk.X, pady=(2, 0))
+        self._verdict_bar = bar  # inspectable + replaceable on the next answer
+        answered = {"done": False}
+
+        def _vote(v: str) -> None:
+            if answered["done"]:
+                return
+            answered["done"] = True
+            out = record_verdict(command, v)
+            ack = str(out.get("answer", "رأیت ثبت شد."))
+            self._chat_append(ack, who="سیستم")
+            for child in bar.winfo_children():
+                child.destroy()
+
+        ttk.Button(bar, text="👍 عالی بود", command=lambda: _vote("good")).pack(side=tk.LEFT, padx=(0, 4))
+        ttk.Button(bar, text="👎 بد بود", command=lambda: _vote("bad")).pack(side=tk.LEFT)
 
     def _show_suggestion_chips(self, suggestions: list[str]) -> None:
         """One chip per suggestion; clicking fills the entry and SENDS."""

@@ -131,6 +131,12 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r43_refusals.py --junit-xml=$(ARTIFACTS_DIR)/probe_r43_refusals.xml
 	@echo "Running probe_r44_wave1.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_wave1.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_wave1.xml
+	@echo "Running probe_r44_verdict_ui.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_verdict_ui.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_verdict_ui.xml
+	@echo "Running probe_r44_crossx.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_crossx.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_crossx.xml
+	@echo "Running probe_r44_red_team.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_red_team.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_red_team.xml
 	@echo "All probes passed"
 
 # Clean artifacts

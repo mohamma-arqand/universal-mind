@@ -740,6 +740,19 @@ def orchestrate(
                 duration_ms=round(duration_ms, 4),
             )
         )
+        # R44-5 — THE CROSS-EXAMINER: every numeric (data/stats) verdict runs
+        # TWICE — numpy (the production path) and an independent pure-Python
+        # reducer over the same echoed series. A disagreement is a CAUGHT BUG,
+        # named in the Persian report; agreement is a real second signature.
+        if capability == "data" and result.ok and isinstance(result.output, dict):
+            try:
+                from universal_mind.cross_examiner import cross_examine
+
+                exam = cross_examine(result.output)
+                if isinstance(exam, dict) and isinstance(exam.get("cross_exam"), dict):
+                    result.output["cross_exam"] = exam["cross_exam"]
+            except Exception:  # noqa: BLE001 — the second opinion never kills the run
+                pass
         # Track the last SUCCESSFUL producer so the next consumer can feed on it.
         if result.ok and result.output is not None:
             last_producer, last_output = capability, result.output

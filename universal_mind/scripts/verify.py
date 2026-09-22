@@ -116,6 +116,9 @@ PROBES = [
     "probe_r42_holes.py",
     "probe_r43_refusals.py",
     "probe_r44_wave1.py",
+    "probe_r44_verdict_ui.py",
+    "probe_r44_crossx.py",
+    "probe_r44_red_team.py",
 ]
 
 
