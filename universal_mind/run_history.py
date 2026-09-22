@@ -269,17 +269,29 @@ class ChainAdvisor:
             return None
         # Rank: overlap first, then the chain's MEAN EXCELLENCE (ARETĒ's verdict
         # over its wins — excellence is the quality signal the advisor learns),
-        # then raw win count as the tie-break.
+        # then raw win count as the tie-break. R44-3: the OPERATOR'S VERDICT
+        # multiplies the excellence — the human judge outranks raw counts
+        # (a 'بد بود' halves the chain's standing, a 'عالی بود' lifts it).
+        try:
+            from universal_mind.operator_verdicts import route_weight
+
+            _weights = {r: route_weight(r) for r in candidates}
+        except Exception:  # noqa: BLE001 — a lens, never a blocker
+            _weights = {r: 1.0 for r in candidates}
         route, (overlap, wins, command, excellence_sum) = max(
             candidates.items(),
-            key=lambda item: (item[1][0], item[1][3] / item[1][1], item[1][1]),
+            key=lambda item: (
+                item[1][0],
+                (item[1][3] / item[1][1]) * _weights.get(item[0], 1.0),
+                item[1][1],
+            ),
         )
         return ChainAdvice(
             route=route,
             similar_command=command,
             similarity=overlap,
             succeeded_runs=wins,
-            mean_excellence=round(excellence_sum / wins, 4),
+            mean_excellence=round((excellence_sum / wins) * _weights.get(route, 1.0), 4),
         )
 
     def completion_hint(self, command: str) -> str | None:

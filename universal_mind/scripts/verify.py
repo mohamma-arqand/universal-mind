@@ -115,6 +115,7 @@ PROBES = [
     "probe_r41_remaining.py",
     "probe_r42_holes.py",
     "probe_r43_refusals.py",
+    "probe_r44_wave1.py",
 ]
 
 

@@ -342,6 +342,7 @@ def route_and_run(
     *,
     params: dict[str, Any] | None = None,
     forced_route: list[str] | None = None,
+    explain_only: bool = False,
 ) -> dict[str, Any]:
     """Route a Persian command AND execute the resulting chain for real.
 
@@ -350,6 +351,20 @@ def route_and_run(
     agent's report (the goal loop with its verdicts). Ordinary commands are
     never hijacked — the goal marker is explicit intent.
     """
+    # R44-1 — «توضیح بده» / «فقط بگو چه میکنی»: the EXPLAIN marker strips
+    # itself from the command and runs the plan EXPLAINED, never executed.
+    # It precedes every route (even reflexive — «توضیح بده» means the NEXT
+    # real work's plan, and it composes: «نمودار بکش و گزارشش کن — توضیح بده»).
+    _explain = explain_only
+    _work_command = command
+    if forced_route is None:
+        for marker in ("توضیح بده", "فقط بگو چه میکنی", "فقط بگو چه کار میکنی"):
+            if marker in command:
+                _explain = True
+                _work_command = command.replace(marker, "").replace("  — ", "").replace(" — ", "").strip()
+                break
+    explain_only = _explain
+
     # THE REFLEXIVE CLASS — self-questions answered from the REAL store
     # (never a capability run, never a guess). The marker is a question
     # about the platform itself, and it precedes every other route.
@@ -360,6 +375,42 @@ def route_and_run(
         if reflex is not None:
             return {
                 **reflex,
+                "_registry": registry or ToolRegistry(),
+            }
+
+    # R44-3 — THE OPERATOR'S VERDICT: «عالی بود» / «بد بود» after a run is
+    # the HUMAN JUDGE speaking. It binds to the last real run of the
+    # previous command and re-weights future route selection. It precedes
+    # every executable route — a verdict is never a capability run.
+    if forced_route is None:
+        from universal_mind.operator_verdicts import is_verdict_phrase, record_verdict
+
+        if is_verdict_phrase(command):
+            # bind to the LAST REAL SUCCESSFUL run in the store — the operator
+            # rules on the work the platform just did, whatever it was.
+            try:
+                _last = _status_store().query(
+                    "SELECT command FROM run_history WHERE succeeded = 1 "
+                    "AND (outcome_class IS NULL OR outcome_class NOT IN ('blocked_env', 'needs_param')) "
+                    "ORDER BY id DESC LIMIT 1"
+                ).get("rows", [])
+                _target = str(_last[0]["command"]) if _last else ""
+            except Exception:  # noqa: BLE001 — a verdict never crashes
+                _target = ""
+            out = record_verdict(_target, "good" if "بد" not in command else "bad")
+            return {
+                "ok": out.get("ok", False),
+                "command": command,
+                "route": ["verdict"],
+                "matched_words": ["رأی"],
+                "unknown": [],
+                "extracted_params": {},
+                "result": {"verdict": out},
+                "errors": {},
+                "durations_ms": {},
+                "flows": [],
+                "judgment": {},
+                "agent_report": str(out.get("answer", "رأیت ثبت شد.")),
                 "_registry": registry or ToolRegistry(),
             }
 
@@ -619,8 +670,11 @@ def route_and_run(
             "_registry": registry or ToolRegistry(),
         }
 
-    route_result = route(command)
-    if not route_result.ok and forced_route is None:
+    # R44-1: with the explain marker stripped, the ROUTE (and every
+    # extraction below) reads the WORK command — «... — توضیح بده» routes
+    # «...», never the marker itself.
+    route_result = route(_work_command if _explain else command)
+    if not route_result.ok and forced_route is None and not _explain:
         # R39: THE UNKNOWN BAND — failure with a SUGGESTION. The router never
         # leaves the operator alone with a bare "nothing recognized": it offers
         # the nearest known words (edit distance), so a typo is one step from
@@ -658,7 +712,8 @@ def route_and_run(
     # Real parameters extracted FROM the command itself: «میانگین ۲ و ۴» must
     # compute [2, 4], not a default series. A capability receives only the params
     # its contract accepts (the dispatch constrains what it is given).
-    extracted = params or {cap: extract_params(command, cap) for cap in caps}
+    _source_command = _work_command if _explain else command
+    extracted = params or {cap: extract_params(_source_command, cap) for cap in caps}
 
     # The dependency planner: reorder by REAL needs (a consumer after its
     # producer, even when said backwards) and choose the operation that uses
@@ -668,6 +723,13 @@ def route_and_run(
     plan = plan_chain(caps, extracted)
     caps = [step.capability for step in plan.steps]  # the dependency-respecting order
     planned_params = _plan_params(plan)
+
+    # R44-1/R44-2 — THE PLAN, EXPLAINED: «توضیح بده» / dry-run builds the
+    # full Persian program (steps + reasons + learned lessons + preferences)
+    # and STOPS — zero side effects, zero files, zero history rows. The
+    # operator sees WHY before the platform DOES.
+    if explain_only:
+        return _explain_payload(_source_command, route_result, plan, extracted, params is not None)
     capability_params = {
         cap: {**planned_params.get(cap, {}), **extracted.get(cap, {})}
         for cap in caps
@@ -853,6 +915,69 @@ def route_and_run(
 # R38-L3: which prior run an anaphoric command is derived from. Set by the
 # consume branch, surfaced on the return payload. Empty = not anaphoric.
 _ANAPHORA_SUBJECT: dict[str, str] = {}
+
+
+def _explain_payload(
+    command: str,
+    route_result: PersianRoute,
+    plan: Any,
+    extracted: dict[str, dict[str, Any]],
+    params_given: bool,
+) -> dict[str, Any]:
+    """The Persian program, EXPLAINED — steps, reasons, evidence — no run.
+
+    R44 items 1+2: the plan the router/planner/lessons/preferences built,
+    narrated BEFORE any side effect. Zero files, zero toasts, zero history.
+    """
+    from universal_mind.persian_report import _fa_num
+
+    steps_fa: list[str] = []
+    for i, step in enumerate(plan.steps, 1):
+        op = f" با عملیات «{step.operation}»" if step.operation else ""
+        steps_fa.append(f"گام {_fa_num(i)}: {step.capability}{op} — {step.reason}")
+
+    notes = list(getattr(plan, "notes", ()) or ())
+    if getattr(plan, "reorder_happened", False):
+        notes.insert(0, "ترتیب گامها بر اساس نیازِ واقعی اصلاح شد (تولیدکننده قبل از مصرفکننده)")
+
+    sources: list[str] = [f"واژگان: «{'، '.join(route_result.matched_words[:6])}»"]
+    if params_given:
+        sources.append("پارامترها: صریح از فرمان")
+    try:
+
+        _prefs_rows = _status_store().query(
+            "SELECT COUNT(*) AS n FROM operator_preferences"
+        ).get("rows", [])
+        if _prefs_rows and int(_prefs_rows[0]["n"]) > 0:
+            sources.append("ترجیحهای یادگرفتهشدهی اپراتور هم اعمال میشوند")
+    except Exception:  # noqa: BLE001 — a lens, never a blocker
+        pass
+
+    report = "برنامهی اجرا — هنوز اجرا نشده:\n" + "\n".join(
+        f"  {s}" for s in steps_fa
+    )
+    if notes:
+        report += "\n" + "\n".join(f"  ⚙ {n}" for n in notes)
+    report += "\n  📚 " + "؛ ".join(sources)
+    report += '\n  برای اجرا بگو: "اجرا کن"'
+
+    return {
+        "ok": True,
+        "command": command,
+        "route": [s.capability for s in plan.steps],
+        "matched_words": list(route_result.matched_words),
+        "unknown": list(route_result.unknown),
+        "extracted_params": extracted,
+        "result": {"planned": True, "executed": False},
+        "errors": {},
+        "durations_ms": {},
+        "flows": [],
+        "judgment": {},
+        "planned": True,
+        "executed": False,
+        "plan_report": report,
+        "agent_report": report,
+    }
 
 
 def _status_store() -> Any:

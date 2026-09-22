@@ -129,6 +129,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r42_holes.py --junit-xml=$(ARTIFACTS_DIR)/probe_r42_holes.xml
 	@echo "Running probe_r43_refusals.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r43_refusals.py --junit-xml=$(ARTIFACTS_DIR)/probe_r43_refusals.xml
+	@echo "Running probe_r44_wave1.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_wave1.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_wave1.xml
 	@echo "All probes passed"
 
 # Clean artifacts
