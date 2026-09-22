@@ -62,9 +62,17 @@ class TestNavigationHolesClosed:
     def test_yesterday_reflex(self) -> None:
         from universal_mind.persian_router import route_and_run
 
+        # seed the ISOLATED store first: a real success to remember.
+        from universal_mind.database_suite import DatabaseSuite
+        from universal_mind.run_history import RunHistory
+
+        RunHistory(DatabaseSuite.shared_persistent()).record(
+            "گزارش ساختیم", ["pdf"], True, excellence=1.0
+        )
         p = route_and_run("چیزی که دیروز ساختی رو نشونم بده")
         assert p["route"] == ["reflexive"]
         assert "آخرین کار" in p["agent_report"]
+        assert "گزارش ساختیم" in p["agent_report"]
 
     def test_trend_reflex_real_numbers(self) -> None:
         from universal_mind.persian_router import route_and_run

@@ -21,9 +21,17 @@ def _fa_num(v: int | float | str) -> str:
     return str(v).translate(_FA)
 
 
+def _store() -> DatabaseSuite:
+    """The shared persistent store (R42) — lambda-mock tolerant."""
+    shared = getattr(DatabaseSuite, "shared_persistent", None)
+    if shared is not None:
+        return DatabaseSuite.shared_persistent()
+    return DatabaseSuite(persistent=True)
+
+
 def _recent_activity() -> str:
     """One honest line about what the platform has been doing."""
-    db = DatabaseSuite(persistent=True)
+    db = _store()
     try:
         q = db.query(
             "SELECT command FROM run_history WHERE succeeded = 1 AND route != '' "
@@ -53,12 +61,17 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
     if c in ("دنبال چه میگردی؟", "چیکار میکنی؟", "چه خبر؟", "حالت چطوره؟"):
         line = _recent_activity()
         return _say(c, f"در خدمتم — {line}" if line else "در خدمتم؛ منتظر فرمانت هستم.")
-    if c in ("کمک کن", "کمک کن لطفا", "راهنمایی کن", "help"):
+    if c in ("کمک کن", "کمک کن لطفا", "راهنمایی کن", "help") or (
+        "کمک" in c and ("چی کار" in c or "چیکار" in c)
+    ):
         return _say(
             c,
             "با فرمان ساده کار میکنم: «نمودار بکش»، «میانگین ۳ و ۹ را حساب کن»، "
             "«گزارش بساز»، «چه کارهایی میتونی بکنی؟» برای فهرست کامل.",
         )
+    # Farewells — the LAST word anyone says deserves an answer too.
+    if c in ("خدانگهدار", "خداحافظ", "خدانگهدار!", "بای", "bye", "فعلاً", "فعلا") or c.startswith("خدانگهدار") or c.startswith("خداحافظ"):
+        return _say(c, "خدانگهدار! منتظر بازگشتت هستم — هر وقت فرمان داشتی، من اینجام.")
     # Smalltalk prefixes — answer briefly rather than routing to nothing.
     if c.startswith("سلام ") or "خوبی؟" in c:
         return _say(c, "سلام! فرمانت را بگو.")

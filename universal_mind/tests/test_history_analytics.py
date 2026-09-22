@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import uuid
 
 from universal_mind.history_analytics import (
@@ -80,6 +82,8 @@ class TestAnalytics:
         stats = analyze_history(history)
         assert stats.mean_excellence == 0.0  # honest: nothing judged yet
         assert stats.total_runs == 1
+
+    @pytest.mark.live_store  # type: ignore[untyped-decorator]
 
     def test_end_to_end_real_history_has_content(self) -> None:
         """The operator's REAL persistent history (non-empty from real runs)."""

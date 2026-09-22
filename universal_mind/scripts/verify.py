@@ -113,6 +113,7 @@ PROBES = [
     "probe_r39_recovery.py",
     "probe_r40_survival.py",
     "probe_r41_remaining.py",
+    "probe_r42_holes.py",
 ]
 
 

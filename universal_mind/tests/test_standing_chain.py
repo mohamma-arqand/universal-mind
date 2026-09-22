@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 class TestStandingChain:
+    @pytest.mark.live_store  # type: ignore[untyped-decorator]
     def test_a_repeated_winner_is_crowned_from_real_history(self) -> None:
         """The LIVE store's dominant chain qualifies (chart→pdf, hundreds of
         wins at 1.0 — verified against the real operator history)."""

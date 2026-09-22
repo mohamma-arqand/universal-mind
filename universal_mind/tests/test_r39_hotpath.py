@@ -5,6 +5,8 @@ sneaks past); the shared suite is one wrapper, one file.
 
 from __future__ import annotations
 
+import pytest
+
 import tempfile
 from pathlib import Path
 
@@ -22,11 +24,17 @@ def test_corrupt_explicit_path_still_fails_early() -> None:
         assert "خراب" in str(e)
 
 
+@pytest.mark.live_store  # type: ignore[untyped-decorator]
+
+
 def test_shared_persistent_is_one_wrapper() -> None:
     a = DatabaseSuite.shared_persistent()
     b = DatabaseSuite.shared_persistent()
     assert a is b
     assert Path(a.db_path) == Path.home() / ".universal-mind" / "mind.db"
+
+
+@pytest.mark.live_store  # type: ignore[untyped-decorator]
 
 
 def test_shared_persistent_writes_and_reads() -> None:

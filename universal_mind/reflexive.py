@@ -42,7 +42,7 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     ordinary router continues. A matched reflex NEVER runs a capability —
     it reads the store and answers.
     """
-    db = DatabaseSuite(persistent=True)
+    db = _store()
     c = command.strip()
 
     # «چند تا اجرا موفق داشتی؟» — the run counts, real.
@@ -121,8 +121,17 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             return _reflex_answer(c, "هنوز چیزی نساختهایم.")
         return _reflex_answer(c, f"آخرین کار موفق: «{rows[0]['command']}» ({rows[0]['route']}).")
 
-    # «راهنما / چیکار میتونی بکنی؟» — the real capability list, counted.
-    if c in ("راهنما", "help") or "چیکار میتونی" in c or "چی کار میتونی" in c:
+    # «راهنما / چیکار میتونی بکنی؟ / چی بلدی؟ / قابلیتهات» — the list, counted.
+    if (
+        c in ("راهنما", "help")
+        or "چیکار میتونی" in c
+        or "چی کار میتونی" in c
+        or "چی بلدی" in c
+        or "چه بلدی" in c
+        or "قابلیتهات" in c
+        or "قابلیت هات" in c
+        or ("قابلیت" in c and ("نشون" in c or "بگو" in c or "لیست" in c or "فهرست" in c))
+    ):
         from universal_mind.real_tool_registry import real_tool_registry
 
         caps = real_tool_registry().capabilities()
@@ -131,7 +140,75 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             f"{_fa_num(len(caps))} قابلیت: " + "، ".join(caps),
         )
 
+    # «امروز چی کار کردی؟ / امروز چه ساختی؟» — today's REAL runs, counted.
+    if "امروز" in c and ("کار" in c or "ساختی" in c or "اجرا" in c or "کردی" in c):
+        today = _query(
+            db,
+            "SELECT COUNT(*) AS n, COALESCE(SUM(succeeded), 0) AS ok_n FROM run_history "
+            "WHERE date(created_at) = date('now', 'localtime') "
+            "AND (outcome_class IS NULL OR outcome_class != 'blocked_env')",
+        )
+        n = int(today[0]["n"]) if today else 0
+        n_ok = int(today[0]["ok_n"]) if today else 0
+        if n == 0:
+            return _reflex_answer(c, "امروز هنوز کاری انجام ندادهام — اولین فرمان را بده.")
+        return _reflex_answer(
+            c,
+            f"امروز {_fa_num(n)} فرمان اجرا کردم؛ {_fa_num(n_ok)} موفق "
+            f"({_fa_num(round(100 * n_ok / n) if n else 0)}٪).",
+        )
+
+    # «فایلهای ساختهشده امروز» — the artifacts of today's successes.
+    if "فایل" in c and ("امروز" in c or "ساخته" in c or "درست کرده" in c):
+        rows = _query(
+            db,
+            "SELECT command FROM run_history "
+            "WHERE succeeded = 1 AND route != '' "
+            "AND (outcome_class IS NULL OR outcome_class != 'blocked_env') "
+            "AND date(created_at) = date('now', 'localtime') ORDER BY id DESC LIMIT 5",
+        )
+        if not rows:
+            return _reflex_answer(c, "امروز فایلی ساخته نشده است.")
+        names = [str(r["command"])[:30] for r in rows]
+        return _reflex_answer(c, "کارهای موفق امروز: " + "؛ ".join(names) + ".")
+
+    # «حافظهات چی میگن؟ / چی یاد گرفتی؟» — the REAL lessons, counted.
+    if ("حافظه" in c or "یاد گرفتی" in c or "درس" in c) and (
+        "میگن" in c or "گفته" in c or "چی" in c or "چه" in c or "یاد" in c
+    ):
+        try:
+            rows = _query(db, "SELECT COUNT(*) AS n FROM planner_lessons")
+            n = int(rows[0]["n"]) if rows else 0
+            op_rows = _query(
+                db,
+                "SELECT operation, COUNT(*) AS n FROM planner_lessons "
+                "GROUP BY operation ORDER BY n DESC LIMIT 3",
+            )
+            if not op_rows:
+                return _reflex_answer(c, "هنوز درسی یاد نگرفتهام — چند فرمان بده تا بیاموزم.")
+            top = "، ".join(
+                f"{r['operation']} ({_fa_num(int(r['n']))} بار)" for r in op_rows
+            )
+            return _reflex_answer(
+                c,
+                f"{_fa_num(n)} درس ثبت کردهام؛ پرتکرارترین عملیاتها: {top}.",
+            )
+        except Exception:  # noqa: BLE001 — a reflex never crashes
+            return _reflex_answer(c, "هنوز درسی یاد نگرفتهام — چند فرمان بده تا بیاموزم.")
+
     return None
+
+
+def _store() -> DatabaseSuite:
+    """The shared persistent store (R42: ONE truth for every reader).
+
+    Tolerant of a lambda-mocked class (test isolation): falls back to the
+    constructor the lambda understands.
+    """
+    shared = getattr(DatabaseSuite, "shared_persistent", None)
+    if shared is not None:
+        return DatabaseSuite.shared_persistent()
+    return DatabaseSuite(persistent=True)
 
 
 def state_fa(state: str) -> str:

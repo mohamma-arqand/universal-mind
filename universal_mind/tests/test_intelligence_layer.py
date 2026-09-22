@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 class TestIntentLens:
     def test_scoring_ranks_fluent_over_reverse(self) -> None:
@@ -81,6 +83,7 @@ class TestFarthestRival:
 
 
 class TestSpeechMemoryAdvise:
+    @pytest.mark.live_store  # type: ignore[untyped-decorator]
     def test_advise_with_seeds_returns_proven_params(self) -> None:
         from universal_mind.run_history import ChainAdvisor, RunHistory
 

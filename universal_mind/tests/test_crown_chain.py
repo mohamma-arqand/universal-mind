@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 class TestCrownStandingChain:
+    @pytest.mark.live_store  # type: ignore[untyped-decorator]
     def test_the_live_best_chain_is_crowned_through_the_real_election(self) -> None:
         """chart → pdf (1300+ wins, excellence 1.0) passes the StandardKeeper
         election — the justice hard-gate included — and is crowned honestly."""
