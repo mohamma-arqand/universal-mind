@@ -734,6 +734,37 @@ def route_and_run(
         cap: {**planned_params.get(cap, {}), **extracted.get(cap, {})}
         for cap in caps
     }
+    # R44-7 — THE PARAMETER A/B: a genuinely ambiguous chart kind («نمودارش کن»,
+    # no named kind) runs as a REAL contest — the two best-fitting variants on
+    # the same series, ARETĒ judges both, the winner ships with the ruling
+    # announced. A NAMED kind (میلهای/دایرهای/خطی) or a stored preference never
+    # contests — the operator's word wins, no theater.
+    if "chart" in caps and forced_route is None and not _explain:
+        from universal_mind.ab_contest import kind_ambiguity, run_ab
+
+        if kind_ambiguity(command, capability_params.get("chart")):
+            try:
+                from universal_mind.chart_suite import ChartSuiteConnector
+                from universal_mind.tool_registry import (
+                    ConnectionMechanism,
+                    ToolConnectionSpec,
+                    ToolEntry,
+                )
+
+                def _run_variant(vparams: dict[str, Any]) -> dict[str, Any]:
+                    conn = ChartSuiteConnector()
+                    spec = ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="unused")
+                    out = conn.connect(spec, vparams)
+                    return {"ok": out.ok, "result": {"chart": out.output}, "errors": {} if out.ok else {"chart": out.error}}
+
+                ab = run_ab(command, capability_params["chart"], _run_variant)
+                if ab.get("ok"):
+                    # the winner's chart result replaces the chart step's params —
+                    # the orchestration below runs pdf on the WON artifact.
+                    capability_params["chart"] = {"operation": ab["ab_contest"]["winner"], "_ab_shipped": ab["result"]["chart"]}
+                    capability_params["_ab_note"] = {"_note": ab["ab_contest"]["reasoning"]}
+            except Exception:  # noqa: BLE001 — the contest is a lens, never a blocker
+                pass
     # R37-L4: remembered operator preferences shape the params — the
     # command's own words already won above; a preference fills only
     # what the sentence did NOT say.
@@ -790,6 +821,10 @@ def route_and_run(
         "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
     }
+    # R44-7: the A/B ruling rides the payload — the Persian report announces it.
+    _ab_note = (capability_params.get("_ab_note") or {}).get("_note")
+    if _ab_note:
+        run_payload_preview["ab_ruling"] = _ab_note
 
     # THE SESSION counts every real run (one sitting, one core, every face).
     try:
@@ -895,6 +930,10 @@ def route_and_run(
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
         "_registry": reg,  # kept internal: the caller may reuse the registry
     }
+    # R44-7: the A/B ruling rides the SHIPPED payload too — the judge read the
+    # preview; the operator's report reads THIS.
+    if _ab_note:
+        payload["ab_ruling"] = _ab_note
     anaphora_subject = _ANAPHORA_SUBJECT.get("command")
     if anaphora_subject and forced_route is None:
         payload["result"]["anaphora_of"] = anaphora_subject

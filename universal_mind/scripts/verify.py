@@ -119,6 +119,7 @@ PROBES = [
     "probe_r44_verdict_ui.py",
     "probe_r44_crossx.py",
     "probe_r44_red_team.py",
+    "probe_r44_ab_rescue.py",
 ]
 
 

@@ -298,6 +298,12 @@ def persian_report(payload: dict[str, Any]) -> str:
         rendered = rendered.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
         lines.append(f"🔗 {rendered}")
 
+    # R44-7 — THE A/B RULING: an ambiguous kind ran as a real contest; the
+    # report announces the winner and the margin (the ruling is visible).
+    ab_ruling = payload.get("ab_ruling")
+    if ab_ruling:
+        lines.append(f"⚖ {ab_ruling}")
+
     # ARETĒ's judgment of this very run — the virtues computed from its own data.
     judgment: dict[str, Any] = payload.get("judgment") or {}
     if judgment and not judgment.get("disqualified", False):
