@@ -36,15 +36,35 @@ class OperationLesson:
     uses: int
 
 
+_CACHED_STORE: DatabaseSuite | None = None
+
+
 def _store() -> DatabaseSuite:
-    return DatabaseSuite(persistent=True)
+    """The persistent suite, built once per process.
+
+    Measured live: this used to build a BRAND-NEW DatabaseSuite on every
+    teach/learned read — which both re-validated the file and re-ran the
+    schema DDL each time (the schema guard is per object, by design). One
+    long-lived object keeps the guard meaningful and the hot path cheap.
+    """
+    global _CACHED_STORE
+    if _CACHED_STORE is None:
+        _CACHED_STORE = DatabaseSuite(persistent=True)
+    return _CACHED_STORE
 
 
 def _ensure_table(db: DatabaseSuite) -> None:
-    db.execute(
+    """Create the lessons table once per database file (not once per call).
+
+    Measured live: re-running this CREATE on every teach/learned read cost a
+    full connect+commit each time, and the hot path paid it many times a run.
+    The suite is re-created per call here, so the memo lives on the file
+    (path + mtime) rather than on the object.
+    """
+    db.ensure_schema("planner_lessons", [
         "CREATE TABLE IF NOT EXISTS planner_lessons "
-        "(capability TEXT, operation TEXT, excellence REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
-    )
+        "(capability TEXT, operation TEXT, excellence REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+    ])
 
 
 def teach(capability: str, operation: str, excellence: float, succeeded: bool) -> None:

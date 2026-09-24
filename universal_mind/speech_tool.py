@@ -1,4 +1,4 @@
-"""The speech tool — the platform SPEAKS its results in real Persian audio.
+"""The speech tool — the platform SPEAKS in real audio, and LISTENS.
 
 Uses the Windows SAPI voice (System.Speech via PowerShell): the same OS-native
 channel as the toast and clipboard, no downloads, no external services. The
@@ -6,7 +6,11 @@ operator's language matters end to end — a Persian report deserves a Persian
 voice, and Persian voices are preferred when installed (fa-IR), with an honest
 fallback message when none exists (never a silent no-op).
 
-Real effects only: the call either makes sound or reports exactly why not.
+R44-9 adds the EARS: `listen()` dictates real speech-to-text through the same
+System.Speech channel, honestly reporting a missing engine or heard silence.
+
+Real effects only: the call either makes sound / returns heard text, or
+reports exactly why not.
 """
 
 from __future__ import annotations
@@ -147,6 +151,66 @@ class SpeechTool:
         ]
         return {"ok": True, "voices": voices, "error": ""}
 
+    def listen(self, *, seconds: int = 5, lang_hint: str = "en-US") -> dict[str, Any]:
+        """LISTEN — real speech-to-text through Windows System.Speech.
+
+        R44 item 9: the platform gains EARS. The SpeechRecognitionEngine
+        dictates from the default microphone for ``seconds``; the recognized
+        text rides back as a REAL string the router can act on.
+
+        HONEST LIMITS (never a silent fake):
+        - No engine / no microphone -> ok=False with the exact remedy.
+        - Silence -> ok=True with recognized="" and a Persian note.
+        - lang_hint selects the engine culture honestly (an en-only machine
+          says so instead of pretending to hear Persian).
+        """
+        seconds = max(2, min(15, int(seconds)))
+        ps = (
+            "$ErrorActionPreference='Stop'; "
+            "$found=$null; "
+            "foreach ($r in [System.Speech.Recognition.SpeechRecognitionEngine]::InstalledRecognizers()) { "
+            "  if ($r.Culture.Name -eq '" + lang_hint + "') { $found=$r; break } "
+            "} "
+            "if (-not $found) { $found=[System.Speech.Recognition.SpeechRecognitionEngine]::InstalledRecognizers() | Select-Object -First 1 } "
+            "if (-not $found) { Write-Output 'NO_ENGINE'; exit } "
+            "$rec = New-Object System.Speech.Recognition.SpeechRecognitionEngine($found); "
+            "$rec.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar())); "
+            "$rec.SetInputToDefaultAudioDevice(); "
+            "$rec.InitialSilenceTimeout = " + str(seconds) + "; "
+            "$rec.BabbleTimeout = " + str(seconds) + "; "
+            "$rec.EndSilenceTimeout = 1; "
+            "$text = $rec.Recognize().Text; "
+            "if ($text) { Write-Output ('TEXT:' + $text) } else { Write-Output 'TEXT:' }"
+        )
+        b64 = _b64(ps)
+        cmd = (
+            "powershell -NoProfile -NonInteractive -Command "
+            "[System.Text.Encoding]::UTF8.GetString("
+            "[Convert]::FromBase64String('" + b64 + "')) | Invoke-Expression"
+        )
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=seconds + 25, check=False)
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "recognized": "", "error": "گوش دادن بیش از حد طول کشید — میکروفون را بررسی کن"}
+        except OSError as exc:
+            return {"ok": False, "recognized": "", "error": f"موتور گفتار ویندوز در دسترس نیست: {exc}"}
+        out = (proc.stdout or "").strip()
+        if "NO_ENGINE" in out:
+            return {
+                "ok": False,
+                "recognized": "",
+                "error": "شناساگر گفتار روی این ویندوز نصب نیست — Settings > Time & Language > Speech",
+            }
+        text = out[5:] if out.startswith("TEXT:") else ""
+        return {
+            "ok": True,
+            "recognized": text,
+            "lang": lang_hint,
+            "seconds": seconds,
+            "note": "" if text else "صدایی شنیده نشد — دوباره و نزدیکتر به میکروفون بگو",
+            "error": "",
+        }
+
 
 def _b64(text: str) -> str:
     """Base64 UTF-8 — the Unicode-safe channel through PowerShell argv."""
@@ -172,6 +236,12 @@ class SpeechToolConnector:
             )
         elif operation == "voices":
             result = self._tool.list_voices()
+        elif operation == "listen":
+            # R44-9: the platform's EARS — real speech-to-text.
+            result = self._tool.listen(
+                seconds=int(params.get("seconds", 5) or 5),
+                lang_hint=str(params.get("lang", "en-US") or "en-US"),
+            )
         else:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
         if result.get("ok") is not True:

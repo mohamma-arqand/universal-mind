@@ -47,25 +47,24 @@ def save_context(command: str, route: list[str], result: dict[str, Any]) -> None
     3,838 rows when exactly 1 is ever read) wasted the durable store.
     """
     db = DatabaseSuite.shared_persistent()
-    db.execute(
-        "CREATE TABLE IF NOT EXISTS last_context ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
-        "result TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
-    )
     import json as _json
 
     res = _json.dumps(result, ensure_ascii=False, default=str)[:2000]
     cmd = command.replace("'", "''")
-    db.execute(
+    # ONE transaction: schema + insert + retention GC. Measured live, the three
+    # separate execute() calls cost three full connect+commit cycles on the
+    # hot path; batching keeps the run inside its latency budget.
+    db.execute_many([
+        "CREATE TABLE IF NOT EXISTS last_context ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
+        "result TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
         f"INSERT INTO last_context (command, route, result) "
-        f"VALUES ('{cmd}', '{','.join(route)}', '{res.replace(chr(39), chr(39) * 2)}')"
-    )
-    # RETENTION GC: keep the newest window (the newest is what last_context()
-    # reads; a small tail is kept for debugging honesty), trim the rest.
-    db.execute(
+        f"VALUES ('{cmd}', '{','.join(route)}', '{res.replace(chr(39), chr(39) * 2)}')",
+        # RETENTION GC: keep the newest window (the newest is what last_context()
+        # reads; a small tail is kept for debugging honesty), trim the rest.
         f"DELETE FROM last_context WHERE id <= "
-        f"(SELECT MAX(id) - {KEEP_ROWS} FROM last_context)"
-    )
+        f"(SELECT MAX(id) - {KEEP_ROWS} FROM last_context)",
+    ])
 
 
 def last_context() -> dict[str, Any] | None:

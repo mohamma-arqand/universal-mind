@@ -30,6 +30,7 @@ from universal_mind.screenshot_tool import ScreenshotToolConnector
 from universal_mind.webfetch_tool import WebFetchToolConnector
 from universal_mind.ocr_tool import OcrToolConnector
 from universal_mind.speech_tool import SpeechToolConnector
+from universal_mind.email_outbox import EmailToolConnector
 from universal_mind.pdf_suite import PdfSuiteConnector
 from universal_mind.tool_registry import (
     ToolEntry,
@@ -46,6 +47,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "notify": NotifyToolConnector,
     "clipboard": ClipboardToolConnector,
     "speech": SpeechToolConnector,         # real Windows SAPI voice (fa-preferred, honest)
+    "email": EmailToolConnector,           # real RFC-822 outbox (.eml) + optional SMTP (R44-11)
     "ocr": OcrToolConnector,              # real Windows.Media.Ocr — the platform READS images
     "excel": ExcelSuiteConnector,         # real openpyxl workbooks (the 15th program)
     "webfetch": WebFetchToolConnector,    # real urllib fetch — the 16th program

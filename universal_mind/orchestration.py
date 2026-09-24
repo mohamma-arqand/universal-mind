@@ -460,10 +460,16 @@ def _flow_params(
             stats = dict(produced_stats) if produced_stats else {}
         if stats:
             headers = ["شاخص", "مقدار"]
-            rows = [[str(k), _fmt_num(v)] for k, v in stats.items()]
+            # R44-10: numeric values ride as REAL numbers (so the total row can
+            # be a live =SUM formula); only non-numerics keep Persian formatting.
+            excel_rows: list[list[Any]] = [
+                [str(k), (float(v) if isinstance(v, (int, float)) and not isinstance(v, bool)
+                          else _fmt_num(v))]
+                for k, v in stats.items()
+            ]
             return (
-                {**params, "operation": "write_table", "headers": headers, "rows": rows},
-                f"{last_producer} → excel ({len(rows)} شاخص در اکسل)",
+                {**params, "operation": "write_table", "headers": headers, "rows": excel_rows},
+                f"{last_producer} → excel ({len(excel_rows)} شاخص در اکسل)",
             )
         return params, None
 
@@ -534,6 +540,26 @@ def _flow_params(
     # The whole chain's output, preserved as a single portable bundle.
     # A generic "compress" (the vocabulary default) is upgradeable: archiving
     # the chain's real files is the superior interpretation of the same intent.
+    # EMAIL flow — the chain's report/artifact leaves as a REAL message:
+    # the body is the chain's own summary, the newest produced file rides as
+    # the attachment. Explicit params always win.
+    if consumer == "email":
+        if params.get("body"):
+            return params, None  # explicit body wins
+        enriched = {**params}
+        if produced_paths and not enriched.get("attachment"):
+            enriched["attachment"] = produced_paths[-1]
+        summary = ""
+        if isinstance(last_output, dict):
+            summary = str(last_output.get("summary") or last_output.get("text") or "")
+        enriched["body"] = summary or "گزارش این اجرا در پیوست است."
+        if not enriched.get("to"):
+            return params, None  # no recipient — the tool refuses honestly
+        note = "گزارش → ایمیل"
+        if enriched.get("attachment"):
+            note = "گزارش + پیوست → ایمیل"
+        return enriched, note
+
     if consumer == "archive" and produced_paths:
         op = params.get("operation")
         if op and op not in ("compress", "compress_files"):

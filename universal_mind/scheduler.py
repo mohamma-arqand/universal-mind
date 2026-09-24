@@ -446,6 +446,29 @@ def backup_database(keep: int = 3) -> dict[str, Any]:
     src = DatabaseSuite.DEFAULT_DB_DIR / "mind.db"
     if not src.exists():
         return {"ok": False, "error": "mind.db does not exist", "backups": []}
+
+    def _prune() -> list[str]:
+        """Keep only the newest `keep` timestamped backups.
+
+        Runs BEFORE the new copy and on every failure path: a failed backup
+        (a full disk was the live case) used to return early and leave its
+        junk file behind, so the directory grew without bound exactly when
+        space was scarcest.
+        """
+        pruned: list[str] = []
+        existing = sorted(
+            (f for f in src.parent.glob("mind.db.bak-2*") if f.is_file()),
+            key=lambda f: f.name,
+        )
+        for old_file in existing[:-keep] if len(existing) > keep else []:
+            try:
+                old_file.unlink()
+                pruned.append(old_file.name)
+            except OSError:
+                pass
+        return pruned
+
+    _prune()
     stamp = _dt.now().strftime("%Y%m%d-%H%M%S")
     dst = src.parent / f"mind.db.bak-{stamp}"
     try:
@@ -456,6 +479,10 @@ def backup_database(keep: int = 3) -> dict[str, Any]:
         with sqlite3.connect(str(src)) as source, sqlite3.connect(str(dst)) as target:
             source.backup(target)
     except (OSError, sqlite3.Error) as exc:
+        try:
+            dst.unlink()
+        except OSError:
+            pass
         return {"ok": False, "error": str(exc), "backups": []}
     # VERIFY: a backup that cannot be read is not a backup.
     try:
@@ -463,23 +490,21 @@ def backup_database(keep: int = 3) -> dict[str, Any]:
         check = probe.execute("PRAGMA integrity_check").fetchone()[0]
         probe.close()
     except sqlite3.Error as exc:
-        return {"ok": False, "error": f"backup verify failed: {exc}", "backups": []}
-    if check != "ok":
-        return {"ok": False, "error": f"backup corrupt: {check}", "backups": []}
-    # prune: keep the newest `keep` timestamped backups
-    backups = sorted(
-        (f for f in src.parent.glob("mind.db.bak-2*") if f.is_file()),
-        key=lambda f: f.name,
-    )
-    pruned = []
-    for old_file in backups[:-keep] if len(backups) > keep else []:
         try:
-            old_file.unlink()
-            pruned.append(old_file.name)
+            dst.unlink()
         except OSError:
             pass
+        return {"ok": False, "error": f"backup verify failed: {exc}", "backups": []}
+    if check != "ok":
+        try:
+            dst.unlink()
+        except OSError:
+            pass
+        return {"ok": False, "error": f"backup corrupt: {check}", "backups": []}
+    pruned = _prune()
+    remaining = len(list(src.parent.glob("mind.db.bak-2*")))
     return {"ok": True, "backup": str(dst), "bytes": dst.stat().st_size,
-            "total_backups": len(backups) - len(pruned), "pruned": len(pruned), "error": ""}
+            "total_backups": remaining, "pruned": len(pruned), "error": ""}
 
 
 def _ensure_watcher_table(db: DatabaseSuite) -> None:

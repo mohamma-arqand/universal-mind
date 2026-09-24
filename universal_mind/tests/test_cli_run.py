@@ -55,11 +55,12 @@ def test_run_invalid_params_json_fails_clean(capsys: CaptureFixture[str]) -> Non
 
 
 def test_run_list_shows_every_capability_and_ops(capsys: CaptureFixture[str]) -> None:
-    """`run --list` shows every registered capability (13 with speech) + ops."""
+    """`run --list` shows every registered capability (incl. speech + email) + ops."""
     code, payload = _run_cli(capsys, ["run", "--list"])
     assert code == 0
-    assert len(payload) == 20
+    assert len(payload) == 21  # R44-11 absorbed the email outbox
     assert "speech" in payload
+    assert "email" in payload  # a real program, absorbed
     assert "ocr" in payload
     assert "excel" in payload and "webfetch" in payload
     assert "pdfreader" in payload and "screenshot" in payload

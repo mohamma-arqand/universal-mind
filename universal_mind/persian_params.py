@@ -276,7 +276,25 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # treating 's://example.com' as an xlsx path was a live bug.
         if path and not path.lower().startswith(("http://", "https://", "s://")):
             return {"operation": "read_table", "path": path}
-        return {"operation": "write_table"}  # OPEN: the flow fills the table
+        # R44-10: a Persian spreadsheet reads RIGHT-TO-LEFT and earns its keep
+        # with REAL formulas — «جمع»/«مجموع»/«جمعش» appends a genuine =SUM row.
+        wants_total = any(w in command for w in ("جمع", "مجموع", "توتال", "جمع کل", "جمعش"))
+        params_excel: dict[str, Any] = {"operation": "write_table", "rtl": True}
+        if wants_total:
+            params_excel["total"] = True
+        return params_excel  # OPEN rows/headers: the flow fills the real table
+
+    if capability == "email":
+        # R44-11: the recipient rides the sentence («به آدرس ali@x.com ایمیل کن»);
+        # without one the tool refuses honestly and names the remedy. The BODY
+        # stays OPEN — the flow fills it with the chain's real report.
+        import re as _re
+
+        addr = _re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+", command)
+        params_email: dict[str, Any] = {"operation": "compose"}
+        if addr:
+            params_email["to"] = addr.group(0)
+        return params_email
 
     if capability == "ocr":
         # «متن تصویر را بخوان» — with a path in the sentence it is explicit;

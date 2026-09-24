@@ -169,6 +169,14 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("اکسل", "excel"),
     ("در اکسل", "excel"),
     ("صفحهگسترده", "excel"),
+    # email (RFC-822 outbox + optional SMTP) — R44-11
+    ("ایمیل کن", "email"),
+    ("ایمیلش کن", "email"),
+    ("ایمیل بزن", "email"),
+    ("میل بزن", "email"),
+    ("برایم ایمیل", "email"),
+    ("ایمیل بفرست", "email"),
+    ("به ایمیل", "email"),
     # ocr (Windows.Media.Ocr) — the platform READS images
     ("متنش را بخوان", "ocr"),
     ("متن تصویر", "ocr"),
@@ -377,6 +385,21 @@ def route_and_run(
                 **reflex,
                 "_registry": registry or ToolRegistry(),
             }
+
+    # R44-9 — THE EARS: «گوش کن» is an operator GESTURE, not a capability run.
+    # The platform dictates real speech-to-text, ECHOES what it heard, then
+    # routes it through this same router. A misheard command is never
+    # executed silently — the echo comes first.
+    if forced_route is None:
+        from universal_mind.hearing import hear_and_run, is_hearing_phrase
+
+        if is_hearing_phrase(command):
+            _secs = 5
+            for _w in command.split():
+                if _w.isdigit():
+                    _secs = int(_w)
+                    break
+            return hear_and_run(_secs, registry=registry or ToolRegistry())
 
     # R44-3 — THE OPERATOR'S VERDICT: «عالی بود» / «بد بود» after a run is
     # the HUMAN JUDGE speaking. It binds to the last real run of the

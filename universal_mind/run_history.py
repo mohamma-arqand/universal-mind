@@ -60,50 +60,55 @@ class ChainAdvice:
     mean_excellence: float = 0.0  # ARETĒ's mean over this chain's wins
 
 
+def _ensure_schema(db: DatabaseSuite) -> None:
+    """Create the run store's table, migrations and indexes ONCE per suite.
+
+    Measured live: the old __init__ opened up to eight connections on EVERY
+    construction (a table create, a pragma read, three ALTERs, three index
+    creates) — and a single simple run constructs RunHistory twice. That was
+    the single largest cost on the hot path. The guard lives on the suite
+    object (see DatabaseSuite.ensure_schema), so a fresh suite always rebuilds.
+    """
+    first_time = db.ensure_schema("run_history", [
+        "CREATE TABLE IF NOT EXISTS run_history "
+        "(id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
+        "succeeded INTEGER, excellence REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+        # Query-acceleration indexes: the advisor and analytics filter by
+        # succeeded+route constantly; a covering index keeps them O(log n)
+        # on a store that grows with every run.
+        "CREATE INDEX IF NOT EXISTS idx_history_succeeded ON run_history (succeeded)",
+        "CREATE INDEX IF NOT EXISTS idx_history_route ON run_history (route)",
+        "CREATE INDEX IF NOT EXISTS idx_lessons_capability ON planner_lessons (capability)",
+    ])
+    if not first_time:
+        return
+    # Migrate an existing persistent DB in place (add newer columns if missing).
+    try:
+        cols = db.query("SELECT name FROM pragma_table_info('run_history')")
+        names = {str(c["name"]) for c in cols.get("rows", [])} if cols.get("ok") else set()
+        alters: list[str] = []
+        if cols.get("ok") and "excellence" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN excellence REAL")
+        if cols.get("ok") and "outcome_class" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN outcome_class TEXT DEFAULT ''")
+        # Migrate the FLOWS column too: the intent lens reads it for its
+        # flow-evidence signal; without it the signal is always zero.
+        if cols.get("ok") and "flows" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN flows TEXT DEFAULT ''")
+        if alters:
+            db.execute_many(alters)
+    except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
+        import sys
+
+        print(f"[history] مهاجرت ستونها ناموفق بود: {exc}", file=sys.stderr)
+
+
 class RunHistory:
     """Record and query real runs in the persistent database."""
 
     def __init__(self, db: DatabaseSuite | None = None) -> None:
         self._db = db if db is not None else _safe_store()
-        self._db.execute(
-            "CREATE TABLE IF NOT EXISTS run_history "
-            "(id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
-            "succeeded INTEGER, excellence REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
-        )
-        # Migrate an existing persistent DB in place (add excellence if missing).
-        try:
-            cols = self._db.query(
-                "SELECT name FROM pragma_table_info('run_history')"
-            )
-            if cols.get("ok") and "excellence" not in {str(c["name"]) for c in cols.get("rows", [])}:
-                self._db.execute("ALTER TABLE run_history ADD COLUMN excellence REAL")
-            if cols.get("ok") and "outcome_class" not in {str(c["name"]) for c in cols.get("rows", [])}:
-                self._db.execute("ALTER TABLE run_history ADD COLUMN outcome_class TEXT DEFAULT ''")
-            # Migrate the FLOWS column too: the intent lens reads it for its
-            # flow-evidence signal; without it the signal is always zero.
-            if cols.get("ok") and "flows" not in {str(c["name"]) for c in cols.get("rows", [])}:
-                self._db.execute("ALTER TABLE run_history ADD COLUMN flows TEXT DEFAULT ''")
-        except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
-            import sys
-
-            print(f"[history] مهاجرت ستون excellence ناموفق بود: {exc}", file=sys.stderr)
-        # Query-acceleration indexes: the advisor and analytics filter by
-        # succeeded+route constantly; a covering index keeps them O(log n)
-        # on a store that grows with every run.
-        try:
-            self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_history_succeeded ON run_history (succeeded)"
-            )
-            self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_history_route ON run_history (route)"
-            )
-            self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_lessons_capability ON planner_lessons (capability)"
-            )
-        except Exception as exc:  # noqa: BLE001 — indexes are speed, never correctness
-            import sys
-
-            print(f"[history] ساخت ایندکسها ناموفق بود: {exc}", file=sys.stderr)
+        _ensure_schema(self._db)
 
     def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None) -> None:
         """Append one real run to the history.

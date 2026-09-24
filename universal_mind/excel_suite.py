@@ -44,10 +44,20 @@ class ExcelSuite:
         rows: list[list[Any]] | None = None,
         sheet: str = "Sheet1",
         out_dir: str | None = None,
+        *,
+        rtl: bool = False,
+        total: bool = False,
     ) -> dict[str, Any]:
-        """Write a real styled table to a new .xlsx (header bolded + filled)."""
+        """Write a real styled table to a new .xlsx (header bolded + filled).
+
+        R44-10: Persian spreadsheets read RIGHT-TO-LEFT and earn their keep with
+        REAL formulas — ``rtl`` flips the sheet view, ``total`` appends a
+        genuine =SUM row (openpyxl stores the formula; Excel computes on open;
+        reading back shows the live formula text, never a fabricated number).
+        """
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill
+        from openpyxl.utils import get_column_letter
 
         hdr = headers or ["A", "B"]
         data = rows or [[1, 2], [3, 4]]
@@ -63,10 +73,31 @@ class ExcelSuite:
             cell.fill = fill
         for row in data:
             ws.append(row)
+
+        formula_row: int | None = None
+        if total and data:
+            # label in the FIRST column, live =SUM under each fully-numeric one
+            total_row: list[Any] = ["جمع"] + ["" for _ in range(max(0, len(hdr) - 1))]
+            for ci in range(1, len(hdr)):
+                col = get_column_letter(ci + 1)
+                column_values = [
+                    r[ci] for r in data if ci < len(r) and isinstance(r[ci], (int, float))
+                ]
+                if len(column_values) == len(data):
+                    total_row[ci] = f"=SUM({col}2:{col}{len(data) + 1})"
+            ws.append(total_row)
+            formula_row = len(data) + 2
+            for cell in ws[formula_row]:
+                cell.font = bold
+
+        if rtl:
+            ws.sheet_view.rightToLeft = True
+
         wb.save(out_path)
         return {
             "ok": True, "path": str(out_path), "bytes": out_path.stat().st_size,
-            "rows": len(data), "columns": len(hdr), "sheet": sheet, "error": "",
+            "rows": len(data), "columns": len(hdr), "sheet": sheet,
+            "rtl": bool(rtl), "formula_row": formula_row, "error": "",
         }
 
     def read_table(self, path: str, sheet: str | None = None) -> dict[str, Any]:
@@ -83,7 +114,7 @@ class ExcelSuite:
             return {"ok": True, "headers": [], "rows": [], "sheets": wb.sheetnames, "error": ""}
         return {
             "ok": True,
-            "headers": [str(h) for h in grid[0]],
+            "headers": [("" if h is None else str(h)) for h in grid[0]],
             "rows": grid[1:],
             "sheets": wb.sheetnames,
             "error": "",
@@ -139,6 +170,8 @@ class ExcelSuiteConnector:
             result = suite.write_table(
                 headers=params.get("headers"), rows=params.get("rows"),
                 sheet=str(params.get("sheet", "Sheet1")),
+                rtl=bool(params.get("rtl", False)),
+                total=bool(params.get("total", False)),
             )
         elif operation == "read_table":
             if not params.get("path"):

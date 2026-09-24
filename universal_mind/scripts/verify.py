@@ -120,6 +120,9 @@ PROBES = [
     "probe_r44_crossx.py",
     "probe_r44_red_team.py",
     "probe_r44_ab_rescue.py",
+    "probe_r44_wave3.py",
+    "probe_r44_absorption_recipe.py",
+    "probe_r44_store_economy.py",
 ]
 
 

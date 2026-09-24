@@ -139,6 +139,12 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_red_team.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_red_team.xml
 	@echo "Running probe_r44_ab_rescue.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_ab_rescue.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_ab_rescue.xml
+	@echo "Running probe_r44_wave3.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_wave3.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_wave3.xml
+	@echo "Running probe_r44_absorption_recipe.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_absorption_recipe.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_absorption_recipe.xml
+	@echo "Running probe_r44_store_economy.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_store_economy.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_store_economy.xml
 	@echo "All probes passed"
 
 # Clean artifacts

@@ -21,6 +21,61 @@ from typing import Any
 from universal_mind.connectors import ConnectorResult
 
 
+
+# Scratch dirs the platform creates under the system temp dir. Every one of
+# them is disposable by construction; none of them was ever reaped, and during
+# one 16-minute suite that left 124,000 directories and ~60 GB on disk (the
+# live incident that made "No space left on device" the real gate).
+_SCRATCH_PREFIXES = (
+    "um-db-",
+    "um-conn-",
+    "um-chart-",
+    "um-csv-",
+    "um-img-",
+    "um-excel-",
+    "um_dashboard_",
+)
+_REAP_INTERVAL_S = 300.0  # at most one sweep every five minutes, per process
+_REAP_MAX_AGE_S = 3600.0  # only scratch older than an hour: never a live suite
+_last_reap = 0.0
+
+
+def reap_stale_scratch(now: float | None = None, *, force: bool = False) -> int:
+    """Delete scratch directories older than an hour. Returns how many went.
+
+    Age-gated on purpose: a directory younger than the gate may belong to a
+    suite another process is still using, and deleting it mid-run would be a
+    silent data-loss bug. Throttled because the sweep walks the temp dir;
+    ``force=True`` bypasses the throttle (tests and explicit maintenance).
+    """
+    global _last_reap
+    import shutil as _shutil
+    import time as _time
+
+    stamp = _time.time() if now is None else now
+    if not force and stamp - _last_reap < _REAP_INTERVAL_S:
+        return 0
+    _last_reap = stamp
+    root = Path(tempfile.gettempdir())
+    removed = 0
+    for prefix in _SCRATCH_PREFIXES:
+        try:
+            entries = list(root.glob(prefix + "*"))
+        except OSError:
+            continue
+        for entry in entries:
+            try:
+                if not entry.is_dir():
+                    continue
+                if stamp - entry.stat().st_mtime < _REAP_MAX_AGE_S:
+                    continue  # young: possibly live
+                _shutil.rmtree(entry, ignore_errors=True)
+                removed += 1
+            except OSError:
+                continue
+    return removed
+
+
 class DatabaseSuite:
     """The integrated sqlite3 capability surface (a complete SQL program)."""
 
@@ -44,9 +99,16 @@ class DatabaseSuite:
         elif persistent:
             target = self.DEFAULT_DB_DIR / "mind.db"
         else:
+            # A throwaway scratch database: sweep the platform's older scratch
+            # dirs while we are here (throttled internally) so a long test
+            # session cannot bury the disk again.
+            reap_stale_scratch()
             target = Path(tempfile.mkdtemp(prefix="um-db-")) / "mind.db"
         target.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(target)
+        # Schemas this suite object has already built (see ensure_schema):
+        # per-object on purpose, so a fresh suite always re-ensures.
+        self._ensured: set[str] = set()
         # R39 HOT PATH: the persistent file is probed and validated ONCE per
         # process. The router's hot path (history + memory + learning) builds
         # ~10 suites per run; re-probing each time was half of every run's
@@ -126,6 +188,55 @@ class DatabaseSuite:
             raise
         finally:
             conn.close()
+
+    @contextmanager
+    def transaction(self) -> Iterator[sqlite3.Connection]:
+        """Many statements on ONE connection — the SAME closed-after-use law
+        as ``_conn`` (no leaked handle can ever lock the file), but the hot
+        writers stop paying one connect+commit PER STATEMENT. Measured live:
+        a single simple run opened 27 connections; batching the hot writers
+        collapses that to a handful, which is what keeps the run under the
+        hot-path budget.
+        """
+        conn = sqlite3.connect(self._path)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def execute_many(self, statements: list[str]) -> dict[str, Any]:
+        """Run several DDL/DML statements in ONE transaction."""
+        if not statements:
+            return {"ok": False, "error": "no statements"}
+        try:
+            with self.transaction() as conn:
+                for sql in statements:
+                    conn.execute(sql)
+        except sqlite3.Error as exc:
+            return {"ok": False, "error": str(exc)}
+        return {"ok": True, "executed": len(statements), "error": ""}
+
+    def ensure_schema(self, name: str, statements: list[str]) -> bool:
+        """Run this DDL once per SUITE OBJECT — returns True if it ran.
+
+        Measured live: the hot writers re-ran their CREATE TABLE / CREATE INDEX
+        on every construction and even on every call, each re-run costing a
+        full connect+commit. The guard is per object on purpose: a fresh
+        DatabaseSuite always re-ensures, so a database file that was deleted
+        and recreated gets its schema back — no stale memo can ever leave a
+        real file bare (a file-identity memo looked tempting and was WRONG:
+        NTFS reuses file indexes, so a recreated database was skipped).
+        A long-lived suite (``shared_persistent``) is where the saving lives.
+        """
+        if name in self._ensured:
+            return False
+        self.execute_many(statements)
+        self._ensured.add(name)
+        return True
 
     def execute(self, sql: str) -> dict[str, Any]:
         """Execute a DDL/DML statement (CREATE/INSERT/UPDATE/DELETE) for real."""
