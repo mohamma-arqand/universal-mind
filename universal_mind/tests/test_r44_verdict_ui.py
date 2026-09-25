@@ -50,6 +50,8 @@ class TestVerdictButtonsDesktop:
             app = MindDesktopApp(root)
             try:
                 app._show_verdict_buttons("میانگین ۴ و ۶ را حساب کن")
+                root.update_idletasks()
+                root.update()  # let Tk render the new widgets before inspecting
                 import tkinter.ttk as ttk
 
                 labels = [
@@ -76,6 +78,8 @@ class TestVerdictButtonsDesktop:
             app = MindDesktopApp(root)
             try:
                 app._show_verdict_buttons("میانگین ۴ و ۶ را حساب کن")
+                root.update_idletasks()
+                root.update()  # let Tk render the new widgets before inspecting
                 import tkinter.ttk as ttk
 
                 buttons = [w for w in app._verdict_bar.winfo_children() if isinstance(w, ttk.Button)]

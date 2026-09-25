@@ -200,6 +200,7 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     if capability == "pdf":
         # Operation words: the sentence can name a SPECIFIC document kind.
         _PDF_OP_WORDS: tuple[tuple[str, str], ...] = (
+            ("سالنامه", "yearbook"), ("گزارش سالانه", "yearbook"),
             ("فاکتور", "invoice"), ("قبض", "invoice"),
             ("نامه", "letterhead"), ("سربرگ", "letterhead"),
             ("جدول", "styled_table"), ("لیست", "bullet_list"),

@@ -172,6 +172,21 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         names = [str(r["command"])[:30] for r in rows]
         return _reflex_answer(c, "کارهای موفق امروز: " + "؛ ".join(names) + ".")
 
+    # «چند روز است زنده؟» — the REAL heartbeat history, not just "now".
+    # (R44-13: the streak and the silent days, derived from the run store.)
+    if (
+        ("زنده" in c and ("چند" in c or "روز" in c or "است" in c))
+        or ("تپش" in c and ("چند" in c or "وضع" in c or "چطور" in c or "چه" in c))
+        or ("چند روزه" in c)
+    ):
+        from universal_mind.tick_pulse import pulse_report, pulse_sentence
+
+        try:
+            report = pulse_report(db=db)
+        except Exception:  # noqa: BLE001 — a heartbeat answer never crashes
+            return _reflex_answer(c, "نبضِ تپش را نتوانستم بخوانم.")
+        return _reflex_answer(c, pulse_sentence(report))
+
     # «حافظهات چی میگن؟ / چی یاد گرفتی؟» — the REAL lessons, counted.
     if ("حافظه" in c or "یاد گرفتی" in c or "درس" in c) and (
         "میگن" in c or "گفته" in c or "چی" in c or "چه" in c or "یاد" in c

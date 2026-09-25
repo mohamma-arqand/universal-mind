@@ -145,6 +145,14 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_absorption_recipe.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_absorption_recipe.xml
 	@echo "Running probe_r44_store_economy.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_store_economy.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_store_economy.xml
+	@echo "Running probe_r44_tick_pulse.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_tick_pulse.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_tick_pulse.xml
+	@echo "Running probe_r44_drift.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_drift.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_drift.xml
+	@echo "Running probe_r44_restore_drill.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_restore_drill.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_restore_drill.xml
+	@echo "Running probe_r44_yearbook.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_yearbook.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_yearbook.xml
 	@echo "All probes passed"
 
 # Clean artifacts

@@ -111,6 +111,24 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — the sweep is a lens, never fatal
         print(f"  (red-team ناموفق: {exc})")
 
+    # R44-15 — THE MONTHLY RESTORE DRILL: a backup that has never been
+    # restored is only hope. The tick drills the newest backup once a month
+    # (first tick of the month): copy to a throwaway dir, integrity-check,
+    # compare every table's row count. Divergence is printed BY NAME.
+    if datetime.now().month != getattr(tick, "_drill_month", 0):
+        tick._drill_month = datetime.now().month  # type: ignore[attr-defined]
+        try:
+            from universal_mind.restore_drill import run_restore_drill
+
+            drill = run_restore_drill()
+            if drill.ok:
+                fa_n = str(len(drill.tables)).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+                print(f"  (مانورِ بازیابی ماهانه: بکاپ واقعاً بازیابی شد — {fa_n} جدول همشمار، integrity: {drill.integrity})")
+            else:
+                print(f"  (مانورِ بازیابی ناموفق: {drill.error})")
+        except Exception as exc:  # noqa: BLE001 — a drill is a lens, never fatal
+            print(f"  (مانورِ بازیابی ناموفق: {exc})")
+
     # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
     # operator's «ادامه بده» is the recovery for exactly these.
     stopped_goals = 0

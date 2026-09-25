@@ -123,6 +123,10 @@ PROBES = [
     "probe_r44_wave3.py",
     "probe_r44_absorption_recipe.py",
     "probe_r44_store_economy.py",
+    "probe_r44_tick_pulse.py",
+    "probe_r44_drift.py",
+    "probe_r44_restore_drill.py",
+    "probe_r44_yearbook.py",
 ]
 
 

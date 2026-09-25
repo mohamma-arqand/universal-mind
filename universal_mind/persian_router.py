@@ -80,6 +80,7 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("گزارش", "pdf"),
     ("سند", "pdf"),
     ("فاکتور", "pdf"),
+    ("سالنامه", "pdf"),
     ("جدول در سند", "pdf"),
     # image (Pillow)
     ("تصویر", "image"),

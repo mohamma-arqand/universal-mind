@@ -175,6 +175,12 @@ class PdfSuite:
         )
         return self._build([Paragraph("Pipeline steps", styles["Title"]), flow], target / "numbered_list.pdf")
 
+    def yearbook(self, year: int | None = None, out_dir: str | None = None) -> dict[str, Any]:
+        """The operator's yearbook: the platform's own year, narrated (R44-16)."""
+        from universal_mind.yearbook import build_yearbook
+
+        return build_yearbook(year, out_dir=out_dir)
+
     def letterhead(self, title: str = "Universal Mind", subtitle: str = "One Mind · Many Capabilities", out_dir: str | None = None) -> dict[str, Any]:
         target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-pdf-"))
         target.mkdir(parents=True, exist_ok=True)
@@ -391,6 +397,7 @@ class PdfSuiteConnector:
             "persian_rtl": lambda: suite.persian_rtl(
                 params.get("title", "گزارش ذهن یکپارچه"), params.get("paragraphs")
             ),
+            "yearbook": lambda: suite.yearbook(params.get("year")),
         }.get(operation)
         if method is None:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
