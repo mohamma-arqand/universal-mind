@@ -199,6 +199,19 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             + "\n".join(lines),
         )
 
+    # R45-8 — THE WEEKLY LETTER, ASKED: «گزارش هفته چطور بود؟» reads the
+    # letter the tick wrote (and if none is written yet, writes it NOW —
+    # the answer is never a promise of a letter, it IS the letter).
+    if "گزارش هفته" in c or "نامهی هفته" in c or ("گزارش" in c and "هفته" in c):
+        from universal_mind.weekly_letter import latest_letter
+
+        info = latest_letter()
+        if not info.get("ok"):
+            from universal_mind.weekly_letter import record_weekly_letter
+
+            info = record_weekly_letter()
+        return _reflex_answer(c, str(info.get("report", "")) or "نامهای نیست.")
+
     # «فایلهای ساختهشده امروز» — the artifacts of today's successes.
     if "فایل" in c and ("امروز" in c or "ساخته" in c or "درست کرده" in c):
         rows = _query(

@@ -129,6 +129,27 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         except Exception as exc:  # noqa: BLE001 — a drill is a lens, never fatal
             print(f"  (مانورِ بازیابی ناموفق: {exc})")
 
+    # R45-8 — THE WEEKLY LETTER: on the first tick of each ISO week the
+    # platform writes its own week (runs, successes, best route, verdicts)
+    # into a toast + a weekly_reports row. A silent week is written as a
+    # silent week — the letter is never fabricated.
+    try:
+        from universal_mind.weekly_letter import due_this_week, record_weekly_letter
+
+        if due_this_week():
+            info = record_weekly_letter()
+            print(f"  (نامهی هفته: {info['report']})")
+            try:
+                from universal_mind.notify_adapter import NotifyToolConnector
+
+                NotifyToolConnector().connect(
+                    {}, {"title": "نامهی هفته", "body": info["report"]}
+                )
+            except Exception:  # noqa: BLE001 — the toast is a courtesy
+                pass
+    except Exception as exc:  # noqa: BLE001 — the letter is a lens, never fatal
+        print(f"  (نامهی هفته ناموفق: {exc})")
+
     # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
     # operator's «ادامه بده» is the recovery for exactly these.
     stopped_goals = 0

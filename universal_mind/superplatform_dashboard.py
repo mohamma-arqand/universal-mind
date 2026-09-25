@@ -89,6 +89,11 @@ def _jalali_day(gregorian_iso: str) -> str:
     return f"{jy}/{jm:02d}/{jd:02d}".translate(fa)
 
 
+def _persian_days(iso_days: list[str]) -> list[str]:
+    """Jalali day labels for the dashboard (a silent day is a real day)."""
+    return [_jalali_day(d) for d in iso_days]
+
+
 def _daily_runs(db: DatabaseSuite, days: int = 14) -> list[dict[str, Any]]:
     """Real runs per day (last N days), oldest first."""
     q = db.query(
@@ -198,6 +203,64 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
             else "هنوز زنجیرهای سزاوارِ تاج نشده"
         )
     except Exception:  # noqa: BLE001
+        crown_html = "—"
+
+    # R45-5 — THE PULSE HOUSE: the 7-day streak and the silent days,
+    # from the same window the tick's own question answers.
+    try:
+        from universal_mind.tick_pulse import pulse_report
+
+        pr = pulse_report(db=db)
+        streak = int(pr.get("streak", 0))
+        silences = list(pr.get("silent", []))
+        pulse_line = f"رشتهی تپش: {_persian_digits(str(streak))} روز پیوسته"
+        if silences:
+            pulse_line += f" — روزهای سکوت: {', '.join(_persian_days(silences))}"
+        pulse_state = "red" if streak == 0 or len(silences) > 2 else "green"
+    except Exception:  # noqa: BLE001
+        pulse_line, pulse_state = "—", "green"
+
+    # R45-6 — THE DRIFT HOUSE: hot-path ratio vs the committed baseline
+    # (the same judge verify.py runs; a red here is a red everywhere).
+    try:
+        from universal_mind.drift import check_perf_drift
+
+        dv = check_perf_drift()
+        drift_line = dv.detail if dv.ok else f"⚠️ {dv.detail}"
+        drift_state = "green" if dv.ok else "red"
+    except Exception:  # noqa: BLE001
+        drift_line, drift_state = "—", "green"
+
+    # R45-7 — THE HUMAN-LOOP HOUSE: verdicts counted, red-team findings
+    # counted, and the newest restore drill (proof, not hope).
+    try:
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS operator_verdicts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "command TEXT NOT NULL, route TEXT NOT NULL, "
+            "verdict TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        v_q = db.query(
+            "SELECT COUNT(*) AS n FROM operator_verdicts"
+        )
+        v_rows = v_q["rows"] if v_q.get("ok") else []
+        n_good = 0
+        g_q = db.query("SELECT verdict, COUNT(*) AS n FROM operator_verdicts GROUP BY verdict")
+        for r in (g_q["rows"] if g_q.get("ok") else []):
+            if str(r["verdict"]) == "good":
+                n_good = int(r["n"])
+        n_verdicts = int(v_rows[0]["n"]) if v_rows else 0
+        n_bad = n_verdicts - n_good
+        from universal_mind.red_team import findings_summary
+
+        red_findings = len(findings_summary(store=db))
+        human_line = (
+            f"رأیها: {_persian_digits(str(n_good))} 👍 / {_persian_digits(str(n_bad))} 👎 — "
+            f"یافتههای تیم سرخ: {_persian_digits(str(red_findings))}"
+        )
+        human_state = "red" if red_findings > 0 else "green"
+    except Exception:  # noqa: BLE001
+        human_line, human_state = "—", "green"
         crown_html = "—"
 
     # The proactive layer: the operator's real schedules (what runs itself).
@@ -336,6 +399,21 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
 <div class="card" style="margin-top:16px">
   <h2>🩺 سلامت حلقهی خودکار</h2>
   <div style="font-size:15px">{tick_html}</div>
+</div>
+
+<div class="grid" style="margin-top:16px">
+  <div class="card">
+    <h2>💓 تپش (۷ روز)</h2>
+    <div style="font-size:15px;color:{'var(--ok,green)' if pulse_state == 'green' else 'crimson'}">{pulse_line}</div>
+  </div>
+  <div class="card">
+    <h2>📐 رانش کارایی</h2>
+    <div style="font-size:15px;color:{'var(--ok,green)' if drift_state == 'green' else 'crimson'}">{drift_line}</div>
+  </div>
+  <div class="card">
+    <h2>👤 حلقهی انسانی</h2>
+    <div style="font-size:15px;color:{'var(--ok,green)' if human_state == 'green' else 'crimson'}">{human_line}</div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:16px">
