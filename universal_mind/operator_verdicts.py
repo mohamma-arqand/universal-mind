@@ -62,9 +62,34 @@ def record_verdict(command: str, verdict: str) -> dict[str, Any]:
     )
     if v == "good":
         answer = "شنیدم و یاد گرفتم — این زنجیره را بیشتر پیش میآورم."
+        # R46-3 — THE VERDICT BECOMES A LAW: the approved command's REAL
+        # report promises are captured as drift anchors, so a future
+        # regression on THIS command turns the gate red BY NAME.
+        try:
+            from universal_mind.report_laws import record_law
+
+            law = record_law(c, _last_report_for(c))
+            if law.get("ok"):
+                answer += " و قوانینش را در پایشِ رانش نگه داشتم."
+        except Exception:  # noqa: BLE001 — the law is a lens, never fatal
+            pass
     else:
         answer = "شنیدم؛ این زنجیره را در انتخابهای بعدی پایین میآورم و جایگزین بهتری میآزم."
     return {"ok": True, "verdict": v, "route": route, "answer": answer}
+
+
+def _last_report_for(command: str) -> str:
+    """The newest stored FULL report for a command (run_reports), or ''.
+
+    R46-3: the anchors must come from the REAL report text — the run's own
+    rendered promises — never from the command string itself.
+    """
+    try:
+        from universal_mind.report_laws import last_report
+
+        return last_report(command)
+    except Exception:  # noqa: BLE001 — best-effort anchor capture
+        return ""
 
 
 def route_weight(route: tuple[str, ...]) -> float:

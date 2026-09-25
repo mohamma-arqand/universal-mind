@@ -113,12 +113,25 @@ GOLDEN_REPORT_CORPUS: list[tuple[str, dict[str, list[str]]]] = [
 ]
 
 
+def learned_laws() -> list[tuple[str, dict[str, list[str]]]]:
+    """R46-3 — the operator's 👍 verdicts BECOME drift laws (report_laws
+    table), each holding the REAL report's promise lines as anchors. See
+    report_laws.py; the drift gate runs them beside the golden corpus."""
+    try:
+        from universal_mind.report_laws import learned_laws as _stored
+
+        return _stored()
+    except Exception:  # noqa: BLE001 — a lens, never fatal
+        return []
+
+
 def check_report_drift() -> list[DriftVerdict]:
-    """Every golden pair through the LIVE router; each violation is drift."""
+    """Every golden pair — AND every 👍-earned law — through the LIVE router."""
     from universal_mind.persian_router import route_and_run
 
     verdicts: list[DriftVerdict] = []
-    for command, law in GOLDEN_REPORT_CORPUS:
+    corpus = list(GOLDEN_REPORT_CORPUS) + learned_laws()
+    for command, law in corpus:
         try:
             payload: Any = route_and_run(command)
             report = str(payload.get("agent_report", ""))

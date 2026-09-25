@@ -91,6 +91,10 @@ def _ensure_schema(db: DatabaseSuite) -> None:
             alters.append("ALTER TABLE run_history ADD COLUMN excellence REAL")
         if cols.get("ok") and "outcome_class" not in names:
             alters.append("ALTER TABLE run_history ADD COLUMN outcome_class TEXT DEFAULT ''")
+        # R46-1 — the machine-verification stamp: '', '1' (all verified),
+        # '0' (a real file failed the open), 'x' (format unknown/unverified)
+        if cols.get("ok") and "verified" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN verified TEXT DEFAULT ''")
         # Migrate the FLOWS column too: the intent lens reads it for its
         # flow-evidence signal; without it the signal is always zero.
         if cols.get("ok") and "flows" not in names:
@@ -110,7 +114,7 @@ class RunHistory:
         self._db = db if db is not None else _safe_store()
         _ensure_schema(self._db)
 
-    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None) -> None:
+    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "") -> None:
         """Append one real run to the history.
 
         ``outcome_class`` separates an HONEST ENVIRONMENT-REFUSAL from a real
@@ -131,7 +135,8 @@ class RunHistory:
               "succeeded": "1" if succeeded else "0",
               "excellence": "" if excellence is None else f"{excellence:.4f}",
               "outcome_class": outcome_class,
-              "flows": "; ".join(flows) if flows else ""}],
+              "flows": "; ".join(flows) if flows else "",
+              "verified": verified}],
         )
 
     def successful_runs(self) -> list[RunRecord]:

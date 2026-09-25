@@ -597,6 +597,82 @@ def route_and_run(
             "_registry": registry or ToolRegistry(),
         }
 
+    # R46-4 — NAMED MEMORY: «یادت باشد …» stores a fact; «دیگه یادت نره …»
+    # forgets it. The platform answers in the same human voice it was asked.
+    if forced_route is None:
+        from universal_mind.named_memory import (
+            forget_matching, parse_remember_request, save_fact,
+        )
+
+        nm_forget = command.strip()
+        forget_hit = ("یادت نره" in nm_forget) or ("یادت نرود" in nm_forget)
+        remember_req = parse_remember_request(command)
+        if remember_req is not None:
+            saved = save_fact(remember_req["fact"])
+            answer = (
+                f"یادداشت شد: «{saved.get('fact', '')}». هر وقت بهش ربط پیدا کرد، خودم یادم میآید."
+                if saved.get("ok") else saved.get("error", "حقیقی پیدا نکردم.")
+            )
+            return {
+                "ok": True, "command": command, "route": ["memory"],
+                "matched_words": ["یادت باشد"], "unknown": [],
+                "extracted_params": {"fact": remember_req["fact"]},
+                "result": {"memory": saved},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": answer,
+                "_registry": registry or ToolRegistry(),
+            }
+        if forget_hit:
+            gone = forget_matching(nm_forget)
+            if gone:
+                answer = f"پاک شد: {'؛ '.join(gone[:3])} — از این به بعد یادم نیست."
+            else:
+                answer = "چیزی که مطابقش باشد پیدا نکردم — یادم چیزی نیست."
+            return {
+                "ok": True, "command": command, "route": ["memory"],
+                "matched_words": ["یادت نره"], "unknown": [],
+                "extracted_params": {},
+                "result": {"memory": {"forgotten": gone}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": answer,
+                "_registry": registry or ToolRegistry(),
+            }
+
+    # R46-2 — «بایست»: the NO-GO answer to the gate's question. Every
+    # PAUSED goal is stopped honestly (state='stopped', a report, no fake
+    # finish) — the operator's word is final.
+    if forced_route is None and command.strip() in ("بایست", "بایست."):
+        from universal_mind.agent_loop import _ensure_goals_table
+
+        db = _status_store()
+        _ensure_goals_table(db)
+        q = db.query("SELECT id FROM goals WHERE state = 'paused' ORDER BY id")
+        paused = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []
+        if not paused:
+            return {
+                "ok": True, "command": command, "route": ["goal"],
+                "matched_words": ["بایست"], "unknown": [],
+                "extracted_params": {},
+                "result": {"goal": {"finished": True, "steps": 0,
+                                    "report": "هدفی در انتظار تصمیم نیست."}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": "هدفی در انتظار تصمیم نیست.",
+                "_registry": registry or ToolRegistry(),
+            }
+        fa_p = str(len(paused)).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+        for gid in paused:
+            db.execute(f"UPDATE goals SET state = 'stopped' WHERE id = {gid}")
+        return {
+            "ok": True, "command": command, "route": ["goal"],
+            "matched_words": ["بایست"], "unknown": [],
+            "extracted_params": {},
+            "result": {"goal": {"finished": False, "steps": len(paused),
+                                "report": f"{fa_p} هدف متوقف شد — هر وقت خواستی با «ادامه بده» برش گردان."}},
+            "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+            "agent_report": f"{fa_p} هدف متوقف شد — هر وقت خواستی با «ادامه بده» برش گردان.",
+            "_registry": registry or ToolRegistry(),
+        }
+
     # «ادامه بده» — the shortest possible resume: every STOPPED goal is
     # resumed from its exact failing step. The human phrasing of recovery.
     if forced_route is None and command.strip().startswith("ادامه"):
@@ -604,7 +680,9 @@ def route_and_run(
 
         db = _status_store()
         _ensure_goals_table(db)
-        q = db.query("SELECT id FROM goals WHERE state = 'stopped' ORDER BY id")
+        # R46-2: PAUSED goals (the go/no-go gate) resume through the SAME
+        # «ادامه بده» — one recovery word for both stopped and paused.
+        q = db.query("SELECT id FROM goals WHERE state IN ('stopped', 'paused') ORDER BY id")
         stopped = [int(r["id"]) for r in q["rows"]] if q.get("ok") else []
         # POISONED goals are refused with the warning — a blind re-run of a
         # 3x-failed step is a retry loop, not recovery.
@@ -954,10 +1032,28 @@ def route_and_run(
             ):
                 outcome_class = "needs_param"
         flows = syn.output.get("flows") if isinstance(syn.output, dict) else None
+        # R46-1 — THE MACHINE-VERIFIED ARTIFACT: every file the run claims
+        # to have made is OPENED by its own format reader before the run is
+        # recorded. The stamp rides into the row: '1' all-proven, '0' a real
+        # file failed the open, 'x' unknown format, '' nothing to check.
+        verified_stamp = ""
+        verification_report = ""
+        if syn.ok:
+            try:
+                from universal_mind.artifact_validator import validate_run
+
+                v = validate_run({"result": syn.output if isinstance(syn.output, dict) else {}})
+                if v["checked"]:
+                    verified_stamp = "1" if v["ok"] else "0"
+                    if v["ok"] and v.get("report"):
+                        verification_report = v["report"]
+            except Exception:  # noqa: BLE001 — a failed lens never breaks the run
+                verified_stamp = ""
         RunHistory().record(command, caps, syn.ok,
                             excellence=judgment.get("excellence"),
                             outcome_class=outcome_class,
-                            flows=list(flows) if flows else None)
+                            flows=list(flows) if flows else None,
+                            verified=verified_stamp)
         # R38-L3: the conversation's last context — what the NEXT anaphoric
         # command («نمودارش را بکش») will refer to. Only successful runs.
         if syn.ok:
@@ -1024,6 +1120,35 @@ def route_and_run(
 
             payload["agent_report"] = persian_report(payload)
         except Exception:  # noqa: BLE001 — reporting is a courtesy, never a blocker
+            pass
+    # R46-1 — the machine-verification line rides LAST (the strongest claim
+    # the platform can make: not "I made a file" but "I OPENED it").
+    if verification_report:
+        payload["agent_report"] = (
+            str(payload.get("agent_report", "")) + "\n🛡 " + verification_report
+        )
+        payload["verification"] = verification_report
+    # R46-3 — keep the FULL report of a successful run: a later 👍 turns
+    # these very promise lines into a drift law (see report_laws.py).
+    if payload.get("ok") is True and payload.get("agent_report"):
+        try:
+            from universal_mind.report_laws import keep_report
+
+            keep_report(command, str(payload["agent_report"]))
+        except Exception:  # noqa: BLE001 — the store is a courtesy
+            pass
+    # R46-4 — NAMED MEMORY SURFACES: when a stored fact is relevant to
+    # THIS command (≥2 shared tokens), it leads the report — memory that
+    # never surfaces is hoarding, not remembering.
+    if forced_route is None:
+        try:
+            from universal_mind.named_memory import surface_for_command
+
+            mem_line, _ids = surface_for_command(command)
+            if mem_line:
+                payload["agent_report"] = mem_line + "\n" + str(payload.get("agent_report", ""))
+                payload["memory_hit"] = mem_line
+        except Exception:  # noqa: BLE001 — the surface is a courtesy
             pass
     return payload
 

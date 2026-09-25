@@ -234,6 +234,12 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
 
     outcomes: list[StepOutcome] = []
     # The MAP order (waves) when a DAG was declared; otherwise the linear order.
+    # R46-2 — THE GO/NO-GO GATE: two CONSECUTIVE failed steps pause the goal
+    # and ASK the operator («۲ گام شکست خورد — ادامه بدهم یا بایستم؟») instead
+    # of either marching on or dying. 'paused' resumes via the SAME «ادامه بده»
+    # path that already resumes stopped goals.
+    consecutive_failures = 0
+
     execution_indexes: list[int] = []
     if passes:
         for wave in passes:
@@ -293,6 +299,10 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
         outcomes.append(outcome)
         _record_outcome(db, goal_id, outcome)
         if not step_ok:
+            # R46-2: the gate counts failures ACROSS RESUMES of the SAME
+            # goal (a step that fails again right after «ادامه بده» is the
+            # real 'keep burning time?' signal — the operator is asked).
+            consecutive_failures += 1
             # A failed step stops the goal UNLESS something DEPENDS on its
             # ENDING (not its success): a CONDITIONAL next step (the guard
             # reacts to failure) or a JOIN still waiting on this branch (the
@@ -301,13 +311,49 @@ def run_goal(goal_id: int, *, max_steps: int = 8, bar: float = 0.75) -> GoalRunR
                 index + 1 < len(guarded) and guarded[index + 1]
             )
             join_waiting = bool(goal_map is not None and goal_map.join_index is not None and goal_map.join_index != index)
+            # R46-2: two consecutive failures → the GATE pauses and ASKS
+            # (go/no-go) instead of a dead stop — the operator decides with
+            # the failure named, the platform never burns steps blindly.
             if not (next_guarded or join_waiting):
+                # R46-2 — THE GO/NO-GO GATE: the FIRST failure keeps the
+                # honest stopped state (poison detection and «ادامه بده»
+                # already live on it). But when THIS step has ALREADY failed
+                # once before (a resume re-failing the same step), the goal
+                # PAUSES and ASKS instead of stopping again — the operator
+                # decides with the failure named, the platform never burns
+                # the third attempt blindly.
+                q_seen = db.query(
+                    "SELECT outcomes FROM goals WHERE id = ?", (str(goal_id),)
+                )
+                seen_fails = 0
+                if q_seen.get("ok") and q_seen.get("rows"):
+                    import json as _json
+
+                    for past in _json.loads(str(q_seen["rows"][0]["outcomes"]) or "[]"):
+                        if int(past.get("index", -1)) == index and not bool(past.get("ok", True)):
+                            seen_fails += 1
+                poison_now = seen_fails >= POISON_THRESHOLD  # the gate never outlives poison
+                if seen_fails >= 2 and not poison_now:  # current + at least one PRIOR
+                    # next_step STAYS on the failed index: a real resume
+                    # re-runs THIS step (so poison detection keeps counting
+                    # and «ادامه بده» means "try again", not "skip ahead").
+                    db.execute(f"UPDATE goals SET next_step = {index}, state = 'paused' WHERE id = {goal_id}")
+                    return GoalRunResult(
+                        goal=goal_text, steps=tuple(outcomes), finished=False,
+                        stopped_at=index,
+                        reasoning=(
+                            "این گام دوباره شکست خورد — ادامه بدهم یا بایستم؟ "
+                            "(بگو: ادامه بده / بایست)"
+                        ),
+                    )
                 db.execute(f"UPDATE goals SET next_step = {index}, state = 'stopped' WHERE id = {goal_id}")
                 return GoalRunResult(
                     goal=goal_text, steps=tuple(outcomes), finished=False,
                     stopped_at=index,
                     reasoning=f"گام {index + 1} شکست خورد ({outcome.detail[:60]}) — هدف متوقف شد",
                 )
+        else:
+            consecutive_failures = 0
         db.execute(f"UPDATE goals SET next_step = {index + 1} WHERE id = {goal_id}")
 
     db.execute(f"UPDATE goals SET state = 'done' WHERE id = {goal_id}")
