@@ -130,6 +130,7 @@ PROBES = [
     "probe_r45_wave1.py",
     "probe_r45_wave2.py",
     "probe_r45_wave3.py",
+    "probe_r45_life.py",
 ]
 
 

@@ -84,6 +84,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("جدول در سند", "pdf"),
     # image (Pillow)
     ("تصویر", "image"),
+    ("هوش مصنوعی", "llm"),      # R45-15 — a live chat model, env-wired
+    ("مدل زبانی", "llm"),
     ("عکس", "image"),
     ("تغییر اندازه", "image"),
     ("برش", "image"),

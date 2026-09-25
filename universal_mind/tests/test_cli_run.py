@@ -58,7 +58,10 @@ def test_run_list_shows_every_capability_and_ops(capsys: CaptureFixture[str]) ->
     """`run --list` shows every registered capability (incl. speech + email) + ops."""
     code, payload = _run_cli(capsys, ["run", "--list"])
     assert code == 0
-    assert len(payload) == 21  # R44-11 absorbed the email outbox
+    # R45-15: the contract is RELATIONAL, not a frozen count — the list
+    # must cover every named capability, including the live LLM wire.
+    assert set(payload) >= {"speech", "email", "ocr", "excel", "webfetch",
+                            "pdfreader", "screenshot", "llm"}
     assert "speech" in payload
     assert "email" in payload  # a real program, absorbed
     assert "ocr" in payload

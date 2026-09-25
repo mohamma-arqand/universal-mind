@@ -20,6 +20,7 @@ from universal_mind.connectors import Connector
 from universal_mind.data_suite import DataSuiteConnector
 from universal_mind.database_suite import DatabaseSuiteConnector
 from universal_mind.image_suite import ImageSuiteConnector
+from universal_mind.llm_connector import LLMToolConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.csv_suite import CsvSuiteConnector
@@ -62,6 +63,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "database": DatabaseSuiteConnector,  # full sqlite3 surface (DDL/inserts/queries/tables)
     "ai": AISuiteConnector,            # real ML + signal (sklearn train/fit + scipy fft/peaks)
     "vision": VisionSuiteConnector,    # real computer vision (OpenCV: edges/contours/threshold)
+    "llm": LLMToolConnector,           # real OpenAI-compatible chat (R45-15, env-wired)
 }
 
 

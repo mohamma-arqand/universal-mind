@@ -346,6 +346,16 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # REPLACE a bare command echo with a real summary of what was made
         # (the toast should say what the chain produced, not echo the order).
         return {"operation": "notify", "title": text or "Universal Mind", "body": command}
+    if capability == "llm":
+        # R45-15 — the prompt is the sentence AFTER the trigger words; the
+        # whole command is a valid prompt when no cleaner cut exists.
+        prompt = command
+        for trig in ("هوش مصنوعی", "مدل زبانی", "بپرس", "بپرس از"):
+            if trig in prompt:
+                prompt = prompt.split(trig, 1)[1]
+        prompt = prompt.strip(" ،.:؛")
+        return {"prompt": prompt or command}
+
     if capability == "vision":
         # «تحلیل تصویر» -> real OpenCV work on the operator's real file/folder.
         # With NO explicit target in the sentence, the operation stays OPEN so

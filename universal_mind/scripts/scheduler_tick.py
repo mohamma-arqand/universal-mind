@@ -166,6 +166,26 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — the harvest is a lens, never fatal
         print(f"  (شکارِ واژههای ناشناخته ناموفق: {exc})")
 
+    # R45-14 — THE DISK WATCH: the 60GB lesson. The store drive's real
+    # free space is read every tick; below the floor a toast fires —
+    # a full disk is never a surprise again.
+    try:
+        from universal_mind.disk_watch import disk_report
+
+        dsk = disk_report()
+        print(f"  (فضای دیسک: {dsk['report']})")
+        if not dsk["ok"] and not dsk["error"]:
+            try:
+                from universal_mind.notify_adapter import NotifyToolConnector
+
+                NotifyToolConnector().connect(
+                    {}, {"title": "هشدار فضای دیسک", "body": dsk["report"]}
+                )
+            except Exception:  # noqa: BLE001 — the toast is a courtesy
+                pass
+    except Exception as exc:  # noqa: BLE001 — the watch is a lens, never fatal
+        print(f"  (پایشِ دیسک ناموفق: {exc})")
+
     # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
     # operator's «ادامه بده» is the recovery for exactly these.
     stopped_goals = 0
