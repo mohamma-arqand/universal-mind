@@ -129,6 +129,30 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         except Exception as exc:  # noqa: BLE001 — a drill is a lens, never fatal
             print(f"  (مانورِ بازیابی ناموفق: {exc})")
 
+    # R46-10 — THE MORNING BRIEFING: on the FIRST tick of each LOCAL day
+    # the platform writes the day open (yesterday's outcome, today's
+    # standings, any red signal) into a daily_briefings row + a toast.
+    try:
+        from universal_mind.daily_briefing import due_today, record_briefing
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        if due_today(today):
+            brief = record_briefing(today)
+            print(f"  ({brief['report'].splitlines()[0]}")
+            for ln in brief["report"].splitlines()[1:]:
+                print(f"   {ln}")
+            print("  )")
+            try:
+                from universal_mind.notify_adapter import NotifyToolConnector
+
+                NotifyToolConnector().connect(
+                    {}, {"title": "بریفینگ امروز", "body": brief["report"]}
+                )
+            except Exception:  # noqa: BLE001 — the toast is a courtesy
+                pass
+    except Exception as exc:  # noqa: BLE001 — the briefing is a lens, never fatal
+        print(f"  (بریفینگ ناموفق: {exc})")
+
     # R45-8 — THE WEEKLY LETTER: on the first tick of each ISO week the
     # platform writes its own week (runs, successes, best route, verdicts)
     # into a toast + a weekly_reports row. A silent week is written as a

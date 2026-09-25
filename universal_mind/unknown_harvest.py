@@ -64,6 +64,10 @@ def ensure_table(db: DatabaseSuite) -> None:
         "term TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 1, "
         "first_seen TEXT NOT NULL DEFAULT (datetime('now', 'localtime')), "
         "last_seen TEXT NOT NULL DEFAULT (datetime('now', 'localtime')))",
+        # R46-11 — term is UNIQUE at the index level: a duplicate term can
+        # never silently fork into two rows (the harvest upserts by hand;
+        # the index is the seatbelt).
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_unknown_term ON unknown_terms (term)",
     ])
 
 

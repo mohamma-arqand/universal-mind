@@ -78,6 +78,11 @@ def _ensure_schema(db: DatabaseSuite) -> None:
         # on a store that grows with every run.
         "CREATE INDEX IF NOT EXISTS idx_history_succeeded ON run_history (succeeded)",
         "CREATE INDEX IF NOT EXISTS idx_history_route ON run_history (route)",
+        # R46-11 — THE HOT-PATH INDEXES: the greeting/briefing/retry read
+        # by date and by (route, succeeded) on every run; a covering index
+        # keeps them flat as the store grows.
+        "CREATE INDEX IF NOT EXISTS idx_history_created ON run_history (created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_history_route_ok ON run_history (route, succeeded)",
         "CREATE INDEX IF NOT EXISTS idx_lessons_capability ON planner_lessons (capability)",
     ])
     if not first_time:

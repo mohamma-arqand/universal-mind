@@ -283,9 +283,23 @@ def _resolve_saved_chain(command: str) -> tuple[str, ...] | None:
 
 
 def route(command: str) -> PersianRoute:
-    """Map a Persian command to a capability chain (deterministic, honest)."""
+    """Map a Persian command to a capability chain (deterministic, honest).
+
+    R46-9 — the LEARNED overlay is read FIRST: words the operator taught
+    («واژهی زرشک یعنی دیتا») route without a code commit. The static
+    _VOCAB follows; a taught word wins over an equal static one.
+    """
     lowered = command.lower()
     matched: dict[str, list[str]] = {}
+
+    try:
+        from universal_mind.learned_vocab import overlay
+
+        for word, capability in overlay().items():
+            if word and word in lowered:
+                matched.setdefault(capability, []).append(word)
+    except Exception:  # noqa: BLE001 — the learner is a lens, never fatal
+        pass
 
     for word, capability in _VOCAB:
         if word in lowered:
@@ -661,6 +675,30 @@ def route_and_run(
         from universal_mind.named_memory import (
             forget_matching, parse_remember_request, save_fact,
         )
+
+        # R46-9 — «واژهی X یعنی Y»: the operator TEACHES a word; the very
+        # next command routes correctly, no code, no commit.
+        from universal_mind.learned_vocab import parse_definition, teach
+
+        definition = parse_definition(command)
+        if definition is not None:
+            taught = teach(definition["word"], definition["cap"])
+            if taught.get("ok"):
+                answer = (
+                    f"یاد گرفتم: «{definition['word']}» یعنی {definition['cap']} — "
+                    "از این به بعد فرمانش را میفهمم."
+                )
+            else:
+                answer = taught.get("error", "تعریف را نگرفتم.")
+            return {
+                "ok": bool(taught.get("ok")), "command": command,
+                "route": ["memory"], "matched_words": ["یعنی"], "unknown": [],
+                "extracted_params": dict(definition),
+                "result": {"vocab": taught},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": answer,
+                "_registry": registry or ToolRegistry(),
+            }
 
         nm_forget = command.strip()
         forget_hit = ("یادت نره" in nm_forget) or ("یادت نرود" in nm_forget)

@@ -62,6 +62,18 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
         return _say(c, _greeting_state())
     if c in ("خسته نباشید", "خسته نباشی", "ممنون", "مرسی", "سپاس", "thanks", "thank you"):
         return _say(c, "خواهش میکنم! کاری بود، فرمان بده.")
+    if ("چه یاد گرفتی" in c or "چه چیزهایی یاد گرفتی" in c
+            or "یادگیریهایت" in c):
+        try:
+            from universal_mind.learned_vocab import learned_words
+
+            learned = learned_words()
+        except Exception:  # noqa: BLE001 — the learner is a lens
+            learned = []
+        if learned:
+            parts = "، ".join(f"«{d['word']}»→{d['capability']}" for d in learned[:6])
+            return _say(c, f"اینها را از تو یاد گرفتم: {parts}.")
+        return _say(c, "هنوز واژهای به من یاد ندادهی — با «واژهی X یعنی Y» یادم بده.")
     if c in ("دنبال چه میگردی؟", "چیکار میکنی؟", "چه خبر؟", "حالت چطوره؟"):
         line = _recent_activity()
         return _say(c, f"در خدمتم — {line}" if line else "در خدمتم؛ منتظر فرمانت هستم.")

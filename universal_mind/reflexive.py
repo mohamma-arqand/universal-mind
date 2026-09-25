@@ -212,6 +212,58 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         info = suggest()
         return _reflex_answer(c, info["report"])
 
+    # R46-12 — THE ONE-MENU PERIODIC REPORT: «گزارش کامل بده» (as a
+    # QUESTION, not a chain command) returns EVERY periodic report — the
+    # morning briefing, the weekly letter, the yearbook — in ONE
+    # structured answer, each section from its REAL table.
+    if c.strip().rstrip("!.؟") in ("گزارش دورهیای بده", "گزارش دوره ای بده",
+                                    "گزارش کامل بده", "همهی گزارشها بده",
+                                    "گزارش کامل"):
+        from datetime import datetime as _dt
+
+        from universal_mind.daily_briefing import record_briefing, today_briefing
+
+        brief = today_briefing()
+        if not brief:
+            brief = record_briefing(_dt.now().strftime("%Y-%m-%d"))["report"]
+        sections: list[str] = [brief]
+        try:
+            from universal_mind.weekly_letter import latest_letter
+
+            letter = latest_letter()
+            if letter:
+                sections.append("📬 " + letter)
+        except Exception:  # noqa: BLE001 — a section is a lens
+            pass
+        try:
+            from universal_mind.database_suite import DatabaseSuite as _DS
+            from universal_mind.yearbook import build_yearbook
+
+            yb = build_yearbook(db=_DS.shared_persistent())
+            if isinstance(yb, dict) and yb.get("ok"):
+                secs = yb.get("sections") or []
+                text = " | ".join(str(s) for s in secs[:4])
+            else:
+                text = str(yb) if not isinstance(yb, dict) else ""
+            if text:
+                sections.append("📖 " + text)
+        except Exception:  # noqa: BLE001 — a section is a lens
+            pass
+        return _reflex_answer(c, "\n\n".join(sections))
+
+    # R46-10 — «بریفینگ امروز را بگو» — the morning briefing, read back.
+    if "بریفینگ" in c:
+        from universal_mind.daily_briefing import record_briefing, today_briefing
+        from datetime import datetime as _dt
+
+        stored = today_briefing()
+        if not stored:
+            # no briefing yet today → write it NOW from the real tables
+            # (the operator asked; the day opens on the ask, not on a tick)
+            info = record_briefing(_dt.now().strftime("%Y-%m-%d"))
+            stored = info["report"]
+        return _reflex_answer(c, stored)
+
     # R45-10 — «وضعیت خودت چطور است؟» — five live signals, one answer.
     # R46-8 — FREE-FORM STATUS ASKS: «خب؟ / چی جدید؟ / وضع؟ / خبر چیست؟»
     # reach the SAME five-signal answer — the operator asks in whatever
@@ -279,14 +331,33 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
                 "SELECT operation, COUNT(*) AS n FROM planner_lessons "
                 "GROUP BY operation ORDER BY n DESC LIMIT 3",
             )
-            if not op_rows:
+            # R46-9 — TAUGHT WORDS too: the vocabulary the operator taught
+            # («واژهی زرشک یعنی داده») is part of what the platform knows.
+            vocab_rows: list[dict[str, Any]] = []
+            try:
+                from universal_mind.learned_vocab import learned_words
+
+                vocab_rows = learned_words()
+            except Exception:  # noqa: BLE001 — the learner is a lens
+                vocab_rows = []
+            vocab_part = ""
+            if vocab_rows:
+                vocab_part = " واژههای آموختهشده: " + "، ".join(
+                    f"«{d['word']}»→{d['capability']}" for d in vocab_rows[:4]
+                ) + "."
+            if not op_rows and not vocab_rows:
                 return _reflex_answer(c, "هنوز درسی یاد نگرفتهام — چند فرمان بده تا بیاموزم.")
+            if not op_rows:
+                return _reflex_answer(
+                    c,
+                    f"{_fa_num(len(vocab_rows))} واژه یاد گرفتهام." + vocab_part,
+                )
             top = "، ".join(
                 f"{r['operation']} ({_fa_num(int(r['n']))} بار)" for r in op_rows
             )
             return _reflex_answer(
                 c,
-                f"{_fa_num(n)} درس ثبت کردهام؛ پرتکرارترین عملیاتها: {top}.",
+                f"{_fa_num(n)} درس ثبت کردهام؛ پرتکرارترین عملیاتها: {top}." + vocab_part,
             )
         except Exception:  # noqa: BLE001 — a reflex never crashes
             return _reflex_answer(c, "هنوز درسی یاد نگرفتهام — چند فرمان بده تا بیاموزم.")
