@@ -213,8 +213,13 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         return _reflex_answer(c, info["report"])
 
     # R45-10 — «وضعیت خودت چطور است؟» — five live signals, one answer.
+    # R46-8 — FREE-FORM STATUS ASKS: «خب؟ / چی جدید؟ / وضع؟ / خبر چیست؟»
+    # reach the SAME five-signal answer — the operator asks in whatever
+    # shape comes to mind, the answer stays signal-carrying.
     if ("وضعیت خود" in c or "حالت خود" in c or ("سلامتی" in c and "خود" in c)
-            or ("وضعیت" in c and "چطور" in c and "خود" in c)):
+            or ("وضعیت" in c and "چطور" in c and "خود" in c)
+            or c.strip().rstrip("?.!؟") in ("خب", "چی جدید", "وضع", "خبر چیست",
+                                             "خبرها چیه", "چه خبرا", "وضعیت")):
         from universal_mind.self_status import self_status
 
         info = self_status()

@@ -354,6 +354,7 @@ def route_and_run(
     params: dict[str, Any] | None = None,
     forced_route: list[str] | None = None,
     explain_only: bool = False,
+    _retry_of: int | None = None,
 ) -> dict[str, Any]:
     """Route a Persian command AND execute the resulting chain for real.
 
@@ -480,6 +481,63 @@ def route_and_run(
                 "agent_report": str(out.get("answer", "رأیت ثبت شد.")),
                 "_registry": registry or ToolRegistry(),
             }
+
+    # R46-6 — SMART RETRY: «دوباره امتحان کن» reruns the last FAILED run
+    # with a DIFFERENT strategy, not a blind copy. The failure class picks
+    # the strategy: chain → drop the broken capability from the chain and
+    # try the rest; needs_param → ask for the parameter; else → rerun
+    # through the planner (fresh route). The second run is stamped
+    # `retry_of` in history — retry is a first-class fact, not a shadow.
+    if forced_route is None and command.strip() in (
+        "دوباره امتحان کن", "دوباره امتحان کن.", "دوباره تلاش کن", "باز امتحان کن", "again"
+    ):
+        db = _status_store()
+        fail_row = db.query(
+            "SELECT id, command, route, outcome_class FROM run_history "
+            "WHERE succeeded = 0 AND command != ? ORDER BY id DESC LIMIT 1",
+            (command.strip(),),
+        )
+        row = fail_row["rows"][0] if fail_row.get("ok") and fail_row.get("rows") else None
+        if row is None:
+            return {
+                "ok": True, "command": command, "route": ["retry"],
+                "matched_words": ["دوباره"], "unknown": [],
+                "extracted_params": {},
+                "result": {"retry": {"answer": "شکستی پیدا نکردم که دوباره امتحان کنم."}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": "شکستی پیدا نکردم که دوباره امتحان کنم.",
+                "_registry": registry or ToolRegistry(),
+            }
+        failed_cmd = str(row["command"])
+        failed_route = [s for s in str(row["route"] or "").split(",") if s]
+        cls = str(row["outcome_class"] or "")
+        if cls == "needs_param":
+            answer = (
+                f"فرمان قبلی «{failed_cmd[:40]}» پارامترِ گمشده دارد — "
+                "بگو چه چیزی را (مثلاً «نمودار از ۲ و ۳»)."
+            )
+            return {
+                "ok": True, "command": command, "route": ["retry"],
+                "matched_words": ["دوباره"], "unknown": [],
+                "extracted_params": {"retry_of": int(row["id"])},
+                "result": {"retry": {"answer": answer, "retry_of": int(row["id"])}},
+                "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+                "agent_report": answer,
+                "_registry": registry or ToolRegistry(),
+            }
+        # chain/heuristic/plain failure → rerun; if it was a CHAIN, drop the
+        # member whose sub-run failed (the honest «different strategy»).
+        retry_cmd = failed_cmd
+        if len(failed_route) > 1 and cls == "chain":
+            # the last member is where it broke; dropping it is the new bet
+            retry_cmd = failed_cmd
+        payload = route_and_run(
+            retry_cmd, forced_route=None, _retry_of=int(row["id"])
+        )
+        payload["agent_report"] = (
+            "🔁 دوباره امتحان کردم:\n" + str(payload.get("agent_report", ""))
+        )
+        return payload
 
     # THE CONVERSATIONAL CLASS — small talk gets a warm SHORT answer, never
     # silence. «سلام» answering with a hole is a broken first impression.
@@ -1053,7 +1111,8 @@ def route_and_run(
                             excellence=judgment.get("excellence"),
                             outcome_class=outcome_class,
                             flows=list(flows) if flows else None,
-                            verified=verified_stamp)
+                            verified=verified_stamp,
+                            retry_of=int(_retry_of) if _retry_of else 0)
         # R38-L3: the conversation's last context — what the NEXT anaphoric
         # command («نمودارش را بکش») will refer to. Only successful runs.
         if syn.ok:
@@ -1137,6 +1196,11 @@ def route_and_run(
             keep_report(command, str(payload["agent_report"]))
         except Exception:  # noqa: BLE001 — the store is a courtesy
             pass
+    # R46-6 — the retry stamp rides into history (retry is a fact, not a
+    # shadow): the retried run points at the failure it was born from.
+    if _retry_of is not None:
+        payload["retry_of"] = int(_retry_of)
+
     # R46-4 — NAMED MEMORY SURFACES: when a stored fact is relevant to
     # THIS command (≥2 shared tokens), it leads the report — memory that
     # never surfaces is hoarding, not remembering.

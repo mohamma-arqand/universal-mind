@@ -53,9 +53,13 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
     """
     c = command.strip()
 
-    # Greetings — the first word anyone says.
+    # Greetings — the first word anyone says. R46-5: the greeting is
+    # STATE-AWARE — it knows what the platform is holding FOR the
+    # operator right now (active goals, today's reminders, today's runs)
+    # and offers them by name. A secretary who says only «سلام» wastes
+    # the most valuable moment of the conversation.
     if c in ("سلام", "درود", "سلام علیکم", "هلو", "hi", "hello"):
-        return _say(c, "سلام! چه کارهایی برایت انجام دهم؟")
+        return _say(c, _greeting_state())
     if c in ("خسته نباشید", "خسته نباشی", "ممنون", "مرسی", "سپاس", "thanks", "thank you"):
         return _say(c, "خواهش میکنم! کاری بود، فرمان بده.")
     if c in ("دنبال چه میگردی؟", "چیکار میکنی؟", "چه خبر؟", "حالت چطوره؟"):
@@ -76,6 +80,45 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
     if c.startswith("سلام ") or "خوبی؟" in c:
         return _say(c, "سلام! فرمانت را بگو.")
     return None
+
+
+def _greeting_state() -> str:
+    """«سلام» that knows what it is holding: goals, reminders, today."""
+    parts: list[str] = ["سلام!"]
+    try:
+        from universal_mind.database_suite import DatabaseSuite
+
+        db = DatabaseSuite.shared_persistent()
+        today = db.query(
+            "SELECT COUNT(*) AS n FROM run_history "
+            "WHERE date(created_at) = date('now', 'localtime')"
+        )
+        n_today = int(today["rows"][0]["n"]) if today.get("ok") and today.get("rows") else 0
+        goals = db.query("SELECT COUNT(*) AS n FROM goals WHERE state = 'active'")
+        n_goals = int(goals["rows"][0]["n"]) if goals.get("ok") and goals.get("rows") else 0
+        paused = db.query("SELECT COUNT(*) AS n FROM goals WHERE state = 'paused'")
+        n_paused = int(paused["rows"][0]["n"]) if paused.get("ok") and paused.get("rows") else 0
+    except Exception:  # noqa: BLE001 — the greeting is a courtesy, never fatal
+        return "سلام! چه کارهایی برایت انجام دهم؟"
+
+    try:
+        from universal_mind.time_windows import today_scope  # R45: local-day
+
+        label, _start, _end = today_scope()
+    except Exception:  # noqa: BLE001
+        label = "امروز"
+    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+    bits: list[str] = []
+    if n_goals:
+        bits.append(f"{str(n_goals).translate(fa)} هدف فعال")
+    if n_paused:
+        bits.append(f"{str(n_paused).translate(fa)} هدف در انتظار تصمیمت (بگو: ادامه بده / بایست)")
+    if n_today:
+        bits.append(f"{label} {str(n_today).translate(fa)} فرمان اجرا کردیم")
+    if bits:
+        parts.append(" — " + "، ".join(bits) + ".")
+    parts.append(" چه کار کنم؟")
+    return "".join(parts)
 
 
 def _say(command: str, answer: str) -> dict[str, Any]:

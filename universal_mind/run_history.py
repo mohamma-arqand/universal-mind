@@ -99,6 +99,10 @@ def _ensure_schema(db: DatabaseSuite) -> None:
         # flow-evidence signal; without it the signal is always zero.
         if cols.get("ok") and "flows" not in names:
             alters.append("ALTER TABLE run_history ADD COLUMN flows TEXT DEFAULT ''")
+        # R46-6 — THE RETRY STAMP: a retried run points at the failure it
+        # was born from ('' = not a retry). Retry is a first-class fact.
+        if cols.get("ok") and "retry_of" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN retry_of INTEGER DEFAULT 0")
         if alters:
             db.execute_many(alters)
     except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
@@ -114,7 +118,7 @@ class RunHistory:
         self._db = db if db is not None else _safe_store()
         _ensure_schema(self._db)
 
-    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "") -> None:
+    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "", retry_of: int = 0) -> None:
         """Append one real run to the history.
 
         ``outcome_class`` separates an HONEST ENVIRONMENT-REFUSAL from a real
@@ -136,7 +140,8 @@ class RunHistory:
               "excellence": "" if excellence is None else f"{excellence:.4f}",
               "outcome_class": outcome_class,
               "flows": "; ".join(flows) if flows else "",
-              "verified": verified}],
+              "verified": verified,
+              "retry_of": str(int(retry_of)) if retry_of else ""}],
         )
 
     def successful_runs(self) -> list[RunRecord]:

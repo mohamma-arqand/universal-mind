@@ -20,6 +20,38 @@ _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 _STOP = {"را", "و", "به", "از", "با", "برای", "که", "این", "آن", "هم", "می",
          "کن", "بده", "بساز", "نشان", "بده.", "لطفا", "یک", "دو"}
 
+# R46-7 — REFUSAL-SENTENCE STOPWORDS: the refusal sentence ITSELF is not
+# vocabulary. Words that appear in the platform's OWN refusal boilerplate
+# («هیچ قابلیتی شناخته نشد — فرمان اجرا نمیکند») were harvested 30 times
+# each and drowned the real subject words. Caught live; poisoned rows are
+# purged by purge_refusal_noise() and never harvested again.
+_REFUSAL_STOP = {
+    "فرمان", "هیچ", "قابلیتی", "ندارد", "نمیکند", "نشد", "شناخته",
+    "شناختهشد", "میکند", "باشد", "است", "است.", "فعال", "فعال.",
+    "گام", "هدف", "هدف:", "رو", "را.", "کنم", "کنی", "کنیم",
+}
+
+
+def purge_refusal_noise(*, db: DatabaseSuite | None = None) -> dict[str, Any]:
+    """Delete every poisoned row (refusal-sentence words + bare test junk).
+
+    Returns what was purged and what remains — the honest audit line.
+    """
+    store = db or DatabaseSuite.shared_persistent()
+    ensure_table(store)
+    q = store.query("SELECT id, term, hits FROM unknown_terms")
+    rows = q.get("rows", []) if q.get("ok") else []
+    purged: list[str] = []
+    purged_hits = 0
+    for r in rows:
+        term = str(r["term"])
+        if term in _REFUSAL_STOP or term in _STOP or len(term) <= 3 and not term.isalpha():
+            purged.append(term)
+            purged_hits += int(r["hits"])
+            store.execute(f"DELETE FROM unknown_terms WHERE id = {int(r['id'])}")
+    return {"purged": purged, "purged_hits": purged_hits,
+            "remaining": len(rows) - len(purged)}
+
 
 def _fa(n: Any) -> str:
     return str(n).translate(_FA)
@@ -43,7 +75,8 @@ def harvest_unknown(unknown_words: list[str], *, db: DatabaseSuite | None = None
     for raw in unknown_words:
         for term in str(raw).split():
             term = term.strip(".,،؛:؟!()«»\"'").strip()
-            if not term or len(term) < 2 or term in _STOP:
+            if (not term or len(term) < 2 or term in _STOP
+                    or term in _REFUSAL_STOP):
                 continue
             q = store.query("SELECT id, hits FROM unknown_terms WHERE term = ?", (term,))
             rows = q.get("rows", []) if q.get("ok") else []
