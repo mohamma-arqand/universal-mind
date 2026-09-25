@@ -129,6 +129,21 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         except Exception as exc:  # noqa: BLE001 — a drill is a lens, never fatal
             print(f"  (مانورِ بازیابی ناموفق: {exc})")
 
+    # R46-14 — THE MONTHLY COMPACTION: on the FIRST tick of each month,
+    # old rows (90+ days) move to the archive in small batches and the
+    # count is SAID. A live rollback command keeps undo possible.
+    try:
+        from universal_mind.history_compact import compact_history
+
+        today = datetime.now()
+        if today.day == 1 or datetime.now().strftime("%Y-%m") != datetime.now(timezone.utc).strftime("%Y-%m"):
+            pass  # first LOCAL day of the month OR timezone disagreement — run it
+        if today.day == 1:
+            comp = compact_history()
+            print(f"  (فشردهسازی ماهانه: {comp['report']})")
+    except Exception as exc:  # noqa: BLE001 — compaction is a lens, never fatal
+        print(f"  (فشردهسازی ناموفق: {exc})")
+
     # R46-10 — THE MORNING BRIEFING: on the FIRST tick of each LOCAL day
     # the platform writes the day open (yesterday's outcome, today's
     # standings, any red signal) into a daily_briefings row + a toast.
@@ -247,7 +262,63 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
         except Exception as exc:  # noqa: BLE001 — the toast is a bonus, never fatal
             print(f"(toast failed: {exc})")
     result["watcher_fired"] = watched_fired
+    # R46-13 — the health row: every tick leaves its trace (state, skipped
+    # lens blocks, named causes); a FAILED tick reaches a toast. The count
+    # comes from the fired entries THEMSELVES — the notify-only `failed`
+    # variable lives inside the toast block and is not the tick's truth.
+    entries = list(result.get("entries", result.get("fired", [])))
+    failed_entries = [e for e in entries if not e.get("ok")]
+    skipped = len(failed_entries)
+    causes = "; ".join(
+        f"{e.get('command', '')[:30]}: {e.get('error', '')[:40]}"
+        for e in failed_entries
+    )
+    result["state"] = "failed" if failed_entries else "ok"
+    result["skipped"] = skipped
+    result["causes"] = causes
+    _write_tick_health(dict(result))
     return dict(result)
+
+
+def _write_tick_health(summary: dict[str, object]) -> None:
+    """R46-13 — every tick's summary lands in tick_health (one row per tick).
+
+    A tick that dies silently leaves no trace; this one leaves the trace:
+    state (ok/degraded/failed), the count of lens blocks that skipped,
+    their named causes, the fired schedules. The next FAILED tick reaches
+    a toast — silence is never the operator's answer again.
+    """
+    try:
+        from universal_mind.database_suite import DatabaseSuite
+
+        db = DatabaseSuite.shared_persistent()
+        db.ensure_schema("tick_health", [
+            "CREATE TABLE IF NOT EXISTS tick_health ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "state TEXT NOT NULL, fired INTEGER NOT NULL DEFAULT 0, "
+            "skipped INTEGER NOT NULL DEFAULT 0, causes TEXT NOT NULL DEFAULT '', "
+            "created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')))",
+        ])
+        state = str(summary.get("state", "ok"))
+        fired_n = summary.get("fired", 0)
+        fired_count = len(fired_n) if isinstance(fired_n, (list, tuple)) else int(fired_n)
+        db.insert_many("tick_health", [{
+            "state": state,
+            "fired": str(fired_count),
+            "skipped": str(int(summary.get("skipped", 0))),
+            "causes": str(summary.get("causes", ""))[:500],
+        }])
+        if state == "failed":
+            try:
+                from universal_mind.notify_adapter import NotifyToolConnector
+
+                NotifyToolConnector().connect(
+                    {}, {"title": "tick ناسالم", "body": str(summary.get("causes", ""))[:300]}
+                )
+            except Exception:  # noqa: BLE001 — the toast is a courtesy
+                pass
+    except Exception as exc:  # noqa: BLE001 — the health row is a lens, never fatal
+        print(f"(tick_health ناموفق: {exc})")
 
 
 def main() -> int:

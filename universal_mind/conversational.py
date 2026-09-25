@@ -103,7 +103,7 @@ def _greeting_state() -> str:
         db = DatabaseSuite.shared_persistent()
         today = db.query(
             "SELECT COUNT(*) AS n FROM run_history "
-            "WHERE date(created_at) = date('now', 'localtime')"
+            "WHERE date(created_at) = date(datetime('now', 'localtime'))"
         )
         n_today = int(today["rows"][0]["n"]) if today.get("ok") and today.get("rows") else 0
         goals = db.query("SELECT COUNT(*) AS n FROM goals WHERE state = 'active'")

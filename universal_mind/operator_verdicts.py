@@ -40,9 +40,11 @@ def record_verdict(command: str, verdict: str) -> dict[str, Any]:
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "command TEXT NOT NULL, route TEXT NOT NULL, "
         "verdict TEXT NOT NULL, created_at TEXT NOT NULL)",
+    )
+    db.execute_many([
         # R46-11 — the verdict-date index: the advisor filters by time.
         "CREATE INDEX IF NOT EXISTS idx_verdicts_created ON operator_verdicts (created_at)",
-    )
+    ])
     rows = db.query(
         "SELECT route FROM run_history WHERE command = ? AND succeeded = 1 "
         "AND (outcome_class IS NULL OR outcome_class NOT IN ('blocked_env', 'needs_param')) "

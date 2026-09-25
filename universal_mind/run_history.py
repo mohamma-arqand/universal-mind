@@ -138,6 +138,13 @@ class RunHistory:
         """
         if not route and not outcome_class:
             outcome_class = "unknown_noise"
+        # R46-13 FIX — created_at is written EXPLICITLY in LOCAL time: the
+        # column default (CURRENT_TIMESTAMP) is UTC, and every consumer of
+        # this table (the greeting, the briefing, compaction) compares in
+        # local days — a UTC row landed at 01:30 Tehran reads as YESTERDAY
+        # and the morning greeting said «۰ فرمان» on a busy morning.
+        from datetime import datetime as _dt
+
         self._db.insert_many(
             "run_history",
             [{"command": command, "route": ",".join(route),
@@ -146,7 +153,8 @@ class RunHistory:
               "outcome_class": outcome_class,
               "flows": "; ".join(flows) if flows else "",
               "verified": verified,
-              "retry_of": str(int(retry_of)) if retry_of else ""}],
+              "retry_of": str(int(retry_of)) if retry_of else "",
+              "created_at": _dt.now().strftime("%Y-%m-%d %H:%M:%S")}],
         )
 
     def successful_runs(self) -> list[RunRecord]:

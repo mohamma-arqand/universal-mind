@@ -1036,6 +1036,17 @@ def route_and_run(
         flow=len(caps) > 1,
         command=command,
     )
+    # The payload the ARETĒ judge reads (the same shape route_and_run returns)
+    # — built BEFORE the gate: R46-13 makes it the gate's primary attempt,
+    # so a strong primary ships without a second real run.
+    run_payload_preview = {
+        "ok": syn.ok,
+        "command": command,
+        "route": caps,
+        "result": syn.output["synthesized_from"] if isinstance(syn.output, dict) else {},
+        "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
+        "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
+    }
     # ---- The quality gate: judgment must change behavior, not just grade it.
     # When ARETĒ grades the planned run weak (below the bar), the platform
     # self-repairs: it runs the honest rival order and ships the best REAL
@@ -1053,7 +1064,13 @@ def route_and_run(
         def _run_candidate(candidate: tuple[str, ...]) -> dict[str, Any]:
             return route_and_run(command, registry=None, params=None, forced_route=list(candidate))
 
-        gate = run_with_quality_gate(command, tuple(caps), _run_candidate, bar=dynamic_bar)
+        # R46-13 FIX — the double-run bug: syn is the PRIMARY attempt, so
+        # a strong primary ships WITHOUT a second real run; only a weak
+        # one triggers the rival candidates (the actual repair search).
+        gate = run_with_quality_gate(
+            command, tuple(caps), _run_candidate, bar=dynamic_bar,
+            _primary_payload=run_payload_preview,
+        )
         if gate.repaired:
             # The shipped attempt replaces the weak one; the operator sees the truth.
             # Surface the anaphora subject too — this is still the OUTER call.
@@ -1063,15 +1080,6 @@ def route_and_run(
                 shipped.setdefault("result", {})["anaphora_of"] = _subj
                 _ANAPHORA_SUBJECT.clear()
             return shipped
-    # The payload the ARETĒ judge reads (the same shape route_and_run returns).
-    run_payload_preview = {
-        "ok": syn.ok,
-        "command": command,
-        "route": caps,
-        "result": syn.output["synthesized_from"] if isinstance(syn.output, dict) else {},
-        "errors": {s.capability: s.error for s in syn.sub_outputs if not s.ok},
-        "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
-    }
     # R44-7: the A/B ruling rides the payload — the Persian report announces it.
     _ab_note = (capability_params.get("_ab_note") or {}).get("_note")
     if _ab_note:

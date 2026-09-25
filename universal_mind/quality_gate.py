@@ -61,6 +61,7 @@ def run_with_quality_gate(
     *,
     bar: float = _DEFAULT_BAR,
     max_attempts: int = 3,
+    _primary_payload: dict[str, Any] | None = None,
 ) -> GateOutcome:
     """Run the planned route; if ARETĒ grades it weak, repair through rivals.
 
@@ -70,6 +71,24 @@ def run_with_quality_gate(
     """
     attempts: list[GateAttempt] = []
     seen: set[tuple[str, ...]] = set()
+
+    # R46-13 — THE PRIMARY IS THE RUN WE ALREADY HAVE: the caller ran the
+    # planned route before calling the gate; re-running it here doubled
+    # every command's history rows and wasted the hot path. The existing
+    # payload becomes the primary attempt; rivals run only on weakness.
+    if _primary_payload is not None:
+        excellence0, disqualified0 = _verdict_of(_primary_payload)
+        attempts.append(GateAttempt(
+            route=route, payload=_primary_payload,
+            excellence=excellence0, disqualified=disqualified0,
+            primary=True,
+        ))
+        if not disqualified0 and excellence0 >= bar:
+            return GateOutcome(
+                attempts=tuple(attempts), shipped=attempts[0],
+                repaired=False,
+                reasoning=f"داوری {excellence0:.2f} — از دروازهی کیفیت گذشت (بدون رانِ دوباره)",
+            )
 
     # THREE honest candidates: the advised route, its reverse, and a
     # planner-style rotation (first→last) for 3+ chains. Each is REAL work —

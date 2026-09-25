@@ -70,7 +70,7 @@ def record_briefing(day: str, *, db: DatabaseSuite | None = None) -> dict[str, A
         n_paused = int(q2["rows"][0]["n"]) if q2.get("ok") and q2.get("rows") else 0
         q3 = store.query(
             "SELECT COUNT(*) AS n FROM run_history "
-            "WHERE date(created_at) = date('now', 'localtime')"
+            "WHERE date(created_at) = date(datetime('now', 'localtime'))"
         )
         n_today = int(q3["rows"][0]["n"]) if q3.get("ok") and q3.get("rows") else 0
     except Exception:  # noqa: BLE001
