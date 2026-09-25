@@ -150,6 +150,22 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — the letter is a lens, never fatal
         print(f"  (نامهی هفته ناموفق: {exc})")
 
+    # R45-12 — THE UNKNOWN HARVEST: the nightly tick names the words the
+    # operator keeps saying and the vocabulary keeps missing — direct data
+    # for the next vocabulary wave.
+    try:
+        from universal_mind.unknown_harvest import top_unknowns
+
+        terms = top_unknowns(5)
+        if terms:
+            fa_d = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+            txt = "، ".join(f"«{t['term']}» ({str(t['hits']).translate(fa_d)} بار)" for t in terms)
+            print(f"  (واژههای ناشناختهی پرتکرار: {txt})")
+        else:
+            print("  (واژههای ناشناخته: هیچ — واژگان با گفتار تو همپوشان است)")
+    except Exception as exc:  # noqa: BLE001 — the harvest is a lens, never fatal
+        print(f"  (شکارِ واژههای ناشناخته ناموفق: {exc})")
+
     # The STOPPED GOALS: the tick surfaces every goal halted mid-way — the
     # operator's «ادامه بده» is the recovery for exactly these.
     stopped_goals = 0

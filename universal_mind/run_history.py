@@ -118,7 +118,13 @@ class RunHistory:
         (the platform worked correctly; the environment lacked a resource),
         NOT a failed run. The predictor and analytics learn from REAL
         failures; blocked_env rows don't poison the success rate.
+
+        R45-9 — THE LAW: a run with no route and no explicit class is
+        stamped 'unknown_noise' HERE, at the writer — poison can never
+        silently return through a forgotten caller.
         """
+        if not route and not outcome_class:
+            outcome_class = "unknown_noise"
         self._db.insert_many(
             "run_history",
             [{"command": command, "route": ",".join(route),

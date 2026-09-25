@@ -747,6 +747,16 @@ def route_and_run(
         from universal_mind.spelling_recovery import suggest_for
 
         suggestion = suggest_for(command)
+        # R45-12 — THE UNKNOWN HARVEST: an unrecognized command is VOCABULARY
+        # DATA. The unknown words are harvested here, at the moment of the
+        # honest refusal, so the nightly tick can name what the operator
+        # keeps saying and the platform keeps missing.
+        try:
+            from universal_mind.unknown_harvest import harvest_unknown
+
+            harvest_unknown(list(route_result.unknown))
+        except Exception:  # noqa: BLE001 — harvesting never blocks the refusal
+            pass
         return {
             "ok": False,
             "command": command,

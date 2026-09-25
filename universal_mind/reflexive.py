@@ -199,6 +199,27 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             + "\n".join(lines),
         )
 
+    # R45-12 — «چه واژههایی را نمیشناسی؟» — the harvest, read back.
+    if "نمیشناس" in c and "واژه" in c:
+        from universal_mind.unknown_harvest import unknown_sentence
+
+        return _reflex_answer(c, unknown_sentence())
+
+    # R45-11 — «پیشنهاد بده» — real advice from real runs.
+    if "پیشنهاد" in c and ("بده" in c or "چی" in c or "کن" in c):
+        from universal_mind.advisor_suggest import suggest
+
+        info = suggest()
+        return _reflex_answer(c, info["report"])
+
+    # R45-10 — «وضعیت خودت چطور است؟» — five live signals, one answer.
+    if ("وضعیت خود" in c or "حالت خود" in c or ("سلامتی" in c and "خود" in c)
+            or ("وضعیت" in c and "چطور" in c and "خود" in c)):
+        from universal_mind.self_status import self_status
+
+        info = self_status()
+        return _reflex_answer(c, info["report"])
+
     # R45-8 — THE WEEKLY LETTER, ASKED: «گزارش هفته چطور بود؟» reads the
     # letter the tick wrote (and if none is written yet, writes it NOW —
     # the answer is never a promise of a letter, it IS the letter).
