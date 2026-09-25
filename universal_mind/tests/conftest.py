@@ -8,7 +8,7 @@ the suite — the live store belongs to the OPERATOR, not the test run.
 
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Any, Iterator
 
 import pytest
 
@@ -73,3 +73,33 @@ def _purge_test_rows_after_suite() -> object:
         )
     except Exception:  # noqa: BLE001 — cleanup never fails a suite
         pass
+
+
+def make_tk_root(retries: int = 4) -> Any:
+    """Build a withdrawn Tk root, retrying the Windows Tcl-library race.
+
+    On Windows, Defender/AV can transiently lock the Tcl library files while
+    the FIRST root of a process initializes them; Tk then reports
+    «Can't find a usable tk.tcl» / «couldn't read panedwindow.tcl» even though
+    the file exists. The lock is momentary: a short backoff and a fresh
+    attempt succeed. Any Tk-based test builds its root through here.
+    """
+    import time
+    import tkinter as tk
+
+    last: Exception | None = None
+    for attempt in range(retries):
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            return root
+        except _tkinter_error() as exc:  # the AV-lock race, retry it
+            last = exc
+            time.sleep(0.3 * (attempt + 1))
+    raise AssertionError(f"Tk root failed after {retries} attempts: {last}")
+
+
+def _tkinter_error() -> Any:
+    import _tkinter
+
+    return _tkinter.TclError

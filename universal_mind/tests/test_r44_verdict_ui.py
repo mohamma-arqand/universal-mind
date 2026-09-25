@@ -40,13 +40,11 @@ class TestVerdictButtonsDesktop:
 
     def test_verdict_buttons_appear_for_real_runs(self) -> None:
         """A successful real run appends 👍/👎 — an explained (dry) run does NOT."""
-        import tkinter as tk
-
+        from tests.conftest import make_tk_root
         from universal_mind.desktop_app import MindDesktopApp
 
         with _isolated():
-            root = tk.Tk()
-            root.withdraw()
+            root = make_tk_root()
             app = MindDesktopApp(root)
             try:
                 app._show_verdict_buttons("میانگین ۴ و ۶ را حساب کن")
@@ -65,16 +63,14 @@ class TestVerdictButtonsDesktop:
 
     def test_a_click_records_the_bound_verdict(self) -> None:
         """Clicking 👍 records verdict='good' bound to THAT command."""
-        import tkinter as tk
-
+        from tests.conftest import make_tk_root
         from universal_mind.desktop_app import MindDesktopApp
 
         with _isolated() as suite:
             from universal_mind.persian_router import route_and_run
 
             route_and_run("میانگین ۴ و ۶ را حساب کن")  # a real success to bind to
-            root = tk.Tk()
-            root.withdraw()
+            root = make_tk_root()
             app = MindDesktopApp(root)
             try:
                 app._show_verdict_buttons("میانگین ۴ و ۶ را حساب کن")

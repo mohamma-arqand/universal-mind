@@ -110,9 +110,13 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             pass
         return _reflex_answer(c, "هنوز دادهی روندی ندارم — چند فرمان بده تا روند شکل بگیرد.")
 
-    # «آخرین چیزی که ساختی؟» / «چیزی که دیروز ساختی رو نشونم بده» — the
-    # newest real success, in ANY spoken shape (دیروز/قبلا/این چند روز).
-    if ("آخرین" in c or "دیروز" in c or "قبلا" in c) and ("ساختی" in c or "کردی" in c or "ساخت" in c):
+    # «آخرین چیزی که ساختی؟» / «چیزی که قبلا ساختی رو نشونم بده» — the
+    # newest real success, in ANY spoken shape (قبلا/این چند روز).
+    # («دیروز» alone is a TIME WINDOW (R45-1) unless it asks to SHOW something.)
+    if (
+        ("آخرین" in c or "قبلا" in c or ("دیروز" in c and ("نشون" in c or "نشان" in c)))
+        and ("ساختی" in c or "کردی" in c or "ساخت" in c)
+    ):
         rows = _query(
             db,
             "SELECT command, route FROM run_history WHERE succeeded = 1 AND route != '' ORDER BY id DESC LIMIT 1",
@@ -156,6 +160,43 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             c,
             f"امروز {_fa_num(n)} فرمان اجرا کردم؛ {_fa_num(n_ok)} موفق "
             f"({_fa_num(round(100 * n_ok / n) if n else 0)}٪).",
+        )
+
+    # R45-1 — TIME WINDOWS: «دیروز چی کار کردی؟» / «این هفته چطور بود؟» /
+    # «ماه پیش چطور بود؟» — the same LOCAL-day law, three windows back.
+    if any(w in c for w in ("دیروز", "هفته", "ماه پیش", "این ماه")) and (
+        "کار" in c or "کردی" in c or "اجرا" in c or "چطور" in c or "بود" in c
+    ):
+        from universal_mind.time_windows import window_sentence
+
+        for name in ("دیروز", "این هفته", "هفته پیش", "این ماه", "ماه پیش"):
+            if name in c:
+                try:
+                    return _reflex_answer(c, window_sentence(name, db=db))
+                except Exception:  # noqa: BLE001 — a time answer never crashes
+                    return _reflex_answer(c, f"نمیتوانم {name} را از تاریخچه بخوانم.")
+
+    # R45-3 — CHAT MEMORY: «آخرین گفتگویمان چه بود؟» — the REAL stored
+    # conversation, replayed (up to 5 turns), with the same honest-zero law.
+    if "گفتگو" in c and ("آخرین" in c or "چه بود" in c or "نشون" in c or "یادت" in c):
+        from universal_mind.chat_history_store import message_count, recent_messages
+
+        total_msgs = message_count()
+        if total_msgs == 0:
+            return _reflex_answer(c, "هنوز گفتگویی ثبت نشده — اولین کلمه را بگو.")
+        msgs = recent_messages(5)
+        if not msgs:
+            return _reflex_answer(c, "گفتگو را نمیتوانم بخوانم.")
+        _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        lines = []
+        for m in msgs:
+            who = "من" if m["who"] == "من" else ("سیستم" if m["who"] == "سیستم" else m["who"])
+            mark = "✅" if m["ok"] else ""
+            lines.append(f"{who}: {m['text'][:80]}{' ' + mark if mark else ''}")
+        return _reflex_answer(
+            c,
+            f"آخرین گفتگوی ما (از {str(total_msgs).translate(_FA)} پیام ثبتشده):\n"
+            + "\n".join(lines),
         )
 
     # «فایلهای ساختهشده امروز» — the artifacts of today's successes.

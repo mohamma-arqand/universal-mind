@@ -151,8 +151,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_drift.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_drift.xml
 	@echo "Running probe_r44_restore_drill.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_restore_drill.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_restore_drill.xml
-	@echo "Running probe_r44_yearbook.py..."
-	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_yearbook.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_yearbook.xml
+	@echo "Running probe_r44_yearbook.py probe_r45_wave1.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_yearbook.py probe_r45_wave1.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_yearbook.xml
 	@echo "All probes passed"
 
 # Clean artifacts

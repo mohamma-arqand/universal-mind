@@ -374,6 +374,47 @@ def route_and_run(
                 break
     explain_only = _explain
 
+    # R45-2 — THE DAILY REMINDER: «یادآور کن ... هر روز ساعت ۸ و نیم ...» is
+    # a SCHEDULE, not an instant toast. Any «یادآور» carrying a recurring
+    # time pattern registers in the scheduler and answers with the real
+    # next-due — a reminder without a registered time is only hope.
+    if forced_route is None and ("یادآور" in command or "یادآوری" in command):
+        from universal_mind.scheduler import parse_schedule, register
+
+        _body = command
+        for _m in ("توضیح بده", "فقط بگو چه میکنی", "فقط بگو چه کار میکنی"):
+            _body = _body.replace(_m, "")
+        _spec = parse_schedule(_body)
+        if _spec is not None:
+            _res = register(_body)
+            _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+            _h = str(_res["hour_of_day"]).translate(_FA)
+            _m = str(_res.get("minute_of_hour", 0)).translate(_FA)
+            if int(_res["hour_of_day"]) >= 0:
+                _when = (
+                    f"هر روز ساعت {_h}:{_m.zfill(len(_m))}"
+                    if int(_res.get("minute_of_hour", 0))
+                    else f"هر روز ساعت {_h}"
+                )
+            else:
+                _every = str(_res.get("every_minutes", 0)).translate(_FA)
+                _when = f"هر {_every} دقیقه"
+            _ok = bool(_res.get("ok", _res.get("id") is not None))
+            _msg = (
+                f"یادآور ثبت شد: {_when}."
+                if _ok
+                else "ثبت یادآور ناموفق بود — دوباره بگو."
+            )
+            _schedule_id = _res.get("id") if _ok else None
+            return {
+                "ok": _ok,
+                "command": command,
+                "route": ["scheduler"],
+                "result": {"registered": _ok, "schedule_id": _schedule_id},
+                "agent_report": _msg,
+                "_registry": registry or ToolRegistry(),
+            }
+
     # THE REFLEXIVE CLASS — self-questions answered from the REAL store
     # (never a capability run, never a guess). The marker is a question
     # about the platform itself, and it precedes every other route.

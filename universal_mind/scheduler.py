@@ -36,8 +36,9 @@ class Schedule:
     command: str          # the Persian command to run when due
     every_minutes: int     # the interval (1440 = daily at the fixed hour)
     hour_of_day: int       # for daily schedules: the fixed hour (else -1)
-    last_run: str          # ISO timestamp of the last real firing ('' = never)
-    active: bool
+    minute_of_hour: int = 0  # R45-2: the minute within the hour (else 0)
+    last_run: str = ""    # ISO timestamp of the last real firing ('' = never)
+    active: bool = True
 
 
 def _normalize_fa_numbers(text: str) -> str:
@@ -59,6 +60,19 @@ def parse_schedule(command: str) -> dict[str, Any] | None:
     if "هر وقت" in command and "پوشه" in command:
         return None  # a folder watcher, not a time schedule
     text = _normalize_fa_numbers(command)
+    # R45-2 — halves and quarters FIRST (the fuller form wins):
+    # «ساعت ۸ و نیم» / «ساعت ۷ و ربع» / «ساعت ۸:30».
+    daily_hm = re.search(r"هر روز ساعت (\d{1,2})(?::(\d{1,2})| و (نیم|ربع))", text)
+    if daily_hm:
+        hour = int(daily_hm.group(1))
+        if not 0 <= hour <= 23:
+            return None
+        if daily_hm.group(2):  # the 08:30 form
+            minute = int(daily_hm.group(2))
+        else:  # the «و نیم/و ربع» form
+            minute = 30 if daily_hm.group(3) == "نیم" else 15
+        if 0 <= minute <= 59:
+            return {"every_minutes": 1440, "hour_of_day": hour, "minute_of_hour": minute}
     daily = re.search(r"هر روز ساعت (\d{1,2})", text)
     if daily:
         hour = int(daily.group(1))
@@ -132,7 +146,8 @@ def _strip_schedule_words(command: str) -> str:
     Persian digits exactly as the operator wrote them.
     """
     pattern = re.compile(
-        r"هر روز ساعت \d{1,2} ?|هر \d+ دقیقه ?|هر \d+ ساعت ?", re.IGNORECASE
+        r"هر روز ساعت \d{1,2}(?::\d{1,2}| و (?:نیم|ربع))? ?"
+        r"|هر \d+ دقیقه ?|هر \d+ ساعت ?", re.IGNORECASE
     )
     out = command
     while (m := pattern.search(_normalize_fa_numbers(out))):
@@ -146,12 +161,19 @@ def _store() -> DatabaseSuite:
 
 
 def _ensure_table(db: DatabaseSuite) -> None:
-    db.execute(
+    db.ensure_schema("schedules", [
         "CREATE TABLE IF NOT EXISTS schedules ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "command TEXT, every_minutes INTEGER, hour_of_day INTEGER, "
-        "last_run TEXT DEFAULT '', active INTEGER DEFAULT 1)"
-    )
+        "last_run TEXT DEFAULT '', active INTEGER DEFAULT 1)",
+    ])
+    try:
+        cols = db.query("SELECT name FROM pragma_table_info('schedules')")
+        names = {str(r["name"]) for r in cols.get("rows", [])} if cols.get("ok") else set()
+        if "minute_of_hour" not in names:
+            db.execute("ALTER TABLE schedules ADD COLUMN minute_of_hour INTEGER DEFAULT 0")
+    except Exception:  # noqa: BLE001 — migration is best-effort, never fatal
+        pass
 
 
 def register(command: str) -> dict[str, Any]:
@@ -181,13 +203,16 @@ def register(command: str) -> dict[str, Any]:
                         "command": f"__goal__{action}",
                         "every_minutes": str(spec["every_minutes"]),
                         "hour_of_day": str(spec["hour_of_day"]),
+                        "minute_of_hour": str(spec.get("minute_of_hour", 0)),
                         "last_run": "", "active": "1",
                     }],
                 )
                 return {"ok": True, "scheduled_goal": True,
                         "steps": list(goal.steps),
                         "every_minutes": spec["every_minutes"],
-                        "hour_of_day": spec["hour_of_day"], "error": ""}
+                        "hour_of_day": spec["hour_of_day"],
+                        "minute_of_hour": int(spec.get("minute_of_hour", 0)),
+                        "error": ""}
         return {"ok": False, "error": "هدفِ زمانبندیشده بند زمان ندارد — «هر روز ساعت ۸» یا «هر ۳۰ دقیقه» اضافه کن"}
     spec = parse_schedule(command)
     if spec is None:
@@ -208,6 +233,7 @@ def register(command: str) -> dict[str, Any]:
             "command": action,
             "every_minutes": str(spec["every_minutes"]),
             "hour_of_day": str(spec["hour_of_day"]),
+            "minute_of_hour": str(spec.get("minute_of_hour", 0)),
             "last_run": "",
             "active": "1",
         }],
@@ -217,6 +243,7 @@ def register(command: str) -> dict[str, Any]:
         "command": action,
         "every_minutes": spec["every_minutes"],
         "hour_of_day": spec["hour_of_day"],
+        "minute_of_hour": int(spec.get("minute_of_hour", 0)),
         "error": "",
     }
 
@@ -225,7 +252,7 @@ def list_schedules() -> list[Schedule]:
     """Every persisted schedule (the operator's real task table)."""
     db = _store()
     _ensure_table(db)
-    q = db.query("SELECT id, command, every_minutes, hour_of_day, last_run, active FROM schedules ORDER BY id")
+    q = db.query("SELECT id, command, every_minutes, hour_of_day, minute_of_hour, last_run, active FROM schedules ORDER BY id")
     if not q.get("ok"):
         return []
     out: list[Schedule] = []
@@ -235,6 +262,7 @@ def list_schedules() -> list[Schedule]:
             command=str(r["command"]),
             every_minutes=int(r["every_minutes"]),
             hour_of_day=int(r["hour_of_day"]),
+            minute_of_hour=int(r["minute_of_hour"] or 0),
             last_run=str(r["last_run"] or ""),
             active=bool(int(r["active"])),
         ))
@@ -254,7 +282,10 @@ def _next_due(schedule: Schedule, now: datetime | None = None) -> datetime | Non
         return current
     if schedule.hour_of_day >= 0:
         # Daily at a fixed hour: due at today's (or tomorrow's) H:00.
-        candidate = current.replace(hour=schedule.hour_of_day, minute=0, second=0, microsecond=0)
+        candidate = current.replace(
+            hour=schedule.hour_of_day,
+            minute=schedule.minute_of_hour, second=0, microsecond=0,
+        )
         if candidate <= last:
             candidate = candidate + timedelta(days=1)
         return candidate

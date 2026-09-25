@@ -127,6 +127,7 @@ PROBES = [
     "probe_r44_drift.py",
     "probe_r44_restore_drill.py",
     "probe_r44_yearbook.py",
+    "probe_r45_wave1.py",
 ]
 
 
