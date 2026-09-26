@@ -274,6 +274,38 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             stored = info["report"]
         return _reflex_answer(c, stored)
 
+    # R47-7 — THE VISIBLE DAY: «صفحهی امروز را بساز» renders today as
+    # one live HTML page from the real tables and says WHERE it lives.
+    if ("صفحهی امروز" in c or ("صفحه" in c and "امروز" in c and "بساز" in c)):
+        from universal_mind.today_page import build_today_page
+
+        info = build_today_page()
+        fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        answer = (
+            f"صفحهی امروز ساخته شد — {str(info['runs']).translate(fa)} فرمان، "
+            f"{str(info['wins']).translate(fa)} موفق، "
+            f"{str(info['shield']).translate(fa)} تأیید 🛡\n"
+            f"📍 {info['path']}"
+        )
+        return _reflex_answer(c, answer)
+
+    # R47-9 — THE FULL GOODBYE: «جمعبندی روز» counts the real day and
+    # closes it — the count comes from run_history, never a promise.
+    if "جمعبندی روز" in c or ("جمعبندی" in c and "امروز" in c):
+        from universal_mind.today_page import build_today_page
+
+        info = build_today_page()
+        fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        answer = (
+            f"🌙 جمعبندیِ امروز: {str(info['runs']).translate(fa)} فرمان اجرا شد، "
+            f"{str(info['wins']).translate(fa)} موفق، "
+            f"{str(info['shield']).translate(fa)} فایلِ تأییدشده، "
+            f"{str(info['judgments']).translate(fa)} قضاوتِ زنده.\n"
+            f"صفحهی امروز هم تازه شده: {info['path']}\n"
+            "خداحافظ — فردا بریفینگ منتظرت است."
+        )
+        return _reflex_answer(c, answer)
+
     # R47-5 — THE PRE-RUN QUESTION: «آیا ... کار میکند؟ / احتمالش چقدر
     # است؟» — the predictor answers BEFORE any run happens. No execution,
     # no fabricated hope: the real prediction (chain evidence + semantic

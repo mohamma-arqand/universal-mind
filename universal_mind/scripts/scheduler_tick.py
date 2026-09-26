@@ -144,6 +144,16 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — compaction is a lens, never fatal
         print(f"  (فشردهسازی ناموفق: {exc})")
 
+    # R47-8 — THE VISIBLE DAY, KEPT FRESH: every active tick rebuilds
+    # today.html so the day is always one glance away. A page failure
+    # never kills the tick (the lens law).
+    try:
+        from universal_mind.today_page import build_today_page
+
+        build_today_page()  # the shared persistent store — one page for all
+    except Exception:  # noqa: BLE001 — the page is a courtesy, never fatal
+        pass
+
     # R47-3 — THE LIVE-JUDGE SAMPLE: each tick sends ONE successful run of
     # today (the newest) to the live judge — the formula meets a foreign
     # standard every day, one verdict at a time. No env → honest silence.
