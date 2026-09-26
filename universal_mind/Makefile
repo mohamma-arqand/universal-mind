@@ -153,6 +153,8 @@ probe: install
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_restore_drill.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_restore_drill.xml
 	@echo "Running probe_r44_yearbook.py probe_r45_wave1.py probe_r45_wave2.py probe_r45_wave3.py probe_r45_life.py..."
 	PYTHONPATH=.. $(PYTHON) scripts/probe_r44_yearbook.py probe_r45_wave1.py probe_r45_wave2.py probe_r45_wave3.py probe_r45_life.py --junit-xml=$(ARTIFACTS_DIR)/probe_r44_yearbook.xml
+	@echo "Running probe_r46_day.py probe_r47_mind.py probe_r48_mind.py..."
+	PYTHONPATH=.. $(PYTHON) scripts/probe_r46_day.py scripts/probe_r47_mind.py scripts/probe_r48_mind.py
 	@echo "All probes passed"
 
 # Clean artifacts
@@ -178,13 +180,22 @@ receipt: test-receipt-input
 # fails the make on the first red; there is no '|| true' anywhere here.
 VERIFIED := $(ARTIFACTS_DIR)/verification_status.txt
 
-verify: lint mypy-ratchet receipt probe
+# R48-9 — THE INTERPRETER LOCK: every tool goes through scripts/py.sh so
+# the outage-swapped PATH python can never bless a dead run.
+PY := $(shell bash scripts/py.sh 2>/dev/null)
+
+verify: interpreter lint mypy-ratchet receipt probe
 	@echo "All gates green — writing READY stamp"
 	@echo "READY" > $(VERIFIED)
 	@echo ""
 	@echo "==================================================="
 	@echo " VERIFICATION: READY  (lint + ratchet + tests + receipt + probes)"
 	@echo "==================================================="
+# R48-9 — the interpreter gate: the CURRENT python must carry the
+# platform's dependencies, or nothing else may run.
+interpreter:
+	@bash scripts/py.sh >/dev/null
+
 # mypy ratchet (one-way): fails if the number of mypy errors RISES above
 # the versioned baseline (mypy_baseline.txt). Existing errors are NOT fixed;
 # this target only prevents new type debt. Count is read fresh each run.

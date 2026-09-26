@@ -25,19 +25,52 @@ STATUS = ARTIFACTS / "verification_status.txt"
 
 
 def _host_python() -> str:
-    """Return the interpreter that can run pytest cleanly on this host.
+    """The interpreter that actually carries the platform's dependencies.
 
-    On this machine the runtime ``python`` (3.11) runs the whole suite green,
-    whereas the user-installed 3.14 has a stricter socket path that trips one
-    localhost HTTP test — so we prefer ``sys.executable`` (whatever launched
-    this script) unless an explicit ``UM_PYTHON`` override is given.
+    R48-9: an outage once left ``python`` pointing at a dependency-less
+    build; verify would have blessed a green run that never imported.
+    Resolution now mirrors scripts/py.sh: UM_PYTHON → the Hermes venv
+    (the interpreter every round was built on) → py -3.11 … — and each
+    candidate must PROVE it imports numpy+pytest+sklearn before use.
     """
     import os
-    import sys
+    import subprocess
+
+    def _carries(exe: str) -> bool:
+        try:
+            return subprocess.run(
+                [exe, "-c", "import numpy, pytest, sklearn"],
+                capture_output=True, timeout=60).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
 
     override = os.environ.get("UM_PYTHON")
-    if override:
+    if override and _carries(override):
         return override
+    homep = os.environ.get("LOCALAPPDATA") or ""
+    candidates = [
+        f"{homep}/hermes/hermes-agent/venv/Scripts/python.exe" if homep else "",
+        "C:/Users/EliteBook/AppData/Local/hermes/hermes-agent/venv/Scripts/python.exe",
+    ]
+    for exe in candidates:
+        if exe and _carries(exe):
+            return exe
+    import shutil
+
+    if shutil.which("py"):
+        for minor in (11, 12, 13):
+            tag = f"3.{minor}"
+            if _carries("py") and subprocess.run(
+                ["py", f"-{tag}", "-c", "import numpy, pytest, sklearn"],
+                capture_output=True, timeout=60).returncode == 0:
+                found = subprocess.run(
+                    ["py", f"-{tag}", "-c", "import sys; print(sys.executable)"],
+                    capture_output=True, text=True, timeout=30)
+                exe = found.stdout.strip()
+                if exe:
+                    return exe
+    # last resort: sys.executable — verify's own gate below will FAIL
+    # LOUDLY if this interpreter is missing the platform's dependencies.
     return sys.executable
 
 
@@ -133,6 +166,7 @@ PROBES = [
     "probe_r45_life.py",
     "probe_r46_day.py",
     "probe_r47_mind.py",
+    "probe_r48_mind.py",
 ]
 
 
@@ -205,7 +239,19 @@ def step_probes() -> int:
 
 def main() -> int:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    # R48-9 — THE INTERPRETER GATE runs first: a green VERIFY on an
+    # interpreter that cannot even import the platform's dependencies
+    # would be a lie. resolve() picks the real interpreter (py.sh logic);
+    # gate() proves THIS process can run the platform's code.
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from interpreter_gate import (  # type: ignore[import-not-found]
+        interpreter_gate as _gate_fn)
+
+    gate_ok, _gate_msg = _gate_fn()
     gates: list[tuple[str, int]] = [
+        ("interpreter", 0 if gate_ok else 1),
         ("lint", step_lint()),
         ("mypy-ratchet", step_mypy_ratchet()),
         ("tests", step_tests()),
