@@ -226,6 +226,9 @@ def step_probes() -> int:
     rc = 0
     env = dict(os.environ)
     env["PYTHONPATH"] = str(REPO)
+    import sys as _sys
+
+    failed: list[str] = []
     for probe in PROBES:
         out = _sh(
             [HOST_PYTHON, f"scripts/{probe}", f"--junit-xml={ARTIFACTS / (probe[:-3] + '.xml')}"],
@@ -233,7 +236,13 @@ def step_probes() -> int:
             check=False,
             env=env,
         )
+        if out != 0:
+            failed.append(probe)
+            print(f"  [RED] {probe} (exit {out})", flush=True)
+            _sys.stderr.flush()
         rc = rc or out
+    if failed:
+        print(f"probes failed: {failed}", flush=True)
     return rc
 
 

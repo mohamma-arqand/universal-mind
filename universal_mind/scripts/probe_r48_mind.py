@@ -113,7 +113,13 @@ def main() -> int:
           deep["wisdom"] >= shallow["wisdom"])
 
     # ---- the clear-eyed path ---------------------------------------------
-    suite = _db()
+    # THE POOLABLE LAW (R48 hotfix): the PERSISTENT store pools one reader
+    # (10 SELECTs → at most 1 fresh connection); a temp store must ride
+    # the closed-per-use path so its file never gets locked on Windows.
+    import tempfile as _tf
+
+    psuite = DatabaseSuite(str(Path(_tf.mkdtemp()) / "r48pool.db"), persistent=True)
+    RunHistory(psuite)
     opened: list[int] = []
     orig = sqlite3.connect
 
@@ -123,10 +129,16 @@ def main() -> int:
 
     with patch.object(sqlite3, "connect", spy):
         for _ in range(10):
-            assert suite.query("SELECT COUNT(*) AS n FROM run_history")["ok"]
-    check(6, f"read pool: 10 SELECTs → {len(opened)} fresh connection(s)",
+            assert psuite.query("SELECT COUNT(*) AS n FROM run_history")["ok"]
+    check(6, f"persistent read pool: 10 SELECTs → {len(opened)} fresh connection(s)",
           len(opened) <= 1)
-    suite.close_reader()
+    psuite.close_reader()
+
+    suite = _db()
+    for _ in range(3):
+        assert suite.query("SELECT COUNT(*) AS n FROM run_history")["ok"]
+    check(6, "temp stores never pool (file never locked)",
+          suite.db_path not in type(suite)._read_pool)
 
     suite2 = _db()
     suite2.insert_many("run_history", [
