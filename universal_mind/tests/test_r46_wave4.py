@@ -15,13 +15,14 @@ import sqlite3
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from universal_mind.database_suite import DatabaseSuite
 from universal_mind.run_history import RunHistory
 
 
-def _fresh_db(monkeypatch, tmp_path):
+def _fresh_db(monkeypatch: Any, tmp_path: Path) -> DatabaseSuite:
     db = DatabaseSuite(str(tmp_path / "r46w4.db"))
     RunHistory(db)
     monkeypatch.setattr(
@@ -32,7 +33,7 @@ def _fresh_db(monkeypatch, tmp_path):
 
 
 class TestTickHealth:
-    def test_failed_entry_leaves_a_health_row(self, monkeypatch, tmp_path):
+    def test_failed_entry_leaves_a_health_row(self, monkeypatch: Any, tmp_path: Path) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.scripts.scheduler_tick import tick
 
@@ -52,7 +53,7 @@ class TestTickHealth:
         rows = db.query("SELECT state, skipped, causes FROM tick_health")["rows"]
         assert rows and rows[0]["state"] == "failed"
 
-    def test_healthy_tick_is_ok_and_stamped(self, monkeypatch, tmp_path):
+    def test_healthy_tick_is_ok_and_stamped(self, monkeypatch: Any, tmp_path: Path) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.scripts.scheduler_tick import tick
 
@@ -63,7 +64,7 @@ class TestTickHealth:
         rows = db.query("SELECT state FROM tick_health")["rows"]
         assert rows and rows[-1]["state"] == "ok"
 
-    def test_tick_survives_a_broken_store_with_rc0(self, monkeypatch, tmp_path):
+    def test_tick_survives_a_broken_store_with_rc0(self, monkeypatch: Any, tmp_path: Path) -> None:
         from universal_mind.scripts.scheduler_tick import tick
 
         broken = DatabaseSuite(str(tmp_path / "broken.db"))
@@ -72,7 +73,7 @@ class TestTickHealth:
             DatabaseSuite, "shared_persistent",
             classmethod(lambda cls: broken),
         )
-        def _boom(*a, **k):
+        def _boom(*a: object, **k: object) -> None:
             raise RuntimeError("store locked")
         with patch.object(type(broken), "query", _boom):
             buf = io.StringIO()
@@ -82,7 +83,7 @@ class TestTickHealth:
 
 
 class TestBackupHealth:
-    def _plant_backup(self, tmp_path, age_days: int = 0) -> Path:
+    def _plant_backup(self, tmp_path: Path, age_days: int = 0) -> Path:
         fake_dir = Path(tmp_path / "dbdir")
         fake_dir.mkdir(parents=True, exist_ok=True)
         src = fake_dir / "mind.db"
@@ -101,7 +102,7 @@ class TestBackupHealth:
             os.utime(bak, (old, old))
         return fake_dir
 
-    def test_fresh_and_drilled_is_healthy(self, monkeypatch, tmp_path):
+    def test_fresh_and_drilled_is_healthy(self, monkeypatch: Any, tmp_path: Path) -> None:
         fake_dir = self._plant_backup(tmp_path)
         from universal_mind.backup_health import backup_health
         from universal_mind.restore_drill import run_restore_drill
@@ -114,7 +115,7 @@ class TestBackupHealth:
             assert "✅" in h["report"]
             assert "مانورِ آخر" in h["report"]    # the drill verdict, read back
 
-    def test_stale_backup_warns_explicitly(self, monkeypatch, tmp_path):
+    def test_stale_backup_warns_explicitly(self, monkeypatch: Any, tmp_path: Path) -> None:
         fake_dir = self._plant_backup(tmp_path, age_days=10)
         from universal_mind.backup_health import backup_health
 
@@ -123,7 +124,7 @@ class TestBackupHealth:
             assert h["ok"] is False
             assert "کهنه" in h["report"]          # the explicit warning
 
-    def test_missing_backup_says_so_by_name(self, monkeypatch, tmp_path):
+    def test_missing_backup_says_so_by_name(self, monkeypatch: Any, tmp_path: Path) -> None:
         from universal_mind.backup_health import backup_health
 
         with patch.object(DatabaseSuite, "DEFAULT_DB_DIR",
@@ -132,7 +133,7 @@ class TestBackupHealth:
             assert h["ok"] is False
             assert "هیچ بکاپی" in h["report"]
 
-    def test_speech_answers_the_question(self, monkeypatch, tmp_path):
+    def test_speech_answers_the_question(self, monkeypatch: Any, tmp_path: Path) -> None:
         fake_dir = self._plant_backup(tmp_path)
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run

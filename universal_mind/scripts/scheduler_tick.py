@@ -150,9 +150,9 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     try:
         from universal_mind.daily_briefing import due_today, record_briefing
 
-        today = datetime.now().strftime("%Y-%m-%d")
-        if due_today(today):
-            brief = record_briefing(today)
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        if due_today(today_str):
+            brief = record_briefing(today_str)
             print(f"  ({brief['report'].splitlines()[0]}")
             for ln in brief["report"].splitlines()[1:]:
                 print(f"   {ln}")
@@ -301,11 +301,13 @@ def _write_tick_health(summary: dict[str, object]) -> None:
         ])
         state = str(summary.get("state", "ok"))
         fired_n = summary.get("fired", 0)
-        fired_count = len(fired_n) if isinstance(fired_n, (list, tuple)) else int(fired_n)
+        fired_count = len(fired_n) if isinstance(fired_n, (list, tuple)) else int(str(fired_n))
+        skipped_n = summary.get("skipped", 0)
+        skipped_count = len(skipped_n) if isinstance(skipped_n, (list, tuple)) else int(str(skipped_n))
         db.insert_many("tick_health", [{
             "state": state,
             "fired": str(fired_count),
-            "skipped": str(int(summary.get("skipped", 0))),
+            "skipped": str(skipped_count),
             "causes": str(summary.get("causes", ""))[:500],
         }])
         if state == "failed":

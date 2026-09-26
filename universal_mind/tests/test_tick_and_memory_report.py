@@ -55,7 +55,7 @@ class TestTickNotification:
              mock_patch.object(_wl, "DatabaseSuite", suite), \
              mock_patch.object(_dbf, "DatabaseSuite", suite), \
              mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch.object(_real_db, "shared_persistent", classmethod(lambda cls: suite)), \
-             mock_patch("universal_mind.real_notify.NotifyTool.notify") as toast, \
+             mock_patch("universal_mind.real_notify.NotifyTool.notify"), \
              mock_patch("universal_mind.notify_adapter.NotifyToolConnector") as connector:
             # fire everything once, then nothing is due (goals store also empty
             # — stopped goals in the LIVE store would rightly toast too).

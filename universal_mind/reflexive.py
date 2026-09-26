@@ -240,8 +240,9 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             from universal_mind.weekly_letter import latest_letter
 
             letter = latest_letter()
-            if letter:
-                sections.append("📬 " + letter)
+            letter_text = str(letter.get("report", "")) if isinstance(letter, dict) else str(letter or "")
+            if letter_text:
+                sections.append("📬 " + letter_text)
         except Exception:  # noqa: BLE001 — a section is a lens
             pass
         try:
@@ -275,12 +276,13 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
 
     # R45-10 — «وضعیت خودت چطور است؟» — five live signals, one answer.
     # R46-8 — FREE-FORM STATUS ASKS: «خب؟ / چی جدید؟ / وضع؟ / خبر چیست؟»
-    # reach the SAME five-signal answer — the operator asks in whatever
-    # shape comes to mind, the answer stays signal-carrying.
+    # reach the SAME five-signal answer — BUT the bare «وضعیت» (the
+    # operator's BOARD command) keeps its own goal route: a free-form
+    # alias never steals a command with its own richer meaning.
     if ("وضعیت خود" in c or "حالت خود" in c or ("سلامتی" in c and "خود" in c)
             or ("وضعیت" in c and "چطور" in c and "خود" in c)
             or c.strip().rstrip("?.!؟") in ("خب", "چی جدید", "وضع", "خبر چیست",
-                                             "خبرها چیه", "چه خبرا", "وضعیت")):
+                                             "خبرها چیه", "چه خبرا")):
         from universal_mind.self_status import self_status
 
         info = self_status()

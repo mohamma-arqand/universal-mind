@@ -10,12 +10,14 @@ Item 8 — free-form status asks («خب؟ / چی جدید؟») reach the five-s
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
 
 from universal_mind.database_suite import DatabaseSuite
 from universal_mind.run_history import RunHistory
 
 
-def _fresh_db(monkeypatch, tmp_path):
+def _fresh_db(monkeypatch: Any, tmp_path: Path) -> DatabaseSuite:
     db = DatabaseSuite(str(tmp_path / "r46w2.db"))
     RunHistory(db)
     monkeypatch.setattr(
@@ -26,7 +28,7 @@ def _fresh_db(monkeypatch, tmp_path):
 
 
 class TestGreetingIsStateAware:
-    def test_bare_greeting_is_short_and_warm(self, monkeypatch, tmp_path):
+    def test_bare_greeting_is_short_and_warm(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -34,7 +36,7 @@ class TestGreetingIsStateAware:
         assert r["ok"] is True
         assert "سلام" in r["agent_report"]
 
-    def test_greeting_knows_today_and_goals(self, monkeypatch, tmp_path):
+    def test_greeting_knows_today_and_goals(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -55,8 +57,8 @@ class TestGreetingIsStateAware:
 
 class TestSmartRetry:
     def test_retry_reruns_the_last_failed_run_and_stamps_it(
-        self, monkeypatch, tmp_path
-    ):
+        self, monkeypatch: Any, tmp_path: Path
+        ) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -72,7 +74,7 @@ class TestSmartRetry:
         assert rows[0]["retry_of"]                  # the stamp is REAL
         assert rows[0]["succeeded"] == 1            # and the retry SUCCEEDED
 
-    def test_retry_with_no_failure_is_honest(self, monkeypatch, tmp_path):
+    def test_retry_with_no_failure_is_honest(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -80,8 +82,8 @@ class TestSmartRetry:
         assert "شکستی پیدا نکردم" in r["agent_report"]
 
     def test_retry_of_needs_param_asks_for_the_parameter(
-        self, monkeypatch, tmp_path
-    ):
+        self, monkeypatch: Any, tmp_path: Path
+        ) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -92,7 +94,7 @@ class TestSmartRetry:
 
 
 class TestRefusalStopwords:
-    def test_refusal_sentence_is_never_harvested(self, monkeypatch, tmp_path):
+    def test_refusal_sentence_is_never_harvested(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.unknown_harvest import harvest_unknown, top_unknowns
 
@@ -101,7 +103,7 @@ class TestRefusalStopwords:
         assert not (terms & {"فرمان", "هیچ", "قابلیتی", "ندارد", "نمیکند",
                              "شناخته", "میکند"})
 
-    def test_real_subject_words_are_still_harvested(self, monkeypatch, tmp_path):
+    def test_real_subject_words_are_still_harvested(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.unknown_harvest import harvest_unknown, top_unknowns
 
@@ -110,7 +112,7 @@ class TestRefusalStopwords:
         assert terms.get("فریبوس") == 1
         assert terms.get("مکیدوبالس") == 1
 
-    def test_purge_cleans_the_poisoned_real_table(self, monkeypatch, tmp_path):
+    def test_purge_cleans_the_poisoned_real_table(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.unknown_harvest import (
             harvest_unknown, purge_refusal_noise, top_unknowns,
@@ -135,8 +137,8 @@ class TestRefusalStopwords:
 
 class TestFreeFormStatus:
     def test_four_spoken_shapes_reach_the_five_signal_answer(
-        self, monkeypatch, tmp_path
-    ):
+        self, monkeypatch: Any, tmp_path: Path
+        ) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 

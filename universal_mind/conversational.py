@@ -113,12 +113,7 @@ def _greeting_state() -> str:
     except Exception:  # noqa: BLE001 — the greeting is a courtesy, never fatal
         return "سلام! چه کارهایی برایت انجام دهم؟"
 
-    try:
-        from universal_mind.time_windows import today_scope  # R45: local-day
-
-        label, _start, _end = today_scope()
-    except Exception:  # noqa: BLE001
-        label = "امروز"
+    label = "امروز"  # the R45 local-day label (window names live in time_windows)
     fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
     bits: list[str] = []
     if n_goals:

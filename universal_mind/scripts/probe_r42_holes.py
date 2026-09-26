@@ -71,8 +71,10 @@ def main() -> int:
         f"before={before} after={after}")
 
     # H3 — the isolated store DID record the run (isolation is not a no-op).
+    # R46 re-pin: the sweep's reflexive reads NEVER record (speech answers
+    # are not runs) — exactly ONE row lands, from the real command.
     iso_n = iso.query("SELECT COUNT(*) AS n FROM run_history")["rows"][0]["n"]
-    _ok("isolated store recorded the run", iso_n >= 2,
+    _ok("isolated store recorded the run", iso_n == 1,
         f"rows={iso_n}")  # the sweep's reflexive reads don't record; the run does
 
     sys.stderr.write("R42 holes + isolation: ALL HOLDS GREEN\n")

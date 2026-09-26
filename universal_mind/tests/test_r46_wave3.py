@@ -11,12 +11,13 @@ from __future__ import annotations
 import sqlite3
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from universal_mind.database_suite import DatabaseSuite
 from universal_mind.run_history import RunHistory
 
 
-def _fresh_db(monkeypatch, tmp_path):
+def _fresh_db(monkeypatch: Any, tmp_path: Path) -> DatabaseSuite:
     db = DatabaseSuite(str(tmp_path / "r46w3.db"))
     RunHistory(db)
     monkeypatch.setattr(
@@ -27,7 +28,7 @@ def _fresh_db(monkeypatch, tmp_path):
 
 
 class TestTaughtWords:
-    def test_definition_teaches_and_next_command_routes(self, monkeypatch, tmp_path):
+    def test_definition_teaches_and_next_command_routes(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route, route_and_run
 
@@ -39,7 +40,7 @@ class TestTaughtWords:
         assert "زرشک" in r2.matched_words       # the taught word fires
         assert "data" in r2.capabilities
 
-    def test_listing_shows_taught_words(self, monkeypatch, tmp_path):
+    def test_listing_shows_taught_words(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -48,7 +49,7 @@ class TestTaughtWords:
         assert "بپاشک" in r["agent_report"]
         assert "واژه" in r["agent_report"]
 
-    def test_redefinition_overwrites(self, monkeypatch, tmp_path):
+    def test_redefinition_overwrites(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.learned_vocab import learned_words, teach
 
@@ -60,7 +61,7 @@ class TestTaughtWords:
 
 
 class TestMorningBriefing:
-    def test_first_tick_writes_and_speech_reads(self, monkeypatch, tmp_path):
+    def test_first_tick_writes_and_speech_reads(self, monkeypatch: Any, tmp_path: Path) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
         from universal_mind.scripts.scheduler_tick import tick
@@ -78,7 +79,7 @@ class TestMorningBriefing:
         assert "بریفینگ" in p["agent_report"]
         assert "دیروز" in p["agent_report"]     # the REAL yesterday line
 
-    def test_silent_day_is_written_honestly(self, monkeypatch, tmp_path):
+    def test_silent_day_is_written_honestly(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.daily_briefing import record_briefing
         from datetime import datetime
@@ -89,7 +90,7 @@ class TestMorningBriefing:
 
 
 class TestHotPathIndexes:
-    def test_scan_becomes_search_using_index(self, tmp_path):
+    def test_scan_becomes_search_using_index(self, tmp_path: Path) -> None:
         con = sqlite3.connect(str(Path(tempfile.mkdtemp()) / "ix.db"))
         con.execute(
             "CREATE TABLE run_history (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -108,7 +109,7 @@ class TestHotPathIndexes:
         ).fetchall()
         assert any("USING INDEX" in str(r) for r in after)
 
-    def test_unique_term_index_refuses_duplicates(self, tmp_path):
+    def test_unique_term_index_refuses_duplicates(self, tmp_path: Path) -> None:
         con = sqlite3.connect(str(Path(tempfile.mkdtemp()) / "u.db"))
         con.execute(
             "CREATE TABLE unknown_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -125,7 +126,7 @@ class TestHotPathIndexes:
 
 
 class TestOneMenuPeriodicReport:
-    def test_briefing_and_yearbook_in_one_answer(self, monkeypatch, tmp_path):
+    def test_briefing_and_yearbook_in_one_answer(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -136,7 +137,7 @@ class TestOneMenuPeriodicReport:
         assert rep.count("📖") == 1              # the yearbook section
         assert "۴ فرمان" in rep or "فرمان" in rep  # real numbers from the store
 
-    def test_alt_phrasing_reaches_the_same_menu(self, monkeypatch, tmp_path):
+    def test_alt_phrasing_reaches_the_same_menu(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 

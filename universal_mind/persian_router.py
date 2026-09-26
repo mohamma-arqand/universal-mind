@@ -677,12 +677,14 @@ def route_and_run(
         )
 
         # R46-9 — «واژهی X یعنی Y»: the operator TEACHES a word; the very
-        # next command routes correctly, no code, no commit.
-        from universal_mind.learned_vocab import parse_definition, teach
+        # next command routes correctly, no code, no commit. (Aliased: the
+        # planner-learning teach() below is a different function.)
+        from universal_mind.learned_vocab import parse_definition
+        from universal_mind.learned_vocab import teach as teach_word
 
         definition = parse_definition(command)
         if definition is not None:
-            taught = teach(definition["word"], definition["cap"])
+            taught = teach_word(definition["word"], definition["cap"])
             if taught.get("ok"):
                 answer = (
                     f"یاد گرفتم: «{definition['word']}» یعنی {definition['cap']} — "

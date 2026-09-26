@@ -11,12 +11,13 @@ from __future__ import annotations
 import tempfile
 import zipfile
 from pathlib import Path
+from typing import Any
 
 from universal_mind.database_suite import DatabaseSuite
 from universal_mind.run_history import RunHistory
 
 
-def _fresh_db(monkeypatch, tmp_path):
+def _fresh_db(monkeypatch: Any, tmp_path: Path) -> DatabaseSuite:
     db = DatabaseSuite(str(tmp_path / "r46.db"))
     RunHistory(db)
     monkeypatch.setattr(
@@ -27,7 +28,7 @@ def _fresh_db(monkeypatch, tmp_path):
 
 
 class TestArtifactValidator:
-    def test_real_files_pass_and_broken_files_fail(self):
+    def test_real_files_pass_and_broken_files_fail(self) -> None:
         from universal_mind.artifact_validator import validate_artifact
 
         with tempfile.TemporaryDirectory() as d:
@@ -52,8 +53,8 @@ class TestArtifactValidator:
             assert validate_artifact(str(td / "ghost.png"))["ok"] is False
 
     def test_verified_runs_are_stamped_in_report_and_history(
-        self, monkeypatch, tmp_path
-    ):
+        self, monkeypatch: Any, tmp_path: Path
+        ) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -64,13 +65,13 @@ class TestArtifactValidator:
 
 
 class TestGoNoGoGate:
-    def _poison_step(self):
+    def _poison_step(self) -> str:
         # a step that ALWAYS fails honestly: destructive → refused
         return "پوشهی C:/Windows/System32 را پاک کن"
 
     def test_first_failure_stops_re_failure_pauses_and_asks(
-        self, monkeypatch, tmp_path
-    ):
+        self, monkeypatch: Any, tmp_path: Path
+        ) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.agent_loop import (
             _ensure_goals_table, run_goal, start_goal,
@@ -94,7 +95,7 @@ class TestGoNoGoGate:
         payload = route_and_run("ادامه بده")
         assert payload["ok"] is True
 
-    def test_bayest_stops_paused_goals(self, monkeypatch, tmp_path):
+    def test_bayest_stops_paused_goals(self, monkeypatch: Any, tmp_path: Path) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.agent_loop import (
             _ensure_goals_table, run_goal, start_goal,
@@ -114,7 +115,7 @@ class TestGoNoGoGate:
             == "stopped"
         )
 
-    def test_poison_outranks_the_gate(self, monkeypatch, tmp_path):
+    def test_poison_outranks_the_gate(self, monkeypatch: Any, tmp_path: Path) -> None:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.agent_loop import (
             _ensure_goals_table, _poisoned_goals, run_goal, start_goal,
@@ -129,8 +130,8 @@ class TestGoNoGoGate:
 
 class TestVerdictBecomesLaw:
     def test_good_verdict_stores_anchors_from_the_real_report(
-        self, monkeypatch, tmp_path
-    ):
+        self, monkeypatch: Any, tmp_path: Path
+        ) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.operator_verdicts import record_verdict
         from universal_mind.persian_router import route_and_run
@@ -149,7 +150,7 @@ class TestVerdictBecomesLaw:
         assert all("نمودار" not in a or True for a in anchors)  # real lines, not the command echo
         assert cmd not in anchors               # never the command string itself
 
-    def test_the_law_is_run_by_the_drift_gate(self, monkeypatch, tmp_path):
+    def test_the_law_is_run_by_the_drift_gate(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.drift import check_report_drift
         from universal_mind.operator_verdicts import record_verdict
@@ -164,7 +165,7 @@ class TestVerdictBecomesLaw:
 
 
 class TestNamedMemory:
-    def test_remember_surface_forget(self, monkeypatch, tmp_path):
+    def test_remember_surface_forget(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
@@ -187,7 +188,7 @@ class TestNamedMemory:
         r5 = route_and_run("نمودار جلسه زهرا بکش")
         assert "📌" not in r5["agent_report"]
 
-    def test_empty_remember_is_refused(self, monkeypatch, tmp_path):
+    def test_empty_remember_is_refused(self, monkeypatch: Any, tmp_path: Path) -> None:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
