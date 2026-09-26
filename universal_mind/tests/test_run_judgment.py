@@ -40,7 +40,45 @@ class TestVirtueScoresFromRealData:
             "errors": {},
         }
         scores = run_virtue_scores(run)
-        assert scores["temperance"] == 0.0
+        # R48-2 re-pin: temperance is now PROPORTIONAL (ceiling/duration),
+        # not binary. 120s against the 60s global ceiling (no learned
+        # witnesses) → exactly 0.5: wounded, never silently "temperate".
+        assert scores["temperance"] == 0.5
+
+    def test_learned_median_tightens_the_band(self) -> None:
+        """With >=3 real witnesses, a 3x-slower run is intemperate."""
+        import json as J
+        import tempfile
+        from pathlib import Path as _P
+        from unittest.mock import patch as _patch
+
+        from universal_mind.database_suite import DatabaseSuite
+        from universal_mind.run_history import RunHistory
+
+        db = DatabaseSuite(str(_P(tempfile.mkdtemp()) / "temper.db"))
+        RunHistory(db)
+        db.insert_many("run_history", [
+            {"command": "w", "route": "media", "succeeded": 1,
+             "excellence": 0.9,
+             "durations_ms": J.dumps({"media": 100.0})}
+            for _ in range(4)
+        ])
+        with _patch.object(DatabaseSuite, "shared_persistent",
+                           classmethod(lambda cls: db)):
+            fast = run_virtue_scores({
+                "route": ["media"],
+                "result": {"media": {"path": "x.mp4", "bytes": 1}},
+                "durations_ms": {"media": 200.0},  # 2x median: inside 3x
+                "errors": {},
+            })
+            slow = run_virtue_scores({
+                "route": ["media"],
+                "result": {"media": {"path": "x.mp4", "bytes": 1}},
+                "durations_ms": {"media": 30_000.0},  # 300x median
+                "errors": {},
+            })
+        assert fast["temperance"] == 1.0
+        assert slow["temperance"] < 0.05  # the learned band bites
 
     def test_silently_dropped_capability_wounds_justice(self) -> None:
         run = {

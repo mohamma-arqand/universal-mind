@@ -108,6 +108,11 @@ def _ensure_schema(db: DatabaseSuite) -> None:
         # was born from ('' = not a retry). Retry is a first-class fact.
         if cols.get("ok") and "retry_of" not in names:
             alters.append("ALTER TABLE run_history ADD COLUMN retry_of INTEGER DEFAULT 0")
+        # R48-2 — THE DURATIONS LEDGER: temperance learns each route's own
+        # expectation from real history; without the column the strict judge
+        # can only fall back to the global ceiling.
+        if cols.get("ok") and "durations_ms" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN durations_ms TEXT DEFAULT ''")
         if alters:
             db.execute_many(alters)
     except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
@@ -123,7 +128,7 @@ class RunHistory:
         self._db = db if db is not None else _safe_store()
         _ensure_schema(self._db)
 
-    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "", retry_of: int = 0) -> None:
+    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "", retry_of: int = 0, durations_ms: dict[str, float] | None = None) -> None:
         """Append one real run to the history.
 
         ``outcome_class`` separates an HONEST ENVIRONMENT-REFUSAL from a real
@@ -145,6 +150,10 @@ class RunHistory:
         # and the morning greeting said «۰ فرمان» on a busy morning.
         from datetime import datetime as _dt
 
+        # R48-2 — durations ride into history as JSON: temperance learns
+        # each route's OWN expectation from real runs (the strict judge).
+        import json as _json
+
         self._db.insert_many(
             "run_history",
             [{"command": command, "route": ",".join(route),
@@ -154,6 +163,9 @@ class RunHistory:
               "flows": "; ".join(flows) if flows else "",
               "verified": verified,
               "retry_of": str(int(retry_of)) if retry_of else "",
+              "durations_ms": _json.dumps(
+                  {k: round(float(v), 2) for k, v in (durations_ms or {}).items()},
+                  ensure_ascii=False) if durations_ms else "",
               "created_at": _dt.now().strftime("%Y-%m-%d %H:%M:%S")}],
         )
 

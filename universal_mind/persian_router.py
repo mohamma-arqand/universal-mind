@@ -1155,12 +1155,21 @@ def route_and_run(
                         verification_report = v["report"]
             except Exception:  # noqa: BLE001 — a failed lens never breaks the run
                 verified_stamp = ""
+        # R48-2 — the real durations ride into history so temperance can
+        # learn each route's own expectation from REAL runs.
+        _durations = {}
+        try:
+            _durations = {s.capability: float(s.duration_ms)
+                          for s in (getattr(syn, "sub_outputs", None) or [])}
+        except Exception:  # noqa: BLE001 — durations are a lens, never fatal
+            _durations = {}
         RunHistory().record(command, caps, syn.ok,
                             excellence=judgment.get("excellence"),
                             outcome_class=outcome_class,
                             flows=list(flows) if flows else None,
                             verified=verified_stamp,
-                            retry_of=int(_retry_of) if _retry_of else 0)
+                            retry_of=int(_retry_of) if _retry_of else 0,
+                            durations_ms=_durations or None)
         # R38-L3: the conversation's last context — what the NEXT anaphoric
         # command («نمودارش را بکش») will refer to. Only successful runs.
         if syn.ok:
