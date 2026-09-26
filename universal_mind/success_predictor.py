@@ -67,6 +67,22 @@ def predict_success(route: tuple[str, ...]) -> Prediction:
         # Laplace smoothing keeps small evidence honest: 1/1 is ~0.75, not 1.0
         p = (wins + 1.0) / (n + 2.0)
         evidence = n
+        # R48-7 — EXCELLENCE-AWARE: success alone is a thin signal now that
+        # the strict judge separates real work from shape-right emptiness.
+        # The chain's mean EXCELLENCE (only real-class runs) joins the
+        # expectation: a chain that "succeeds" with thin evidence earns a
+        # lower expectation than one that succeeds with full witnesses.
+        try:
+            exc_q = db.query(
+                "SELECT AVG(excellence) AS e FROM run_history WHERE route = ? "
+                "AND succeeded = 1 "
+                "AND (outcome_class IS NULL OR outcome_class = '')",
+                (key,),
+            )
+            mean_exc = float(exc_q["rows"][0]["e"] or 0.0) if exc_q.get("ok") else 0.0
+        except Exception:  # noqa: BLE001
+            mean_exc = 0.0
+        p = round(0.5 * p + 0.5 * mean_exc, 4)
     else:
         # An UNSEEN chain inherits the global success rate — never blind 1.0
         try:

@@ -113,6 +113,16 @@ def _ensure_schema(db: DatabaseSuite) -> None:
         # can only fall back to the global ceiling.
         if cols.get("ok") and "durations_ms" not in names:
             alters.append("ALTER TABLE run_history ADD COLUMN durations_ms TEXT DEFAULT ''")
+        # R48-8 — THE GATE STAMP: what the quality gate actually did for
+        # this run — 'repaired', 'passed', or 'weak_shipped'. Countable,
+        # speakable, and honest (the gate's work was invisible until now).
+        if cols.get("ok") and "gate_outcome" not in names:
+            alters.append("ALTER TABLE run_history ADD COLUMN gate_outcome TEXT DEFAULT ''")
+        # R48-6 — MEASURED, NOT GUESSED: the daily consumers' SCAN over
+        # 36.5k rows measures 0.14ms (below any index's own overhead at
+        # this scale, and every writer would pay the index tax forever).
+        # The real hot-path bottleneck was connection churn — closed by
+        # the R48-5 read pool (432ms → 67ms measured). No index added.
         if alters:
             db.execute_many(alters)
     except Exception as exc:  # noqa: BLE001 — migration is best-effort, never fatal
@@ -128,7 +138,7 @@ class RunHistory:
         self._db = db if db is not None else _safe_store()
         _ensure_schema(self._db)
 
-    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "", retry_of: int = 0, durations_ms: dict[str, float] | None = None) -> None:
+    def record(self, command: str, route: list[str], succeeded: bool, excellence: float | None = None, outcome_class: str = "", flows: list[str] | None = None, verified: str = "", retry_of: int = 0, durations_ms: dict[str, float] | None = None, gate_outcome: str = "") -> None:
         """Append one real run to the history.
 
         ``outcome_class`` separates an HONEST ENVIRONMENT-REFUSAL from a real
@@ -166,6 +176,7 @@ class RunHistory:
               "durations_ms": _json.dumps(
                   {k: round(float(v), 2) for k, v in (durations_ms or {}).items()},
                   ensure_ascii=False) if durations_ms else "",
+              "gate_outcome": gate_outcome,
               "created_at": _dt.now().strftime("%Y-%m-%d %H:%M:%S")}],
         )
 

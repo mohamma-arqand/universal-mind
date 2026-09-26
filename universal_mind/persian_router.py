@@ -1073,6 +1073,12 @@ def route_and_run(
             command, tuple(caps), _run_candidate, bar=dynamic_bar,
             _primary_payload=run_payload_preview,
         )
+        # R48-8 — THE GATE STAMP: what the gate actually did, spoken later
+        # by the day summary and countable from history.
+        _gate_outcome = ("repaired" if gate.repaired
+                         else ("passed" if not gate.shipped.disqualified
+                               and gate.shipped.excellence >= dynamic_bar
+                               else "weak_shipped"))
         if gate.repaired:
             # The shipped attempt replaces the weak one; the operator sees the truth.
             # Surface the anaphora subject too — this is still the OUTER call.
@@ -1169,7 +1175,8 @@ def route_and_run(
                             flows=list(flows) if flows else None,
                             verified=verified_stamp,
                             retry_of=int(_retry_of) if _retry_of else 0,
-                            durations_ms=_durations or None)
+                            durations_ms=_durations or None,
+                            gate_outcome=_gate_outcome)
         # R38-L3: the conversation's last context — what the NEXT anaphoric
         # command («نمودارش را بکش») will refer to. Only successful runs.
         if syn.ok:
