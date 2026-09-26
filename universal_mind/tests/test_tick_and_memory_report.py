@@ -43,17 +43,38 @@ class TestTickNotification:
         import universal_mind.agent_loop as agent_mod
 
         _real_db = DatabaseSuite  # grabbed BEFORE the class-lambda patch
+        _conn_calls: list[str] = []
+        import importlib
+
+        _dw = importlib.import_module("universal_mind.disk_watch")
+        _wl = importlib.import_module("universal_mind.weekly_letter")
+        _dbf = importlib.import_module("universal_mind.daily_briefing")
         with mock_patch.object(sched_mod, "_store", lambda: suite), \
              mock_patch.object(agent_mod, "_store", lambda: suite), \
+             mock_patch.object(_dw, "DatabaseSuite", suite), \
+             mock_patch.object(_wl, "DatabaseSuite", suite), \
+             mock_patch.object(_dbf, "DatabaseSuite", suite), \
              mock_patch("universal_mind.database_suite.DatabaseSuite", lambda persistent=True: suite), mock_patch.object(_real_db, "shared_persistent", classmethod(lambda cls: suite)), \
-             mock_patch("universal_mind.real_notify.NotifyTool.notify") as toast:
+             mock_patch("universal_mind.real_notify.NotifyTool.notify") as toast, \
+             mock_patch("universal_mind.notify_adapter.NotifyToolConnector") as connector:
             # fire everything once, then nothing is due (goals store also empty
-            # — stopped goals in the LIVE store would rightly toast too)
+            # — stopped goals in the LIVE store would rightly toast too).
+            # R46 re-pin: the FIRST tick of a fresh day also writes the morning
+            # briefing and (ISO-week boundary) the weekly letter through the
+            # NotifyToolConnector — REAL work, not noise. The SECOND tick with
+            # everything already written must not toast again.
+            connector.return_value.connect.side_effect = (
+                lambda params, kw: _conn_calls.append(kw.get("title", "?"))
+            )
             tick()
+            first_tick_conn = len(_conn_calls)
             tick()
-        # the second tick (nothing due) must not toast again in this window
-        # (call count is either 1 — only the first fired — or 0 if nothing due)
-        assert toast.call_count <= 1
+            # R46: the FIRST tick of a fresh day writes the morning briefing
+            # (and at an ISO-week boundary the weekly letter) through the
+            # NotifyToolConnector — REAL work. The SECOND tick, with
+            # everything already written, adds NOTHING (silence stays
+            # honest when nothing ran).
+            assert len(_conn_calls) == first_tick_conn
 
 
 class TestMemoryToReportFlow:

@@ -353,6 +353,16 @@ def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
     from universal_mind.persian_router import route_and_run
 
     fired: list[dict[str, Any]] = []
+    # R46-13 — A BROKEN STORE NEVER KILLS THE TICK: reading the schedules
+    # through a locked/corrupt store is an HONEST failure with a name (it
+    # lands in tick_health and reaches a toast), never an uncaught crash.
+    try:
+        due_now = due_schedules()
+    except Exception as exc:  # noqa: BLE001 — the failure IS the report
+        return {
+            "fired": [], "count": 0, "error": f"خواندنِ زمانبندیها ناموفق: {exc}",
+            "ok": False,
+        }
     # POISON-DOWN: goals that halted 3+ times at the same step are NOT
     # re-spawned by the tick — the self-inspection reports them instead.
     try:
@@ -368,7 +378,7 @@ def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         poison_names = set()
 
-    for schedule in due_schedules()[:max_runs]:
+    for schedule in due_now[:max_runs]:
         if schedule.command.removeprefix("__goal__") in poison_names or schedule.command in poison_names:
             mark_run(schedule.schedule_id)  # the clock advances; the poison stays visible
             continue

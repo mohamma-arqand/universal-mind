@@ -212,6 +212,15 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         info = suggest()
         return _reflex_answer(c, info["report"])
 
+    # R46-15 — «بکاپ سالم است؟» — the recovery path's health, with proof:
+    # the newest backup, the last drill's verdict, and an explicit warning
+    # when the backup is stale (>7 days) or absent.
+    if "بکاپ" in c or "بک آپ" in c:
+        from universal_mind.backup_health import backup_health
+
+        health = backup_health()
+        return _reflex_answer(c, health["report"])
+
     # R46-12 — THE ONE-MENU PERIODIC REPORT: «گزارش کامل بده» (as a
     # QUESTION, not a chain command) returns EVERY periodic report — the
     # morning briefing, the weekly letter, the yearbook — in ONE

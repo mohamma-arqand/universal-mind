@@ -21,6 +21,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+_LAST_DRILL = ""  # the newest drill's one-line verdict ('' = never run)
+
+
+def last_drill_verdict() -> str:
+    """The last restore drill's verdict ('' = never drilled — honest)."""
+    return _LAST_DRILL
+
+
 @dataclass(frozen=True)
 class DrillResult:
     """One restore drill's honest outcome."""
@@ -139,6 +147,16 @@ def run_restore_drill(store_dir: str | Path | None = None) -> DrillResult:
 
     ok = not diverged
     error = "" if ok else f"این جدولها بعد از بازیابی واگرا شدند: {diverged}"
+    # R46-15 — the drill's verdict is a FACT that sticks (the backup-health
+    # answer reads it): a drill that ran is never again "never drilled".
+    global _LAST_DRILL
+    _fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+    n_tables = str(len(tables)).translate(_fa)
+    _LAST_DRILL = (
+        f"مانورِ آخر: بازیابی {'موفق' if ok else 'ناموفق'} — {n_tables} جدول، "
+        f"integrity: {integrity}"
+        + (f" | واگرا: {diverged[:3]}" if diverged else "")
+    )
     return DrillResult(
         ok=ok, source=str(source), restored=str(restored),
         tables=tables, integrity=integrity, diverged=diverged, error=error,
