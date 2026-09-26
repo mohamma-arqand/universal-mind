@@ -274,6 +274,35 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             stored = info["report"]
         return _reflex_answer(c, stored)
 
+    # R47-5 — THE PRE-RUN QUESTION: «آیا ... کار میکند؟ / احتمالش چقدر
+    # است؟» — the predictor answers BEFORE any run happens. No execution,
+    # no fabricated hope: the real prediction (chain evidence + semantic
+    # anchor) is spoken, with its tier and its anchor named.
+    if (("آیا" in c and "کار میکند" in c) or ("احتمالش چقدر است" in c)
+            or ("احتمال موفقیت" in c)):
+        from universal_mind.persian_router import route
+
+        routed = route(c)
+        chain = tuple(routed.capabilities or ())
+        # the QUESTION FRAME is not the command: strip «آیا ... کار
+        # میکند؟» so the predictor sees the core, not the scaffolding.
+        # only the QUESTION FRAME is stripped — «را» and the rest of the
+        # sentence are the operator's real words and stay in the core.
+        core = c.replace("آیا", " ").replace("کار میکند", " ")
+        core = core.replace("احتمالش چقدر است", " ").replace("؟", " ")
+        core = core.replace("احتمال موفقیت", " ").replace("میشود", " ")
+        core = core.replace("میکند", " ").strip() or c
+        from universal_mind.semantic_predictor import predict_semantic, anchor_fa
+        from universal_mind.success_predictor import prediction_fa
+
+        pred = predict_semantic(core, chain)
+        answer = prediction_fa(pred)
+        if pred.semantic_anchor:
+            answer += f"\n• {anchor_fa(pred.semantic_anchor)}"
+        else:
+            answer += "\n• فرمانِ مشابهی در تاریخچه پیدا نشد — پیشبینی از شواهدِ خودِ زنجیره است."
+        return _reflex_answer(c, answer)
+
     # R45-10 — «وضعیت خودت چطور است؟» — five live signals, one answer.
     # R46-8 — FREE-FORM STATUS ASKS: «خب؟ / چی جدید؟ / وضع؟ / خبر چیست؟»
     # reach the SAME five-signal answer — BUT the bare «وضعیت» (the

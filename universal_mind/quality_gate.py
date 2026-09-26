@@ -123,6 +123,41 @@ def run_with_quality_gate(
     except Exception:  # noqa: BLE001 — the gate never blocks on a lens
         pass
 
+    # R47-6 — THE SEMANTIC RIVAL: when the chain's own prediction is weak
+    # but the command MEANS something that already succeeded, the anchor's
+    # proven route joins the candidates — pre-declared in the reasoning,
+    # never silently. It never runs when the anchor is absent or strong.
+    semantic_note = ""
+    try:
+        from universal_mind.success_predictor import predict_success
+        from universal_mind.semantic_predictor import predict_semantic
+
+        base_pred = predict_success(route)
+        if base_pred.tier == "weak" and len(candidates) < max(1, max_attempts):
+            anchored = predict_semantic(command, route)
+            anchor_route = None
+            if anchored.semantic_anchor:
+                # the anchor command's real route from history
+                from universal_mind.success_predictor import _store
+
+                q = _store().query(
+                    "SELECT route FROM run_history WHERE command = ? "
+                    "AND succeeded = 1 ORDER BY id DESC LIMIT 1",
+                    (str(anchored.semantic_anchor.get("command")),),
+                )
+                rows = q.get("rows", []) if q.get("ok") else []
+                if rows:
+                    anchor_route = tuple(
+                        str(rows[0]["route"]).split(","))
+            if anchor_route and anchor_route not in candidates:
+                candidates.append(anchor_route)
+                semantic_note = (
+                    "پیشبینی ضعیف بود؛ رقیبِ معنایی "
+                    f"{' → '.join(anchor_route)} را امتحان کردم"
+                )
+    except Exception:  # noqa: BLE001 — the rival is an option, never a blocker
+        pass
+
     for candidate in candidates[:max(1, max_attempts)]:
         if candidate in seen:
             continue
@@ -158,13 +193,19 @@ def run_with_quality_gate(
             f"داوری مسیر اصلی {primary.excellence:.2f} بود (زیر میزان {bar:.2f}) — "
             f"ترمیم خودکار: {' → '.join(best.route)} با {best.excellence:.2f} جایگزین شد"
         )
+        if semantic_note:
+            reasoning += f"؛ {semantic_note}"
     elif best.excellence < bar:
         reasoning = (
             f"داوری بهترین تلاش {best.excellence:.2f} بود (زیر میزان {bar:.2f}) — "
             "هر نامزد ضعیف بود؛ بهترین ضعیف ارسال میشود، نه موفقیت جعلی"
         )
+        if semantic_note:
+            reasoning += f"؛ {semantic_note} (و باز هم ناکام ماند)"
     else:
         reasoning = f"داوری {best.excellence:.2f} — از دروازهی کیفیت گذشت"
+        if semantic_note:
+            reasoning += f"؛ {semantic_note}"
 
     try:
         from universal_mind.session_core import SessionCore

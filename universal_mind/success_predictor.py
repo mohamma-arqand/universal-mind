@@ -16,6 +16,7 @@ Unseen chains get the global success rate (never a blind 1.0 — the
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from universal_mind.database_suite import DatabaseSuite
 
@@ -29,6 +30,8 @@ class Prediction:
     evidence_runs: int            # how many real runs back it
     tier: str                    # strong / medium / weak
     recommended_bar: float       # the quality-gate bar this chain earned
+    semantic_anchor: dict[str, Any] | None = None  # R47-4: nearest past command
+    anchor_similarity: float = 0.0  # R47-4: its TF-IDF similarity, 0 when none
 
 
 def _route_key(route: tuple[str, ...]) -> str:
