@@ -109,6 +109,10 @@ class DatabaseSuite:
         # Schemas this suite object has already built (see ensure_schema):
         # per-object on purpose, so a fresh suite always re-ensures.
         self._ensured: set[str] = set()
+        # R48-5 — POOLABLE: only the fixed persistent store may pool a
+        # reader (a pooled handle locks the file on Windows); temp and
+        # isolated stores always ride the closed-per-use path.
+        self._poolable = persistent
         # R39 HOT PATH: the persistent file is probed and validated ONCE per
         # process. The router's hot path (history + memory + learning) builds
         # ~10 suites per run; re-probing each time was half of every run's
@@ -199,7 +203,19 @@ class DatabaseSuite:
     _read_pool: dict[str, sqlite3.Connection] = {}
 
     def _reader(self) -> sqlite3.Connection:
-        """The pooled SELECT connection for this database path."""
+        """The pooled SELECT connection for this database path.
+
+        R48 fix: on Windows an open pooled handle LOCKS the file — any
+        test or caller that later unlink()s its temp database hits
+        WinError 32 (caught live by probe_r44_store_economy under
+        verify). The pool exists for the ONE hot persistent store that
+        never gets deleted; every other path (temp/isolated stores) rides
+        the closed-per-use path, keeping the 'a reader is a lens, never a
+        blocker' law true at the OS level too.
+        """
+        if not self._poolable:
+            # a temp/isolated store: a fresh closed-handle read, no pooling
+            return sqlite3.connect(self._path)  # closed by the caller law below
         conn = type(self)._read_pool.get(self._path)
         if conn is None:
             conn = sqlite3.connect(self._path, check_same_thread=False)
@@ -308,9 +324,15 @@ class DatabaseSuite:
             # no per-query open/close churn). A broken pool falls back to
             # the closed-handle path — a reader is a lens, never a blocker.
             try:
-                conn = self._reader()
-                cursor = conn.execute(sql, params) if params else conn.execute(sql)
-                rows = [dict(r) for r in cursor.fetchall()]
+                if self._poolable:
+                    conn = self._reader()
+                    cursor = conn.execute(sql, params) if params else conn.execute(sql)
+                    rows = [dict(r) for r in cursor.fetchall()]
+                else:
+                    with self._conn() as conn:
+                        conn.row_factory = sqlite3.Row
+                        cursor = conn.execute(sql, params) if params else conn.execute(sql)
+                        rows = [dict(r) for r in cursor.fetchall()]
             except sqlite3.Error:
                 # a stale/broken pooled reader: drop it and answer from the
                 # closed-handle path — the pool is a lens, never a blocker.
@@ -326,11 +348,18 @@ class DatabaseSuite:
     def tables(self) -> dict[str, Any]:
         """List the real tables that exist in this database."""
         try:
-            conn = self._reader()
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-            )
-            names = [r[0] for r in cursor.fetchall()]
+            if self._poolable:
+                conn = self._reader()
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                )
+                names = [r[0] for r in cursor.fetchall()]
+            else:
+                with self._conn() as conn:
+                    cursor = conn.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                    )
+                    names = [r[0] for r in cursor.fetchall()]
         except sqlite3.Error as exc:
             return {"ok": False, "error": str(exc)}
         return {"ok": True, "tables": names, "error": ""}

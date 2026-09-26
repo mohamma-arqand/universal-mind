@@ -31,8 +31,13 @@ def _db(rows: list[dict[str, Any]] | None = None) -> DatabaseSuite:
 
 
 class TestReadPool:
-    def test_selects_reuse_one_connection(self) -> None:
-        suite = _db()
+    def test_persistent_selects_reuse_one_connection(self) -> None:
+        # the hot path is the PERSISTENT store — that one pools a reader
+        import tempfile as _tf
+
+        suite = DatabaseSuite(str(Path(_tf.mkdtemp()) / "r48pool.db"),
+                              persistent=True)
+        RunHistory(suite)
         opened: list[int] = []
         orig = sqlite3.connect
 
@@ -41,13 +46,26 @@ class TestReadPool:
             return orig(*a, **k)
 
         with patch.object(sqlite3, "connect", spy):
-
             for _ in range(10):
                 q = suite.query("SELECT COUNT(*) AS n FROM run_history")
                 assert q["ok"] is True
         # 10 reads, at most ONE fresh connection (the pooled reader)
         assert len(opened) <= 1
         suite.close_reader()
+
+    def test_temp_stores_never_lock_the_file(self) -> None:
+        # R48 hotfix: a pooled handle LOCKS the file on Windows — temp
+        # stores (tests, probes) must ride the closed-per-use path so any
+        # later unlink() succeeds. The pool is a lens, never a blocker.
+        suite = _db()
+        for _ in range(3):
+            q = suite.query("SELECT COUNT(*) AS n FROM run_history")
+            assert q["ok"] is True
+        # no pooled entry for a temp path
+        assert suite.db_path not in type(suite)._read_pool
+        # and the file stays deletable — the law the live probe caught
+        suite.close_reader()
+        Path(suite.db_path).unlink()
 
     def test_reads_see_committed_writes(self) -> None:
         suite = _db()
