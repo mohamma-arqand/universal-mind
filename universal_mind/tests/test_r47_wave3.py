@@ -59,9 +59,14 @@ class TestTodayPage:
             assert "🛡" in html                    # the verified stamp shows
 
     def test_every_section_comes_from_the_real_tables(self) -> None:
+        import datetime as _dtmod
+
         db = _db(_DAY)
+        # R48-timefix — TODAY'S reminder, not a hard-coded date: a pinned
+        # calendar day makes the test rot the moment the clock passes it.
+        today = _dtmod.datetime.now().strftime("%Y-%m-%d")
         db.insert_many("reminders", [
-            {"message": "بکاپ شبانه را چک کن", "fire_at": "2026-09-26 21:00"},
+            {"message": "بکاپ شبانه را چک کن", "fire_at": f"{today} 21:00"},
         ])
         with patch.object(DatabaseSuite, "shared_persistent",
                           classmethod(lambda cls: db)):

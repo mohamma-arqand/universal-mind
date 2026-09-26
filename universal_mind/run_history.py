@@ -72,7 +72,12 @@ def _ensure_schema(db: DatabaseSuite) -> None:
     first_time = db.ensure_schema("run_history", [
         "CREATE TABLE IF NOT EXISTS run_history "
         "(id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, route TEXT, "
-        "succeeded INTEGER, excellence REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+        "succeeded INTEGER, excellence REAL, "
+        # R48-timefix — ONE CLOCK LAW: record() stamps LOCAL wall-clock;
+        # the bare DEFAULT must not be a second, UTC clock (CURRENT_
+        # TIMESTAMP is UTC) — raw inserts got a +3:30 shift against every
+        # local reader. One store, one clock: LOCAL.
+        "created_at TEXT DEFAULT (datetime('now', 'localtime')))",
         # Query-acceleration indexes: the advisor and analytics filter by
         # succeeded+route constantly; a covering index keeps them O(log n)
         # on a store that grows with every run.
