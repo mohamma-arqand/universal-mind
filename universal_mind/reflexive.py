@@ -205,6 +205,31 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
 
         return _reflex_answer(c, unknown_sentence())
 
+    # R47-10 — THE VOCABULARY SUGGESTS: «واژههای ناشناخته را پیشنهاد بده»
+    # names each frequent unknown and its nearest REAL capability.
+    if ("ناشناخته" in c and "پیشنهاد" in c) or "واژههای ناشناخته را پیشنهاد" in c:
+        from universal_mind.vocab_breathing import suggestions
+
+        items = suggestions(min_hits=1)
+        if not items:
+            return _reflex_answer(c, "واژهی ناشناختهی پرتکراری برای پیشنهاد نیست — شکار تمیز است.")
+        fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        lines = []
+        for it in items:
+            lines.append(
+                f"• «{it['term']}» ({str(it['hits']).translate(fa)} بار) — "
+                f"شاید منظورت «{it['capability']}» بود؟ بگو: واژهی {it['term']} یعنی {it['capability']}"
+            )
+        return _reflex_answer(c, "واژههای ناشناخته و نزدیکترین قابلیت:\n" + "\n".join(lines))
+
+    # R47-11 — THE LEARNING RATIO: «چقدر یاد گرفتی؟» answers with the real
+    # share of harvested unknowns that are resolved — a number that grows.
+    if "چقدر یاد گرفتی" in c or ("یاد" in c and "گرفتی" in c and "چقدر" in c):
+        from universal_mind.vocab_breathing import learning_ratio, learning_fa
+
+        info = learning_ratio()
+        return _reflex_answer(c, learning_fa(info))
+
     # R45-11 — «پیشنهاد بده» — real advice from real runs.
     if "پیشنهاد" in c and ("بده" in c or "چی" in c or "کن" in c):
         from universal_mind.advisor_suggest import suggest

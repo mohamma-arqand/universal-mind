@@ -132,6 +132,7 @@ PROBES = [
     "probe_r45_wave3.py",
     "probe_r45_life.py",
     "probe_r46_day.py",
+    "probe_r47_mind.py",
 ]
 
 
