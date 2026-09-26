@@ -1244,6 +1244,32 @@ def route_and_run(
             keep_report(command, str(payload["agent_report"]))
         except Exception:  # noqa: BLE001 — the store is a courtesy
             pass
+    # R47-2 — THE LIVE-JUDGE LINE: when a live model is wired (env), the
+    # successful run is independently judged and the verdict rides the
+    # report as its own line. No env → silence (an honest absence, never
+    # a mock). Divergence > 0.3 names itself as a warning line.
+    if (payload.get("ok") is True and forced_route is None
+            and payload.get("agent_report")):
+        try:
+            import os as _os
+
+            if _os.environ.get("UM_LLM_BASE_URL"):
+                from universal_mind.live_judge import judge_live
+
+                live_verdict = judge_live(
+                    command, str(payload["agent_report"]),
+                    float((judgment or {}).get("excellence") or 0.0),
+                )
+                if live_verdict.get("ok"):
+                    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+                    score_fa = f"{live_verdict['llm_score']:.2f}".translate(fa)
+                    line = f"⚖ داورِ زنده: {score_fa} — {live_verdict['reason']}"
+                    if live_verdict.get("diverged"):
+                        line = "⚠️ داورِ زنده با فرمول اختلاف دارد — " + line
+                    payload["agent_report"] = str(payload["agent_report"]) + "\n" + line
+                    payload["live_judge"] = live_verdict
+        except Exception:  # noqa: BLE001 — a dead judge never breaks the run
+            pass
     # R46-6 — the retry stamp rides into history (retry is a fact, not a
     # shadow): the retried run points at the failure it was born from.
     if _retry_of is not None:

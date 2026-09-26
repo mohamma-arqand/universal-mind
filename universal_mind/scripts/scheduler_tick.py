@@ -144,6 +144,36 @@ def tick(*, notify_summary: bool = True) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001 — compaction is a lens, never fatal
         print(f"  (فشردهسازی ناموفق: {exc})")
 
+    # R47-3 — THE LIVE-JUDGE SAMPLE: each tick sends ONE successful run of
+    # today (the newest) to the live judge — the formula meets a foreign
+    # standard every day, one verdict at a time. No env → honest silence.
+    try:
+        import os as _os
+
+        if _os.environ.get("UM_LLM_BASE_URL"):
+            from universal_mind.database_suite import DatabaseSuite as _DS
+            from universal_mind.live_judge import judge_live
+
+            _db = _DS.shared_persistent()
+            _q = _db.query(
+                "SELECT command, route, excellence FROM run_history "
+                "WHERE succeeded = 1 AND date(created_at) = date(datetime('now', 'localtime')) "
+                "ORDER BY id DESC LIMIT 1"
+            )
+            if _q.get("ok") and _q.get("rows"):
+                _row = _q["rows"][0]
+                _v = judge_live(
+                    str(_row["command"]),
+                    f"مسیر: {str(_row['route'])} — داوری فرمول: {_row['excellence']}",
+                    float(_row["excellence"] or 0.0),
+                )
+                if _v.get("ok"):
+                    print(f"  (⚖ داورِ زنده: نمونهی امروز نمرهی {_v['llm_score']:.2f} گرفت — {_v['reason'][:50]})")
+                else:
+                    print(f"  (⚖ داورِ زنده: {_v['reason'][:60]})")
+    except Exception as exc:  # noqa: BLE001 — the judge is a lens, never fatal
+        print(f"  (⚖ داورِ زنده ناموفق: {exc})")
+
     # R46-10 — THE MORNING BRIEFING: on the FIRST tick of each LOCAL day
     # the platform writes the day open (yesterday's outcome, today's
     # standings, any red signal) into a daily_briefings row + a toast.
