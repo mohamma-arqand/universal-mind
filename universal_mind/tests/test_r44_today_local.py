@@ -1,9 +1,9 @@
-"""Tests: R44 — «امروز» means the OPERATOR's today, not UTC's.
+"""Tests: R44/R48 — «امروز» means the OPERATOR's today, not UTC's.
 
-The run store keeps `created_at` in UTC (SQLite CURRENT_TIMESTAMP). The
-"today" questions must therefore convert it to LOCAL time before comparing,
-or every morning between 00:00 and 03:30 (UTC+3:30) the platform denies
-work it really did. This was a live bug; these laws keep it dead.
+`created_at` is STORED local (datetime.now() in the writer), so the
+reader must NOT apply a SECOND 'localtime' — the old double shift pushed
+every evening run into tomorrow (a live bug caught by an after-20:30
+verify). These laws keep the single-shift truth dead-anchored.
 """
 
 from __future__ import annotations
@@ -32,19 +32,21 @@ class TestTodayIsTheOperatorsDay:
 
         iso = DatabaseSuite(str(Path(tempfile.mkdtemp()) / "tz.db"))
         RunHistory(iso)  # creates the table with its real schema
-        # TIME-INDEPENDENT law: pick the instant that falls on the same LOCAL
-        # day but a DIFFERENT UTC day (just after local midnight east of UTC,
-        # just before it west of UTC). A naive date(created_at) comparison
-        # misses this run at ANY hour; the local-corrected query always sees it.
+        # THE TRUE LAW (R48 fix): `record()` stores created_at in LOCAL time
+        # (datetime.now()), so the reader compares the bare local stamp with
+        # the local 'now'. A run made at 00:30 local — which falls on the
+        # PREVIOUS UTC day east of UTC — must still count as today. Seeding
+        # with the WRITER's own stamp format (local) is what reality produces;
+        # a UTC stamp would be a fictional premise (the double-shift bug).
         offset = _dt.datetime.now() - _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         today = _dt.datetime.now().date()
         t_local = _dt.datetime.combine(
             today, _dt.time(0, 30) if offset >= _dt.timedelta(0) else _dt.time(23, 30)
         )
-        utc_stamp = t_local - offset  # the very same instant, expressed in UTC
-        _seed_run_utc(iso, "کار امروز", utc_stamp.strftime("%Y-%m-%d %H:%M:%S"))
-        # prove the fixture really discriminates (else the law proves nothing)
-        assert utc_stamp.date() != today, "fixture must cross the UTC day boundary"
+        # discrimination proof: the same instant on a different UTC day
+        utc_equiv = t_local - offset
+        assert utc_equiv.date() != today, "fixture must cross the UTC day boundary"
+        _seed_run_utc(iso, "کار امروز", t_local.strftime("%Y-%m-%d %H:%M:%S"))
 
         with mock_patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: iso)):
             from universal_mind.persian_router import route_and_run
@@ -53,11 +55,13 @@ class TestTodayIsTheOperatorsDay:
 
         assert "فرمان اجرا کردم" in p["agent_report"], p["agent_report"]
 
-    def test_every_today_query_converts_to_local(self) -> None:
-        """No 'today' query may compare a bare UTC stamp against the local date."""
+    def test_every_today_query_reads_local_stamps_verbatim(self) -> None:
+        """created_at is STORED local (datetime.now() / one SQL 'localtime'),
+        so readers must NOT apply a SECOND 'localtime' — that shifted every
+        evening run into tomorrow (caught live by an after-20:30 verify)."""
         root = Path(__file__).resolve().parent.parent
         for name in ("reflexive.py", "superplatform_dashboard.py"):
             src = (root / name).read_text(encoding="utf-8")
-            assert "date(created_at) = date('now'" not in src, name
-            assert "date(created_at) AS d" not in src, name
-            assert "date(created_at, 'localtime')" in src, name
+            assert "date(created_at, 'localtime')" not in src, name
+            assert "date(created_at) = date('now'" in src or \
+                "date(created_at) AS d" in src, name

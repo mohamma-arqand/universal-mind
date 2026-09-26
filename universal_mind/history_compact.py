@@ -47,7 +47,7 @@ def compact_history(
     while True:
         q = store.query(
             "SELECT id FROM run_history "
-            "WHERE date(created_at, 'localtime') < date('now', 'localtime', ?) "
+            "WHERE date(created_at) < date('now', 'localtime', ?) "
             f"ORDER BY id LIMIT {int(batch)}",
             (f"-{int(older_than_days)} day",),
         )

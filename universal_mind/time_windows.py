@@ -59,14 +59,14 @@ def window_stats(name: str, *, db: Any) -> WindowStats:
                    "این ماه": "0 day", "ماه پیش": "-30 day"}[name]
         q = db.query(
             "SELECT COUNT(*) AS n, COALESCE(SUM(succeeded), 0) AS ok_n FROM run_history "
-            "WHERE date(created_at, 'localtime') >= date('now', 'localtime', ?) "
-            f"AND date(created_at, 'localtime') <= date('now', 'localtime', ?) AND {_EXCLUDE}",
+            "WHERE date(created_at) >= date('now', 'localtime', ?) "
+            f"AND date(created_at) <= date('now', 'localtime', ?) AND {_EXCLUDE}",
             (mod, end_mod),
         )
     else:
         q = db.query(
             "SELECT COUNT(*) AS n, COALESCE(SUM(succeeded), 0) AS ok_n FROM run_history "
-            f"WHERE date(created_at, 'localtime') = date('now', 'localtime', ?) AND {_EXCLUDE}",
+            f"WHERE date(created_at) = date('now', 'localtime', ?) AND {_EXCLUDE}",
             (mod,),
         )
     rows = q.get("rows", []) if q.get("ok") else []

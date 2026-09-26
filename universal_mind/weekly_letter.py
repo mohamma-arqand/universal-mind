@@ -44,8 +44,8 @@ def week_letter(*, db: DatabaseSuite | None = None) -> dict[str, Any]:
     store = db or DatabaseSuite.shared_persistent()
     q = store.query(
         "SELECT COUNT(*) AS n, COALESCE(SUM(succeeded), 0) AS ok_n FROM run_history "
-        "WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 day') "
-        f"AND date(created_at, 'localtime') <= date('now', 'localtime') AND {_EXCLUDE}"
+        "WHERE date(created_at) >= date('now', 'localtime', '-6 day') "
+        f"AND date(created_at) <= date('now', 'localtime') AND {_EXCLUDE}"
     )
     rows = q.get("rows", []) if q.get("ok") else []
     runs = int(rows[0]["n"]) if rows else 0
@@ -53,7 +53,7 @@ def week_letter(*, db: DatabaseSuite | None = None) -> dict[str, Any]:
 
     best_q = store.query(
         "SELECT route, COUNT(*) AS n FROM run_history "
-        "WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 day') "
+        "WHERE date(created_at) >= date('now', 'localtime', '-6 day') "
         f"AND succeeded = 1 AND route != '' AND {_EXCLUDE} "
         "GROUP BY route ORDER BY n DESC LIMIT 1"
     )
@@ -70,7 +70,7 @@ def week_letter(*, db: DatabaseSuite | None = None) -> dict[str, Any]:
         )
         v_q = store.query(
             "SELECT COUNT(*) AS n FROM operator_verdicts "
-            "WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 day')"
+            "WHERE date(created_at) >= date('now', 'localtime', '-6 day')"
         )
         v_rows = v_q.get("rows", []) if v_q.get("ok") else []
         verdicts = int(v_rows[0]["n"]) if v_rows else 0

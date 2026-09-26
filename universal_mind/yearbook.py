@@ -35,7 +35,7 @@ def _year_stats(db: Any, year: int) -> dict[str, Any]:
         q = db.query(
             "SELECT route, COUNT(*) AS n, COALESCE(SUM(succeeded), 0) AS ok_n, "
             "COALESCE(AVG(excellence), 0) AS m FROM run_history "
-            "WHERE strftime('%Y', created_at, 'localtime') = ? "
+            "WHERE strftime('%Y', created_at) = ? "
             "AND (outcome_class IS NULL OR outcome_class NOT IN ('blocked_env', 'needs_param')) "
             "GROUP BY route ORDER BY n DESC",
             (str(year),),
@@ -58,7 +58,7 @@ def _lessons(db: Any, year: int) -> list[tuple[str, str, float]]:
     try:
         q = db.query(
             "SELECT capability, operation, AVG(excellence) AS m FROM planner_lessons "
-            "WHERE strftime('%Y', created_at, 'localtime') = ? "
+            "WHERE strftime('%Y', created_at) = ? "
             "GROUP BY capability, operation ORDER BY m DESC, capability LIMIT 6",
             (str(year),),
         )
@@ -78,7 +78,7 @@ def _verdicts(db: Any, year: int) -> dict[str, int]:
     try:
         q = db.query(
             "SELECT verdict, COUNT(*) AS n FROM operator_verdicts "
-            "WHERE strftime('%Y', created_at, 'localtime') = ? GROUP BY verdict",
+            "WHERE strftime('%Y', created_at) = ? GROUP BY verdict",
             (str(year),),
         )
         if q.get("ok"):

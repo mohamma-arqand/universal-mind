@@ -97,7 +97,7 @@ def _persian_days(iso_days: list[str]) -> list[str]:
 def _daily_runs(db: DatabaseSuite, days: int = 14) -> list[dict[str, Any]]:
     """Real runs per day (last N days), oldest first."""
     q = db.query(
-        "SELECT date(created_at, 'localtime') AS d, COUNT(*) AS n FROM run_history "
+        "SELECT date(created_at) AS d, COUNT(*) AS n FROM run_history "
         "WHERE created_at IS NOT NULL "
         f"GROUP BY d ORDER BY d DESC LIMIT {days}"
     )
@@ -134,7 +134,7 @@ def build_dashboard(out_path: str | None = None) -> dict[str, Any]:
     # The excellence TREND: mean ARETĒ verdict per day (the learning curve).
     try:
         trend_q = db.query(
-            "SELECT date(created_at, 'localtime') AS d, AVG(excellence) AS m FROM run_history "
+            "SELECT date(created_at) AS d, AVG(excellence) AS m FROM run_history "
             "WHERE excellence IS NOT NULL AND succeeded = 1 "
             "GROUP BY d ORDER BY d DESC LIMIT 14"
         )

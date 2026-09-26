@@ -48,7 +48,7 @@ def _fa(n: Any) -> str:
 def _hot_routes(db: DatabaseSuite, limit: int = 2) -> list[tuple[str, int]]:
     q = db.query(
         "SELECT route, COUNT(*) AS n FROM run_history "
-        "WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 day') "
+        "WHERE date(created_at) >= date('now', 'localtime', '-6 day') "
         f"AND route != '' AND {_EXCLUDE} "
         "GROUP BY route ORDER BY n DESC LIMIT ?",
         (limit,),
@@ -60,7 +60,7 @@ def _hot_routes(db: DatabaseSuite, limit: int = 2) -> list[tuple[str, int]]:
 def _best_route(db: DatabaseSuite) -> tuple[str, float] | None:
     q = db.query(
         "SELECT route, AVG(excellence) AS m FROM run_history "
-        "WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-30 day') "
+        "WHERE date(created_at) >= date('now', 'localtime', '-30 day') "
         f"AND succeeded = 1 AND route != '' AND excellence != '' AND {_EXCLUDE} "
         "GROUP BY route ORDER BY m DESC LIMIT 1",
     )

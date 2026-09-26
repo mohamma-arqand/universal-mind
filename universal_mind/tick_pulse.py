@@ -47,9 +47,9 @@ def pulse_window(days: int = WINDOW_DAYS, *, db: Any | None = None) -> list[Puls
     """
     store = db if db is not None else _store()
     q = store.query(
-        "SELECT date(created_at, 'localtime') AS d, COUNT(*) AS n, "
+        "SELECT date(created_at) AS d, COUNT(*) AS n, "
         "COALESCE(SUM(succeeded), 0) AS ok_n FROM run_history "
-        "WHERE date(created_at, 'localtime') >= date('now', 'localtime', ?) "
+        "WHERE date(created_at) >= date('now', 'localtime', ?) "
         "GROUP BY d",
         (f"-{days - 1} day",),
     )
