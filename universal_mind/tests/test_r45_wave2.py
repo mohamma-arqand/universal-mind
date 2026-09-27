@@ -28,7 +28,7 @@ def _seeded(tmp_path: Path, *, with_week: bool = True) -> DatabaseSuite:
     now = dt.datetime.now()
     days = (0, 1, 2, 5) if with_week else (40, 41)
     oks = (1, 1, 0, 1) if with_week else (1, 1)
-    for back, ok in zip(days, oks):
+    for back, ok in zip(days, oks, strict=True):
         ts = (now - dt.timedelta(days=back)).strftime("%Y-%m-%d %H:%M:%S")
         db.execute(
             "INSERT INTO run_history (command, route, succeeded, excellence, outcome_class, created_at) "

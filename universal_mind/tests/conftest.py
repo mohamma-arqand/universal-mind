@@ -15,7 +15,7 @@ import pytest
 
 def pytest_configure(config: object) -> None:
     """Register the live_store marker (tests that read the operator's store)."""
-    getattr(config, "addinivalue_line")(
+    config.addinivalue_line(
         "markers", "live_store: this test reads the operator's REAL store."
     )
 

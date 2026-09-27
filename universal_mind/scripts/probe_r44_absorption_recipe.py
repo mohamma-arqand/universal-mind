@@ -55,7 +55,7 @@ def main() -> int:
     )
 
     dangling: list[str] = []
-    for capability, constructor in _REAL_CONNECTORS.items():
+    for capability, _constructor in _REAL_CONNECTORS.items():
         entry = ToolEntry(
             name=f"probe::{capability}",
             capability=capability,
