@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>داشبورد ذهن یکپارچه</title>
+<meta http-equiv="refresh" content="60">
+<style>
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0e1117; color: #e6e6e6; margin: 0; padding: 24px; }
+  h1 { font-size: 22px; color: #7aa2f7; margin: 0 0 4px; }
+  .sub { color: #888; font-size: 12px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 16px; }
+  .card { background: #161a23; border: 1px solid #23283a; border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 14px; color: #9ece6a; margin: 0 0 12px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .kpi { background: #161a23; border: 1px solid #23283a; border-radius: 10px; padding: 14px; text-align: center; }
+  .kpi .v { font-size: 26px; color: #7aa2f7; font-weight: 600; }
+  .kpi .l { font-size: 12px; color: #888; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #23283a; }
+  th { color: #7aa2f7; font-weight: 500; }
+  .bar { fill: #7aa2f7; }
+  .axis { stroke: #444; }
+  text { fill: #aaa; font-size: 10px; }
+</style>
+</head>
+<body>
+<h1>داشبورد ذهن یکپارچه</h1>
+<div class="sub">دادهی واقعی از تاریخچهی اجراها — ۲۰۲۶-۰۹-۲۷ ۲۰:۴۱ UTC</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">۰</div><div class="l">کل اجراها</div></div>
+  <div class="kpi"><div class="v">۰٪</div><div class="l">نرخ موفقیت</div></div>
+  <div class="kpi"><div class="v">۰٪</div><div class="l">میانگین داوری ARETĒ</div></div>
+  <div class="kpi"><div class="v">۳۰</div><div class="l">درسهای planner</div></div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>اجرا در ۱۴ روز اخیر</h2>
+    <svg viewBox="0 0 320 120" width="100%">
+      <line x1="10" y1="100" x2="310" y2="100" class="axis"/>
+      
+    </svg>
+  </div>
+  <div class="card">
+    <h2>پرکاربردترین قابلیتها</h2>
+    <table><tr><th>قابلیت</th><th>اجرا</th><th>موفقیت</th></tr></table>
+  </div>
+  <div class="card">
+    <h2>پرکاربردترین زنجیرهها</h2>
+    <table><tr><th>زنجیره</th><th>اجرا</th></tr></table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>⏰ زمانبندیها — چه چیزی خودش اجرا میشود</h2>
+  <table><tr><th>فرمان</th><th>فاصله</th><th>وضعیت</th><th>آخرین اجرا</th></tr><tr><td colspan='4'>هنوز زمانبندیای ثبت نشده</td></tr></table>
+  <h2 style="margin-top:14px">📁 پوشههای تحت نظر (رویداد فایل)</h2>
+  <table><tr><th>پوشه</th><th>فرمان</th><th>وضعیت</th></tr><tr><td colspan='3'>پوشهای تحت نظر نیست</td></tr></table>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>📈 روند داوری ARETĒ (روزانه)</h2>
+  <table><tr><th>روز</th><th>میانگین داوری</th></tr><tr><td colspan='2'>هنوز داوریای ثبت نشده</td></tr></table>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>⭐ داوری نشست (۲۴ ساعت، یک اثر)</h2>
+  <div style="font-size:15px">هنوز داوریای در ۲۴ ساعت اخیر ثبت نشده</div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>🩺 سلامت حلقهی خودکار</h2>
+  <div style="font-size:15px">—</div>
+</div>
+
+<div class="grid" style="margin-top:16px">
+  <div class="card">
+    <h2>💓 تپش (۷ روز)</h2>
+    <div style="font-size:15px;color:crimson">رشتهی تپش: ۰ روز پیوسته — روزهای سکوت: ۱۴۰۵/۰۶/۳۱, ۱۴۰۵/۰۷/۰۱, ۱۴۰۵/۰۷/۰۲, ۱۴۰۵/۰۷/۰۳, ۱۴۰۵/۰۷/۰۴, ۱۴۰۵/۰۷/۰۵, ۱۴۰۵/۰۷/۰۶</div>
+  </div>
+  <div class="card">
+    <h2>📐 رانش کارایی</h2>
+    <div style="font-size:15px;color:var(--ok,green)">hot path 65ms / مبنا 66ms = 0.98× (سقف 2.0×)</div>
+  </div>
+  <div class="card">
+    <h2>👤 حلقهی انسانی</h2>
+    <div style="font-size:15px;color:var(--ok,green)">رأیها: ۰ 👍 / ۰ 👎 — یافتههای تیم سرخ: ۰</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>👑 استاندارد ایستاده (تاج ARETĒ)</h2>
+  <div style="font-size:15px">هنوز زنجیرهای سزاوارِ تاج نشده</div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>🎯 اهداف عامل</h2>
+  <table><tr><th>هدف</th><th>گام بعدی</th><th>آخرین داوری</th><th>وضعیت</th></tr><tr><td colspan='4'>هدفی ثبت نشده</td></tr></table>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>🧠 planner چه آموخته (از داوریهای واقعی)</h2>
+  <table><tr><th>قابلیت</th><th>عملیات اثباتشده</th><th>میانگین داوری</th><th>اجراها</th></tr><tr><td>یادگیری ماشین</td><td dir='ltr'>cluster</td><td>۱۰۰٪</td><td>۹۲۰</td></tr><tr><td>بایگانی</td><td dir='ltr'>compress</td><td>۱۰۰٪</td><td>۲۶۶۹</td></tr><tr><td>نمودار</td><td dir='ltr'>pie</td><td>۱۰۰٪</td><td>۱۲۳</td></tr><tr><td>نمودار</td><td dir='ltr'>histogram</td><td>۱۰۰٪</td><td>۵۲۰</td></tr><tr><td>نمودار</td><td dir='ltr'>bar</td><td>۱۰۰٪</td><td>۴۲۴</td></tr><tr><td>نمودار</td><td dir='ltr'>line</td><td>۱۰۰٪</td><td>۱۷۸۲۹</td></tr><tr><td>کلیپبورد</td><td dir='ltr'>read</td><td>۹۷٪</td><td>۶۳۶</td></tr><tr><td>csv</td><td dir='ltr'>write_table</td><td>۱۰۰٪</td><td>۶۴۶</td></tr><tr><td>تحلیل داده</td><td dir='ltr'>scalar_op</td><td>۱۰۰٪</td><td>۸۴۱</td></tr><tr><td>تحلیل داده</td><td dir='ltr'>stats</td><td>۹۹٪</td><td>۳۴۵۰۷</td></tr><tr><td>دیتابیس</td><td dir='ltr'>insert_many</td><td>۱۰۰٪</td><td>۲۰۲۶</td></tr><tr><td>دیتابیس</td><td dir='ltr'>query</td><td>۹۹٪</td><td>۱۱۴۱</td></tr><tr><td>email</td><td dir='ltr'>compose</td><td>۱۰۰٪</td><td>۹۹</td></tr><tr><td>excel</td><td dir='ltr'>write_table</td><td>۱۰۰٪</td><td>۱۳۹۶</td></tr><tr><td>پردازش تصویر</td><td dir='ltr'>info</td><td>۸۷٪</td><td>۱۱۴</td></tr><tr><td>رسانه</td><td dir='ltr'>generate</td><td>۱۰۰٪</td><td>۲۸۲</td></tr><tr><td>اطلاعرسانی</td><td dir='ltr'>notify</td><td>۸۳٪</td><td>۱۰۱۱</td></tr><tr><td>ocr</td><td dir='ltr'>read</td><td>۱۰۰٪</td><td>۷۵۵</td></tr><tr><td>سند PDF</td><td dir='ltr'>invoice</td><td>۱۰۰٪</td><td>۶۴۴</td></tr><tr><td>سند PDF</td><td dir='ltr'>persian_rtl</td><td>۹۹٪</td><td>۸۹۹۳</td></tr><tr><td>سند PDF</td><td dir='ltr'>yearbook</td><td>۹۹٪</td><td>۷۹</td></tr><tr><td>pdfreader</td><td dir='ltr'>read_text</td><td>۱۰۰٪</td><td>۲۹۴</td></tr><tr><td>testcap_6536a2</td><td dir='ltr'>op_great</td><td>۱۰۰٪</td><td>۱</td></tr><tr><td>testcap_7ed66f</td><td dir='ltr'>op_great</td><td>۱۰۰٪</td><td>۱</td></tr><tr><td>بینایی کامپیوتر</td><td dir='ltr'>edges</td><td>۱۰۰٪</td><td>۴۲۰</td></tr><tr><td>بینایی کامپیوتر</td><td dir='ltr'>chart_structure</td><td>۱۰۰٪</td><td>۶۵۵</td></tr><tr><td>بینایی کامپیوتر</td><td dir='ltr'>contours</td><td>۹۰٪</td><td>۹۲</td></tr><tr><td>webfetch</td><td dir='ltr'>fetch</td><td>۱۰۰٪</td><td>۵۷۶</td></tr><tr><td>x</td><td dir='ltr'>y</td><td>۹۰٪</td><td>۱</td></tr><tr><td>zip</td><td dir='ltr'>pack</td><td>۱۰۰٪</td><td>۲۵۷</td></tr></table>
+</div>
+
+</body>
+</html>
