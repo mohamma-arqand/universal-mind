@@ -137,6 +137,7 @@ def _flow_params(
         and last_producer in ("data", "ai", "compute")
         and isinstance(last_output, dict)
         and not params.get("seeded")
+        and not params.get("operation")  # explicit intent always wins
     ):
         # The stats output carries its metrics (mean/min/max/...) — the raw
         # input series only when the suite echoes it. Both are real computes.
@@ -185,7 +186,7 @@ def _flow_params(
             v = _num(r.get("value"))
             if v is not None:
                 numeric_rows.append((r, v))
-        if numeric_rows and not params.get("seeded"):
+        if numeric_rows and not params.get("seeded") and not params.get("operation"):
             labels = [str(r.get("metric", i)) for i, (r, _) in enumerate(numeric_rows)]
             series_values = [v for _, v in numeric_rows]
             return (
@@ -364,7 +365,7 @@ def _flow_params(
     ):
         text = str(last_output.get("text") or last_output.get("preview") or "").strip()
         if text:
-            if params.get("operation") and params["operation"] not in ("query", "insert_many"):
+            if params.get("operation"):  # ANY explicit operation — query included — wins
                 return params, None  # explicit non-store intent wins
             words = text.split()[:20]
             ocr_rows: list[dict[str, str]] = [
