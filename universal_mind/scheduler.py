@@ -517,8 +517,17 @@ def backup_database(keep: int = 3) -> dict[str, Any]:
         # (a raw file copy can catch a half-written page: the corruption lesson).
         import sqlite3
 
-        with sqlite3.connect(str(src)) as source, sqlite3.connect(str(dst)) as target:
+        # Explicit close — `with sqlite3.connect(...)` COMMITS but NEVER
+        # CLOSES (the fd-leak class): the open handle then locks dst, so the
+        # cleanup unlink below fails with WinError 32 and the junk file stays
+        # behind exactly when space was scarcest (this function's own law).
+        source = sqlite3.connect(str(src))
+        target = sqlite3.connect(str(dst))
+        try:
             source.backup(target)
+        finally:
+            source.close()
+            target.close()
     except (OSError, sqlite3.Error) as exc:
         try:
             dst.unlink()
