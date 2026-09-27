@@ -180,9 +180,10 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     if cap == "webfetch" and isinstance(result, dict):
         title = str(result.get("title", ""))
         status = result.get("status")
+        code: float | str = status if status is not None else "—"
         if title:
-            return f"صفحهی وب گرفته شد (کد {status}): «{title}» ({_kb(result.get('bytes'))})."
-        return f"صفحهی وب گرفته شد (کد {status})."
+            return f"صفحهی وب گرفته شد (کد {_fa_num(code)}): «{title}» ({_kb(result.get('bytes'))})."
+        return f"صفحهی وب گرفته شد (کد {_fa_num(code)})."
     if cap == "pdfreader" and isinstance(result, dict):
         text = str(result.get("text", "")).strip()
         pages = result.get("pages", 0)
@@ -191,12 +192,12 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
             return f"PDF خوانده شد ({_fa_num(pages)} صفحه): «{preview}»"
         return f"PDF خوانده شد ({_fa_num(pages)} صفحه) — لایهی متنی ندارد (اسکن است؟)"
     if cap == "excel" and isinstance(result, dict):
-        if "rows" in result:  # a write: a real workbook was made
+        if "rows" in result and not isinstance(result["rows"], list):  # a write: rows is a COUNT
             return (
                 f"صفحهگستردهی اکسل ساخته شد "
-                f"({_fa_num(result['rows'])} ردیف × {_fa_num(result['columns'])} ستون، {_kb(result.get('bytes'))})."
+                f"({_fa_num(result['rows'])} ردیف × {_fa_num(result.get('columns', 0))} ستون، {_kb(result.get('bytes'))})."
             )
-        if "headers" in result:  # a read: a real workbook came back
+        if "rows" in result:  # a read-back: a real workbook came back
             return (
                 f"صفحهگسترده خوانده شد: {_fa_num(len(result.get('rows', [])))} ردیف "
                 f"با ستونهای {'، '.join(str(h) for h in result.get('headers', []))}."

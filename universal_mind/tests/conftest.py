@@ -11,9 +11,10 @@ from __future__ import annotations
 from typing import Any, Iterator
 
 import pytest
+from pytest import Config
 
 
-def pytest_configure(config: object) -> None:
+def pytest_configure(config: Config) -> None:
     """Register the live_store marker (tests that read the operator's store)."""
     config.addinivalue_line(
         "markers", "live_store: this test reads the operator's REAL store."
