@@ -8,16 +8,21 @@ import pytest
 class TestCrownStandingChain:
     @pytest.mark.live_store  # type: ignore[untyped-decorator]
     def test_the_live_best_chain_is_crowned_through_the_real_election(self) -> None:
-        """chart → pdf (1300+ wins, excellence 1.0) passes the StandardKeeper
-        election — the justice hard-gate included — and is crowned honestly."""
+        """The live history's ACTUAL dominant chain passes the StandardKeeper
+        election — the justice hard-gate included — and is crowned honestly.
+
+        The chain NAME is whatever the live store crowned (the operator's real
+        history decides, not this test); the LAW is: a winner exists, it won
+        repeatedly with full excellence, and the election names its reasoning."""
         from universal_mind.history_analytics import crown_standing_chain
 
         result = crown_standing_chain()
         assert result["ok"] is True
         # the live history crowns the real dominant chain
         assert result["crowned"] is True
-        assert result["chain"] == "chart → pdf"
+        assert result["chain"]  # a real chain name, whatever the store crowned
         assert result["wins"] >= 3
+        assert result["mean_excellence"] == 1.0  # the hard bar
         assert result["decision"]  # the election's own reasoning, verbatim
 
     def test_no_qualifier_crowns_nothing(self) -> None:
