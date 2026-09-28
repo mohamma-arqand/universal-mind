@@ -1054,6 +1054,10 @@ def route_and_run(
     # self-repairs: it runs the honest rival order and ships the best REAL
     # verdict. Every attempt stays in the ledger; nothing is fabricated.
     # (A forced_route call IS a gate candidate — the gate runs one level only.)
+    # The gate stamp's default for the gate-internal path (no gate ran): the
+    # history record below reads it on EVERY path — an UnboundLocalError here
+    # silently failed every forced-route run's history insert.
+    _gate_outcome = ""
     if forced_route is None:
         from universal_mind.quality_gate import run_with_quality_gate
         from universal_mind.success_predictor import predict_success

@@ -396,7 +396,12 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     if capability == "database":
         # «چی ذخیره کردی؟» — a READ-back of the real persistent store: the
         # memory loop closes (store → recall → narrate).
-        asking = any(w in command for w in ("چی ذخیره", "چه ذخیره", "نشونم بده", "نشان بده", "بخوان"))
+        # «بخوان» only signals a READ-back when NO explicit store verb follows —
+        # «متن تصویر را بخوان و در دیتابیس ذخیره کن» reads AND stores: the
+        # store verb wins, the flow layer fills the rows.
+        asking = any(w in command for w in ("چی ذخیره", "چه ذخیره", "نشونم بده", "نشان بده")) or (
+            "بخوان" in command and "ذخیره کن" not in command
+        )
         if asking:
             return {
                 "operation": "query",

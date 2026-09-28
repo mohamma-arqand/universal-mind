@@ -137,7 +137,7 @@ def _flow_params(
         and last_producer in ("data", "ai", "compute")
         and isinstance(last_output, dict)
         and not params.get("seeded")
-        and not params.get("operation")  # explicit intent always wins
+        and params.get("operation") in (None, "line")  # line IS the upgrade kind; other kinds win
     ):
         # The stats output carries its metrics (mean/min/max/...) — the raw
         # input series only when the suite echoes it. Both are real computes.
@@ -186,7 +186,7 @@ def _flow_params(
             v = _num(r.get("value"))
             if v is not None:
                 numeric_rows.append((r, v))
-        if numeric_rows and not params.get("seeded") and not params.get("operation"):
+        if numeric_rows and not params.get("seeded") and params.get("operation") in (None, "bar"):
             labels = [str(r.get("metric", i)) for i, (r, _) in enumerate(numeric_rows)]
             series_values = [v for _, v in numeric_rows]
             return (
@@ -365,7 +365,10 @@ def _flow_params(
     ):
         text = str(last_output.get("text") or last_output.get("preview") or "").strip()
         if text:
-            if params.get("operation"):  # ANY explicit operation — query included — wins
+            op = params.get("operation")
+            # A query/read is non-store intent — untouched. An explicit insert
+            # IS this branch's own intent («ذخیره کن»): the upgrade runs.
+            if op and op not in ("insert", "insert_many"):
                 return params, None  # explicit non-store intent wins
             words = text.split()[:20]
             ocr_rows: list[dict[str, str]] = [
