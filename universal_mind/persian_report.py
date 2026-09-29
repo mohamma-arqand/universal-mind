@@ -10,6 +10,8 @@ Deterministic and pure: a given payload always renders the same report.
 
 from __future__ import annotations
 
+import math
+
 from typing import Any
 
 # Persian labels for the capability names (single source for rendering).
@@ -64,6 +66,12 @@ def _fa_num(value: float | str) -> str:
             value = float(value)
         except ValueError:
             return str(value)  # a genuine label, not a number — render as-is
+    # NaN / ±inf are honest non-finite results (std of a single value,
+    # division by zero on a live payload) — name them, never crash the report.
+    if isinstance(value, float) and not math.isfinite(value):
+        if math.isnan(value):
+            return "نامشخص"
+        return "بی‌نهایت"
     if isinstance(value, int):
         text = str(value)
     elif value == int(value):
