@@ -15,6 +15,18 @@ import subprocess
 from typing import Any
 
 
+def _named_clip_error(stderr: str, verb: str) -> str:
+    """Name a clipboard refusal honestly — the Windows clipboard is a GLOBAL
+    OS resource: another app can hold it (CLIPBRD_E_CANT_OPEN), and that is a
+    named, actionable state, never a bare English traceback in the operator's
+    Persian report."""
+    tail = (stderr or "").strip()
+    if "ExternalException" in tail or "CANT_OPEN" in tail:
+        return (f"کلیپبورد قفل شده — {verb} الان ممکن نیست؛ "
+                "یک برنامهی دیگر کلیپبورد را در اختیار دارد. دوباره تلاش کن.")
+    return tail or "کلیپبورد در دسترس نیست"
+
+
 class ClipboardTool:
     """A real clipboard specialist (read from / write to the OS clipboard)."""
 
@@ -44,7 +56,8 @@ class ClipboardTool:
         except (FileNotFoundError, OSError) as exc:
             return {"ok": False, "outcome": "", "error": str(exc)}
         if result.returncode != 0:
-            return {"ok": False, "outcome": "", "error": result.stderr.strip() or "set-clipboard failed"}
+            return {"ok": False, "outcome": "",
+                    "error": _named_clip_error(result.stderr, "نوشتن")}
         return {"ok": True, "outcome": text, "error": ""}
 
     def get_text(self) -> dict[str, Any]:
@@ -63,7 +76,8 @@ class ClipboardTool:
         except (FileNotFoundError, OSError) as exc:
             return {"ok": False, "outcome": "", "error": str(exc)}
         if result.returncode != 0:
-            return {"ok": False, "outcome": "", "error": result.stderr.strip() or "get-clipboard failed"}
+            return {"ok": False, "outcome": "",
+                    "error": _named_clip_error(result.stderr, "خواندن")}
         b64 = result.stdout.strip()
         if not b64:
             return {"ok": False, "outcome": "", "error": "clipboard is empty"}

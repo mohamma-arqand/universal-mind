@@ -27,13 +27,21 @@ class TestFlowEvidenceColumn:
         assert "→ chart" in row["flows"]
 
     def test_the_live_router_records_its_flows(self) -> None:
-        """A real two-capability run leaves its flows in the history."""
+        """A real two-capability run leaves ITS OWN flows in the history.
+
+        The query is anchored to THIS test's unique command — the live store
+        keeps recording other runs' flows (conversational witnesses, later
+        test files), and "the newest flows row" is whoever ran last, a
+        history-snapshot bomb (the R51 crown lesson in a new coat)."""
         from universal_mind.database_suite import DatabaseSuite
         from universal_mind.persian_router import route_and_run
 
-        route_and_run("میانگین ۳ و ۶ را حساب کن و نمودارش را بکش")
+        marker = "میانگین ۳ و ۶ را حساب کن و نمودارش را بکش"
+        route_and_run(marker)
         row = DatabaseSuite(persistent=True).query(
-            "SELECT route, flows FROM run_history WHERE flows != '' ORDER BY id DESC LIMIT 1"
+            "SELECT route, flows FROM run_history WHERE command = ? AND flows != '' "
+            "ORDER BY id DESC LIMIT 1",
+            (marker,),
         )["rows"]
         assert row and "→ chart" in row[0]["flows"]
 

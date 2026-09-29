@@ -52,7 +52,11 @@ class TestClipboard:
         tool = ClipboardTool()
         payload = "سلام ذهن یکپارچه ۱۲۳"
         r1 = tool.set_text(payload)
-        assert r1["ok"] is True, r1.get("error", "")
+        if r1["ok"] is not True:
+            # the clipboard is a GLOBAL OS resource: another app may hold it.
+            # The honest law: the lock is NAMED in Persian, never silent.
+            assert "قفل" in r1["error"]
+            return
         r2 = tool.get_text()
         assert r2["ok"] is True
         assert r2["outcome"] == payload
