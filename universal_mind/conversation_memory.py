@@ -46,7 +46,10 @@ def save_context(command: str, route: list[str], result: dict[str, Any]) -> None
     survive (retention GC on every write). Unbounded growth (caught live:
     3,838 rows when exactly 1 is ever read) wasted the durable store.
     """
-    db = DatabaseSuite.shared_persistent()
+    try:
+        db = DatabaseSuite.shared_persistent()
+    except Exception:  # noqa: BLE001 — the memory is a courtesy, never a crash
+        return
     import json as _json
 
     res = _json.dumps(result, ensure_ascii=False, default=str)[:2000]
@@ -69,7 +72,10 @@ def save_context(command: str, route: list[str], result: dict[str, Any]) -> None
 
 def last_context() -> dict[str, Any] | None:
     """The newest successful context row, or None (absence is honest)."""
-    db = DatabaseSuite.shared_persistent()
+    try:
+        db = DatabaseSuite.shared_persistent()
+    except Exception:  # noqa: BLE001 — the memory is a courtesy, never a crash
+        return None
     try:
         q = db.query(
             "SELECT command, route, result FROM last_context ORDER BY id DESC LIMIT 1"
