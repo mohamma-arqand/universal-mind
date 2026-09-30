@@ -13,7 +13,14 @@ class TestScreenshotTool:
             return  # headless service context: honest skip
         assert result["ok"] is True
         assert result["width"] >= 640 and result["height"] >= 480  # a real display
-        assert result["bytes"] > 10_000  # a real PNG, not a stub
+        # A real PNG's SIZE tracks its CONTENT (a calm dark desktop compresses
+        # to ~7 KB; a busy one to ~2 MB) — a byte floor pins compression luck,
+        # not realness. Realness = a decodable PNG of a real display:
+        from PIL import Image
+
+        with Image.open(result["path"]) as im:
+            assert im.size == (result["width"], result["height"])
+        assert result["bytes"] > 1_000  # any real PNG clears this trivially
 
     def test_connector_contracts(self) -> None:
         from universal_mind.connectors import ConnectorResult

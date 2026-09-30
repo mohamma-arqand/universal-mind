@@ -102,7 +102,7 @@ class TestScheduleFace:
         assert entry is not None  # skip narrows, but mypy wants the assert
         entry.delete(0, tk.END)
         entry.insert(0, "هر ۳۰ دقیقه میانگین بگیر")
-        with _isolated():
+        with _isolated(), mock_patch("universal_mind.desktop_app.messagebox"):
             app._register_schedule()
         text = app._sched_text.get("1.0", tk.END)
         assert "میانگین" in text
@@ -164,9 +164,11 @@ class TestStatusAndWatchers:
 
     def test_scan_watchers_runs(self, tk_root: tk.Tk) -> None:
         app = _app(tk_root)
-        with _isolated():
+        with _isolated(), mock_patch("universal_mind.desktop_app.messagebox"):
             app._scan_watchers()
-        # no crash
+        # no crash — messagebox MUST be mocked: showinfo is a live MODAL dialog
+        # that parks the Tk event loop forever in a full-suite run (the zombie
+        # that hung verify twice); the mock keeps the scan itself the test.
 
 
 __test__ = True
