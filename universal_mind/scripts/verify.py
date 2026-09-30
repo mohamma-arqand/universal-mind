@@ -189,6 +189,34 @@ def step_lint() -> int:
     # E-rules (E402/E712/E731/E741) that flag pre-existing intentional patterns
     # across the suite — pinning keeps the gate measuring *our* rules, not ruff's
     # version drift.
+    import shutil
+    import subprocess as sub
+
+    probe = sub.run(
+        ["uvx", "ruff@0.15.18", "--version"], capture_output=True, timeout=90, check=False,
+    )
+    if probe.returncode != 0:
+        # OFFLINE FALLBACK (the sandboxed-host lesson): uvx needs the network
+        # to materialize the pinned ruff; on a cut-off host the SAME pinned
+        # version installed in the runtime venv is the honest substitute —
+        # same tool, same version, measured (not assumed) below.
+        local = shutil.which("ruff") or str(
+            Path(__file__).resolve().parents[2] / "hermes-agent" / "venv" / "Scripts" / "ruff.exe"
+        )
+        cand = [local]
+        hermes_ruff = Path(
+            os.environ.get("LOCALAPPDATA", "")
+        ) / "hermes" / "hermes-agent" / "venv" / "Scripts" / "ruff.exe"
+        if hermes_ruff.exists():
+            cand.insert(0, str(hermes_ruff))
+        for exe in cand:
+            if exe and Path(exe).exists():
+                ver = sub.run([exe, "--version"], capture_output=True, text=True, timeout=60, check=False)
+                if "0.15.18" in (ver.stdout or ""):
+                    print(f"  [offline] using pinned ruff at {exe}")
+                    return _sh([exe, "check", "universal_mind/", "universal_mind/tests/"], check=False)
+        print("  [lint] no pinned ruff reachable (uvx offline, venv missing)")
+        return 2
     return _sh(["uvx", "ruff@0.15.18", "check", "universal_mind/", "universal_mind/tests/"], check=False)
 
 
