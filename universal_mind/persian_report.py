@@ -42,6 +42,8 @@ _CAP_FA: dict[str, str] = {
     "pdfreader": "خوانندهی PDF",
     "screenshot": "عکس صفحه",
     "goal": "عامل هدف",
+    "filesearch": "جستجوی فایل",
+    "scheduler": "زمانبند",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -211,6 +213,23 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                 f"با ستونهای {'، '.join(str(h) for h in result.get('headers', []))}."
             )
         return None
+    if cap == "filesearch" and isinstance(result, dict):
+        matches = result.get("matches", []) or []
+        if not matches:
+            note = "؛ ".join(str(n) for n in (result.get("notes") or []))
+            base = "جستجوی واقعی انجام شد ولی فایلی مطابق پیدا نشد"
+            return f"{base} ({note})" if note else base + "."
+        top_line = f"جستجوی واقعی انجام شد: {_fa_num(len(matches))} فایلِ بزرگ در «{result.get('root', '')}»"
+        shown = []
+        for m in matches[:5]:
+            mb = int(m.get("bytes", 0)) / (1024 * 1024)
+            size_fa = f"{_fa_num(round(mb, 1))} مگابایت" if mb >= 1 else f"{_fa_num(int(mb * 1024))} کیلوبایت"
+            shown.append(f"«{m.get('name', '')}» ({size_fa})")
+        line = top_line + ": " + "، ".join(shown)
+        notes = result.get("notes") or []
+        if notes:
+            line += "\n• " + "\n• ".join(str(n) for n in notes)
+        return line
     if cap == "ocr" and isinstance(result, dict):
         text = str(result.get("text", "")).strip()
         lang = str(result.get("language", ""))

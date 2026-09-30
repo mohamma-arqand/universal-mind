@@ -26,6 +26,7 @@ from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.csv_suite import CsvSuiteConnector
 from universal_mind.zip_suite import ZipSuiteConnector
 from universal_mind.excel_suite import ExcelSuiteConnector
+from universal_mind.file_search_tool import FileSearchToolConnector
 from universal_mind.pdfreader_tool import PdfReaderToolConnector
 from universal_mind.screenshot_tool import ScreenshotToolConnector
 from universal_mind.webfetch_tool import WebFetchToolConnector
@@ -54,6 +55,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "webfetch": WebFetchToolConnector,    # real urllib fetch — the 16th program
     "pdfreader": PdfReaderToolConnector, # real pypdf — the 17th: reads PDFs
     "screenshot": ScreenshotToolConnector,  # real ImageGrab — the 18th: sees the screen
+    "filesearch": FileSearchToolConnector,  # R53 wave-4 — real disk search (read-only)
     "csv": CsvSuiteConnector,             # real csv stdlib — the 19th: universal interchange
     "zip": ZipSuiteConnector,             # real zipfile — the 20th: the world's archive format
     "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)

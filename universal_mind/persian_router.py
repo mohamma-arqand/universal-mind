@@ -195,6 +195,16 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("متنش را بخوان", "ocr"),
     ("متن تصویر", "ocr"),
     ("ocr کن", "ocr"),
+    # filesearch (R53 wave-4) — the platform FINDS files on the real disk
+    ("فایلهای بزرگ", "filesearch"),
+    ("فایلهای بزرگ‌تر", "filesearch"),
+    ("فایل های بزرگ", "filesearch"),
+    ("پیدا کن در", "filesearch"),
+    ("جستجوی فایل", "filesearch"),
+    ("فایلها را پیدا", "filesearch"),
+    ("فایل های را پیدا", "filesearch"),
+    ("را پیدا کن", "filesearch"),
+    ("بزرگترین فایل", "filesearch"),
     # speech (SAPI) — the platform speaks its results aloud
     ("بگو", "speech"),
     ("بلند بخوان", "speech"),
@@ -262,7 +272,7 @@ _VOCAB: tuple[tuple[str, str], ...] = (
 # data/compute produce inputs; chart/pdf consume them; database/notify/archive
 # are sinks. The order below is the natural data-flow order.
 _PRIORITY: tuple[str, ...] = (
-    "data", "compute", "image", "media", "vision", "ai",
+    "data", "compute", "filesearch", "image", "media", "vision", "ai",
     "chart", "pdf", "database", "archive", "clipboard", "notify",
 )
 # "chain" is a dispatch word, never an executable capability: when other words
@@ -342,6 +352,20 @@ def route(command: str) -> PersianRoute:
     # over the bare «بنویس» (clipboard paste). Explicit > inference, always.
     if "متن بنویس" in lowered:
         matched.pop("clipboard", None)
+
+    # R53 wave-4 — FILE-SEARCH INTENT: «... را پیدا کن» with a folder/word
+    # (no URL, no «سایت») is a DISK search. The words «دانلود»/«جستجو» that
+    # also fire webfetch/image must not drag those into a disk search —
+    # the explicit find-intent wins.
+    find_intent = any(
+        w in lowered for w in ("را پیدا کن", "پیدا کن در", "جستجوی فایل", "فایلهای بزرگ", "بزرگترین فایل")
+    )
+    if find_intent and "filesearch" in matched:
+        if not any(u in lowered for u in ("http", "www.", "سایت", "لینک", "صفحه وب")):
+            matched.pop("webfetch", None)
+        # «عکس» in a find-intent means FILTER BY IMAGE FILES, not edit one
+        if not any(w in lowered for w in ("ویرایش", "تغییر اندازه", "برش", "فیلتر")):
+            matched.pop("image", None)
 
     if not matched:
         return PersianRoute(command=command, capabilities=(), matched_words=(), unknown=(lowered,))

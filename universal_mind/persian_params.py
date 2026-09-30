@@ -341,6 +341,18 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "write"}  # text comes from the flow
         return {"operation": "read"}
 
+    if capability == "filesearch":
+        # R53 wave-4 — the search params come from the command itself:
+        # «فایلهای بزرگ دیسک D»، «عکسها را پیدا کن»، «بزرگتر از ۱ گیگ».
+        from universal_mind.file_search_tool import extract_search_params
+
+        out = extract_search_params(command)
+        # the rest of the sentence (minus trigger words) is a name filter
+        # when the operator named a file type with their own words
+        for trig in ("فایلهای بزرگ", "فایل های بزرگ", "پیدا کن در", "جستجوی فایل",
+                     "فایلها را پیدا", "بزرگترین فایل", "را پیدا کن", "پیدا کن"):
+            command = command.replace(trig, "")  # noqa: PLW2901
+        return out
     if capability == "notify":
         # The body defaults to the command itself, but the dataflow layer will
         # REPLACE a bare command echo with a real summary of what was made
