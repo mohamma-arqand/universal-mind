@@ -162,6 +162,32 @@ class MindDesktopApp:
         self._sched_text.pack(fill=tk.BOTH, expand=True)
         self._refresh_schedules()
 
+        # --- Tab: یادآورها (R53 — one-shot reminders, live list) ---
+        rem_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(rem_tab, text="یادآورها")
+        rem_top = ttk.LabelFrame(rem_tab, text="یادآور یکبارمصرف جدید", padding=6)
+        rem_top.pack(fill=tk.X)
+        self._rem_entry = ttk.Entry(rem_top, font=("Segoe UI", 11))
+        self._rem_entry.pack(fill=tk.X, side=tk.LEFT, expand=True)
+        self._rem_entry.insert(tk.END, "یادم بنداز که فردا ساعت ۸ زود بیدار شوم")
+        ttk.Button(rem_top, text="＋ ثبت", command=self._register_reminder).pack(side=tk.LEFT, padx=6)
+        ttk.Button(rem_tab, text="🔄 بهروزرسانی فهرست", command=self._refresh_reminders).pack(anchor=tk.W, pady=6)
+        self._rem_text = scrolledtext.ScrolledText(
+            rem_tab, font=("Segoe UI", 12), wrap=tk.WORD
+        )
+        self._rem_text.pack(fill=tk.BOTH, expand=True)
+        self._refresh_reminders()
+
+        # --- Tab: سیستم (R53 — the machine's real vitals) ---
+        sys_tab = ttk.Frame(self._notebook, padding=8)
+        self._notebook.add(sys_tab, text="سیستم")
+        ttk.Button(sys_tab, text="🔄 وضعیت زنده را بخوان", command=self._refresh_sysstatus).pack(anchor=tk.W, pady=6)
+        self._sys_text = scrolledtext.ScrolledText(
+            sys_tab, font=("Segoe UI", 12), wrap=tk.WORD
+        )
+        self._sys_text.pack(fill=tk.BOTH, expand=True)
+        self._refresh_sysstatus()
+
         # --- Tab: goals (اهداف — the agent layer) ---
         goals_tab = ttk.Frame(self._notebook, padding=8)
         self._notebook.add(goals_tab, text="اهداف")
@@ -330,6 +356,73 @@ class MindDesktopApp:
         ttk.Button(
             preview_frame, text="📂 باز کردن پوشه در Explorer", command=self._open_preview_folder
         ).pack(anchor=tk.W, pady=(4, 0))
+
+    def _register_reminder(self) -> None:
+        """«یادم بنداز فردا ساعت ۸ ...» — a one-shot via the real engine."""
+        text = self._rem_entry.get().strip()
+        if not text:
+            self._rem_text.delete("1.0", tk.END)
+            self._rem_text.insert(tk.END, "یادآوری بنویس — مثلا: «یادم بنداز که فردا ساعت ۸ تماس دارم»\n")
+            return
+        from universal_mind.persian_router import route_and_run
+
+        res = route_and_run(text)
+        self._rem_text.delete("1.0", tk.END)
+        self._rem_text.insert(tk.END, str(res.get("agent_report", "")) + "\n\n")
+        self._refresh_reminders()
+
+    def _refresh_reminders(self) -> None:
+        """The REAL one-shot reminder list (kind='once') with next-due."""
+        from datetime import datetime as _dt
+
+        from universal_mind.scheduler import list_schedules
+
+        self._rem_text.delete("1.0", tk.END)
+        onces = [s for s in list_schedules() if s.kind == "once"]
+        if not onces:
+            self._rem_text.insert(
+                tk.END,
+                "یادآور یکبارمصرفی نداری. بالا بنویس: «یادم بنداز که فردا ساعت ۸ ...»\n",
+            )
+            return
+        for s in onces:
+            try:
+                fire = _dt.fromisoformat(s.run_at)
+                when = fire.strftime("%H:%M روز %Y-%m-%d")
+            except ValueError:
+                when = "زمان ناخوانا"
+            self._rem_text.insert(tk.END, f"• «{s.command}»\n  شلیک: {when}\n\n")
+
+    def _refresh_sysstatus(self) -> None:
+        """The machine's REAL vitals — measured, honest, Persian."""
+        from universal_mind.system_status_tool import SystemStatusTool
+
+        self._sys_text.delete("1.0", tk.END)
+        try:
+            vit = SystemStatusTool().status()
+        except Exception as exc:  # noqa: BLE001 — the tab never crashes
+            self._sys_text.insert(tk.END, f"خواندن وضعیت ناموفق: {exc}\n")
+            return
+        lines: list[str] = []
+        up = vit.get("uptime")
+        if up:
+            parts = []
+            if up.get("days"):
+                parts.append(f"{up['days']} روز")
+            if up.get("hours"):
+                parts.append(f"{up['hours']} ساعت")
+            lines.append(f"⏱ روشنبودن: {' و '.join(parts)}")
+        ram = vit.get("ram")
+        if ram:
+            lines.append(f"🧠 رم: {ram['used_pct']}٪ در استفاده ({ram['free_gb']} گیگ از {ram['total_gb']} آزاد)")
+        for d in vit.get("disks") or []:
+            lines.append(f"💾 دیسک {d['drive']} {d['free_gb']} گیگ آزاد از {d['total_gb']} ({d['free_pct']}٪)")
+        bat = vit.get("battery_pct")
+        if bat is not None:
+            lines.append(f"🔋 باتری: {bat}٪")
+        for note in vit.get("notes") or []:
+            lines.append(f"⚠ {note}")
+        self._sys_text.insert(tk.END, "\n".join(lines) + "\n")
 
     def _refresh_schedules(self) -> None:
         """Render the operator's real schedule table (persisted, with status)."""
