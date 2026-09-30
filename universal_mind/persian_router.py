@@ -205,6 +205,15 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فایل های را پیدا", "filesearch"),
     ("را پیدا کن", "filesearch"),
     ("بزرگترین فایل", "filesearch"),
+    # sysstatus (R53 wave-6) — the REAL machine vitals in one report
+    ("وضعیت سیستم", "sysstatus"),
+    ("وضعیت سیستم را بگو", "sysstatus"),
+    ("وضعیت دستگاه", "sysstatus"),
+    ("رم چقدر", "sysstatus"),
+    ("حافظه چقدر", "sysstatus"),
+    ("دیسک چقدر", "sysstatus"),
+    ("فضای خالی", "sysstatus"),
+    ("باتری چقدر", "sysstatus"),
     # filededupe (R53 wave-5) — SHA-256 duplicates, preview-first
     ("فایلهای تکراری", "filededupe"),
     ("فایل های تکراری", "filededupe"),
@@ -778,7 +787,16 @@ def route_and_run(
             }
 
     # «وضعیت» — the agent's status board: every goal, its state and verdict.
-    if forced_route is None and (command.strip().startswith("وضعیت") or command.strip() in ("چی شد؟", "چه خبر")):
+    # R53 wave-6 — «وضعیت سیستم/دستگاه» is the MACHINE'S vitals (sysstatus
+    # capability), NOT the goal board; only a bare «وضعیت» opens the board.
+    _bare_status = command.strip()
+    _is_machine_status = any(
+        _bare_status.startswith(p) or f"{p} " in _bare_status
+        for p in ("وضعیت سیستم", "وضعیت دستگاه", "وضعیت کامپیوتر", "وضعیت لپتاپ")
+    ) or any(w in _bare_status for w in ("رم چقدر", "حافظه چقدر", "دیسک چقدر", "فضای خالی", "باتری چقدر"))
+    if forced_route is None and not _is_machine_status and (
+        command.strip().startswith("وضعیت") or command.strip() in ("چی شد؟", "چه خبر")
+    ):
         from universal_mind.agent_loop import _ensure_goals_table
 
         db = _status_store()

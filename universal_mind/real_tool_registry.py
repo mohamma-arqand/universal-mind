@@ -28,6 +28,7 @@ from universal_mind.zip_suite import ZipSuiteConnector
 from universal_mind.excel_suite import ExcelSuiteConnector
 from universal_mind.file_search_tool import FileSearchToolConnector
 from universal_mind.file_dedupe_tool import FileDedupeToolConnector
+from universal_mind.system_status_tool import SystemStatusToolConnector
 from universal_mind.pdfreader_tool import PdfReaderToolConnector
 from universal_mind.screenshot_tool import ScreenshotToolConnector
 from universal_mind.webfetch_tool import WebFetchToolConnector
@@ -58,6 +59,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "screenshot": ScreenshotToolConnector,  # real ImageGrab — the 18th: sees the screen
     "filesearch": FileSearchToolConnector,  # R53 wave-4 — real disk search (read-only)
     "filededupe": FileDedupeToolConnector,  # R53 wave-5 — SHA-256 duplicates, preview-first
+    "sysstatus": SystemStatusToolConnector,  # R53 wave-6 — real machine vitals
     "csv": CsvSuiteConnector,             # real csv stdlib — the 19th: universal interchange
     "zip": ZipSuiteConnector,             # real zipfile — the 20th: the world's archive format
     "image": ImageSuiteConnector,      # full Pillow surface (convert/resize/crop/rotate/filters/...)

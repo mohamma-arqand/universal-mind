@@ -44,6 +44,7 @@ _CAP_FA: dict[str, str] = {
     "goal": "عامل هدف",
     "filesearch": "جستجوی فایل",
     "filededupe": "فایلهای تکراری",
+    "sysstatus": "وضعیت سیستم",
     "scheduler": "زمانبند",
 }
 
@@ -214,6 +215,36 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                 f"با ستونهای {'، '.join(str(h) for h in result.get('headers', []))}."
             )
         return None
+    if cap == "sysstatus" and isinstance(result, dict):
+        lines = []
+        up = result.get("uptime")
+        if up:
+            parts = []
+            if up.get("days"):
+                parts.append(f"{_fa_num(up['days'])} روز")
+            if up.get("hours"):
+                parts.append(f"{_fa_num(up['hours'])} ساعت")
+            if not up.get("days") and up.get("minutes"):
+                parts.append(f"{_fa_num(up['minutes'])} دقیقه")
+            lines.append(f"دستگاه {' و '.join(parts)} روشن است")
+        ram = result.get("ram")
+        if ram:
+            lines.append(
+                f"رم: {_fa_num(ram['used_pct'])}٪ در استفاده "
+                f"({_fa_num(ram['free_gb'])} گیگ از {_fa_num(ram['total_gb'])} آزاد)"
+            )
+        for d in result.get("disks") or []:
+            lines.append(
+                f"دیسک {d['drive']} {_fa_num(d['free_gb'])} گیگ از {_fa_num(d['total_gb'])} آزاد ({_fa_num(d['free_pct'])}٪)"
+            )
+        bat = result.get("battery_pct")
+        if bat is not None:
+            lines.append(f"باتری: {_fa_num(bat)}٪")
+        for note in result.get("notes") or []:
+            lines.append(f"⚠ {note}")
+        if not lines:
+            return "وضعیت سیستم خوانده نشد."
+        return "\n".join(lines)
     if cap == "filededupe" and isinstance(result, dict):
         groups = result.get("groups", []) or []
         if result.get("deleted"):

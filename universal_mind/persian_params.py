@@ -341,6 +341,10 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "write"}  # text comes from the flow
         return {"operation": "read"}
 
+    if capability == "sysstatus":
+        # R53 wave-6 — the machine's vitals; no parameters to extract,
+        # the probe reads everything it can and names what it cannot.
+        return {"operation": "status"}
     if capability == "filededupe":
         # R53 wave-5 — «فایلهای تکراری در دانلودها را پاک کن».
         from universal_mind.file_search_tool import extract_search_params
