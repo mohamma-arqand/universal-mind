@@ -167,7 +167,9 @@ class TestWebFetchWiring:
             def __exit__(self, *a: object) -> bool:
                 return False
 
-        monkeypatch.setattr(wf.urllib.request, "urlopen", lambda *a, **k: _Resp())
+        monkeypatch.setattr(
+            wf, "_OPENER", type("O", (), {"open": lambda *a, **k: _Resp()})()
+        )
         out = wf.WebFetchTool().fetch("https://example.com/evil")
         assert out["ok"] is True
         assert out["quarantine"]["verdict"] == "hostile"
@@ -191,6 +193,8 @@ class TestWebFetchWiring:
             def __exit__(self, *a: object) -> bool:
                 return False
 
-        monkeypatch.setattr(wf.urllib.request, "urlopen", lambda *a, **k: _Resp())
+        monkeypatch.setattr(
+            wf, "_OPENER", type("O", (), {"open": lambda *a, **k: _Resp()})()
+        )
         out = wf.WebFetchTool().fetch("https://example.com/calm")
         assert out["quarantine"]["verdict"] == "clean"

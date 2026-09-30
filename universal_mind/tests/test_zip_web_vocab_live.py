@@ -107,7 +107,9 @@ class TestWebfetchOffline:
                 pass
 
         tool = WebFetchTool()
-        with mp("urllib.request.urlopen", return_value=FakeResponse()):
+        # R57: the transport seam is the guarded OPENER, not urlopen — a
+        # patch on urllib.request.urlopen no longer reaches the tool.
+        with mp.object(wf._OPENER, "open", return_value=FakeResponse()):
             result = tool.fetch("http://example.com/big")
         assert result["ok"] is True
         assert result["truncated"] is True  # the cap bit

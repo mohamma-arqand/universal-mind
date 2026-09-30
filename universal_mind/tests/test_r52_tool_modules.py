@@ -134,7 +134,9 @@ class TestWebFetchLive:
         t = threading.Thread(target=srv.serve_forever, daemon=True)
         t.start()
         try:
-            r = WebFetchTool().fetch(f"http://127.0.0.1:{port}/x")
+            # R57: a loopback target is refused BY DEFAULT — reading the
+            # operator's own machine must be an explicit act.
+            r = WebFetchTool().fetch(f"http://127.0.0.1:{port}/x", allow_private=True)
         finally:
             srv.shutdown()
             t.join(timeout=2)
@@ -144,7 +146,15 @@ class TestWebFetchLive:
     def test_a_refused_connection_is_named_offline(self) -> None:
         from universal_mind.webfetch_tool import WebFetchTool
 
-        r = WebFetchTool().fetch("http://127.0.0.1:1/nope")
+        # R57 split this in two: by default loopback is BLOCKED outright
+        # (SSRF guard); with the guard explicitly lifted it is an ordinary
+        # refused connection, classified honestly.
+        blocked = WebFetchTool().fetch("http://127.0.0.1:1/nope")
+        assert blocked["ok"] is False
+        assert blocked["kind"] == "blocked_target"
+        assert blocked["error"]
+
+        r = WebFetchTool().fetch("http://127.0.0.1:1/nope", allow_private=True)
         assert r["ok"] is False
         assert r["kind"] == "offline"
         assert r["error"]
