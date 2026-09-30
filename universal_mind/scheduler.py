@@ -30,7 +30,7 @@ _FA_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
 
 @dataclass(frozen=True)
 class Schedule:
-    """One persisted recurring task."""
+    """One persisted task — repeating, or a one-shot reminder (R53 wave-2)."""
 
     schedule_id: int
     command: str          # the Persian command to run when due
@@ -39,6 +39,8 @@ class Schedule:
     minute_of_hour: int = 0  # R45-2: the minute within the hour (else 0)
     last_run: str = ""    # ISO timestamp of the last real firing ('' = never)
     active: bool = True
+    kind: str = ""        # '' = repeating; 'once' = one-shot reminder (R53)
+    run_at: str = ""      # for kind='once': the LOCAL ISO moment to fire
 
 
 def _normalize_fa_numbers(text: str) -> str:
@@ -89,6 +91,138 @@ def parse_schedule(command: str) -> dict[str, Any] | None:
         if n > 0:
             return {"every_minutes": n * 60, "hour_of_day": -1}
     return None
+
+
+# R53 wave-2 — ONE-SHOT TIME WORDS (the local clock, the operator's words).
+_FA_NUMS = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+
+
+def _re_search_her(text: str) -> bool:
+    """True when the sentence carries the REPEATING marker «هر ...».
+
+    «هر روز» / «هر ۳۰ دقیقه» / «هر وقت» — an interval, not a moment. Written
+    as its own helper because the word «هر» also appears inside other words;
+    the check is on the standalone token preceding a time word.
+    """
+    import re
+
+    return bool(re.search(r"\bهر\b", text) or re.search(r"هر (روز|دقیقه|ساعت|هفته|ماه|وقت)", text))
+
+
+def parse_one_shot(command: str, now: datetime | None = None) -> dict[str, Any] | None:
+    """Extract a ONE-SHOT moment from Persian, or None.
+
+    Honest forms (LOCAL clock — the one-clock law):
+      «فردا ساعت ۸ ...» / «فردا صبح ساعت ۷:30 ...»  → tomorrow at H[:M]
+      «امشب ساعت ۲۱ ...» / «امشب ۹ ...»              → today at H (evening)
+      «ساعت ۱۵:۳۰ ...» / «ساعت ۳ و نیم ...»          → today (or tomorrow if past)
+      «پس‌فردا ساعت ۸ ...»                             → day after tomorrow
+    «صبح/صبح زود» alone → tomorrow 08:00; «ظهر» → today 12:00 (or tomorrow).
+    None = no one-shot moment in the sentence (repeating/other syntax).
+    """
+    import re
+
+    text = command.translate(_FA_NUMS)
+    text = text.replace("\u200c", " ")  # ZWNJ → space for پس‌فردا
+    current = now or datetime.now()
+    # REPEATING IS NOT ONE-SHOT: «هر روز ساعت ۸» / «هر ۳۰ دقیقه» carry an
+    # interval (هر) — they belong to parse_schedule, never to a single moment.
+    if _re_search_her(text):
+        return None
+
+    def _at(day_offset: int, hour: int, minute: int) -> datetime:
+        candidate = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        candidate = candidate + timedelta(days=day_offset)
+        if day_offset == 0 and candidate <= current:
+            candidate += timedelta(days=1)  # «ساعت ۸» at 9am means TOMORROW 8
+        return candidate
+
+    # explicit hour first — it names the moment precisely
+    hm = re.search(r"ساعت (\d{1,2})(?::(\d{1,2})| و (نیم|ربع))?", text)
+    day = 0
+    if "پس فردا" in text or "پس‌فردا" in command:
+        day = 2
+    elif "فردا" in text:
+        day = 1
+    elif "امشب" in text:
+        day = 0
+        if hm is None:
+            hm = re.search(r"امشب (\d{1,2})(?::(\d{1,2}))?", text)
+    if hm:
+        hour = int(hm.group(1))
+        minute = 0
+        if hm.group(2):
+            minute = int(hm.group(2))
+        elif hm.group(3) == "نیم":
+            minute = 30
+        elif hm.group(3) == "ربع":
+            minute = 15
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return {"run_at": _at(day, hour, minute).isoformat(), "day_offset": day}
+
+    # bare day-words: صبح زود/فردا صبح → 08:00, ظهر → 12:00, امشب → 21:00
+    if "پس فردا" in text or "پس‌فردا" in command:
+        return {"run_at": _at(2, 8, 0).isoformat(), "day_offset": 2}
+    if "فردا" in text:
+        return {"run_at": _at(1, 8, 0).isoformat(), "day_offset": 1}
+    if "صبح زود" in text:
+        return {"run_at": _at(1, 6, 30).isoformat(), "day_offset": 1}
+    if "امشب" in text:
+        return {"run_at": _at(0, 21, 0).isoformat(), "day_offset": 0}
+    if "ظهر" in text:
+        return {"run_at": _at(0, 12, 0).isoformat(), "day_offset": 0}
+    return None
+
+
+def register_one_shot(command: str, now: datetime | None = None) -> dict[str, Any]:
+    """Persist a ONE-SHOT reminder («یادم بنداز که فردا زود بیدار شوم»).
+
+    The sentence's BODY (minus the one-shot time words) becomes the reminder
+    text — what actually gets said aloud/toasted at the moment. Fires once,
+    then the tick deletes it (a fired reminder that stays is a lie in the list).
+    """
+    moment = parse_one_shot(command, now)
+    if moment is None:
+        return {"ok": False, "error": "یک زمانِ یکبارمصرف در جمله پیدا نکردم", "id": None}
+    body = command.strip()
+    for noise in ("یادم بنداز که", "یادم بنداز", "یادآوری کن که", "یادآوری کن",
+                  "یادم باشه که", "یادم باشه", "به یادم بیار که", "به یادم بیار"):
+        if body.startswith(noise):
+            body = body[len(noise):].strip()
+            break
+    body = body or command.strip()
+    db = _store()
+    _ensure_table(db)
+    db.insert_many("schedules", [{
+        "command": body,
+        "every_minutes": "0",
+        "hour_of_day": "-1",
+        "minute_of_hour": "0",
+        "last_run": "",
+        "active": "1",
+        "kind": "once",
+        "run_at": moment["run_at"],
+    }])
+    # WHEN (in Persian): فردا/امشب + ساعت — the operator reads time in words.
+    fire = datetime.fromisoformat(moment["run_at"])
+    days_fa = {0: "امروز", 1: "فردا", 2: "پس‌فردا"}.get(moment["day_offset"], "")
+    h = _fa_num(fire.hour)
+    m = _fa_num(fire.minute)
+    clock = f"ساعت {h}" + (f":{m}" if fire.minute else "")
+    when_fa = f"{days_fa} {clock}".strip()
+    return {"ok": True, "id": None, "run_at": moment["run_at"], "when_fa": when_fa,
+            "reminder": body, "error": ""}
+
+
+def delete_schedule(schedule_id: int) -> dict[str, Any]:
+    """Remove a schedule/reminder BY ID (the operator's explicit intent)."""
+    db = _store()
+    _ensure_table(db)
+    try:
+        db.execute(f"DELETE FROM schedules WHERE id = {int(schedule_id)}")
+    except Exception as exc:  # noqa: BLE001 — deletion reports, never crashes
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "deleted": int(schedule_id), "error": ""}
 
 
 def parse_folder_watcher(command: str) -> dict[str, Any] | None:
@@ -172,6 +306,14 @@ def _ensure_table(db: DatabaseSuite) -> None:
         names = {str(r["name"]) for r in cols.get("rows", [])} if cols.get("ok") else set()
         if "minute_of_hour" not in names:
             db.execute("ALTER TABLE schedules ADD COLUMN minute_of_hour INTEGER DEFAULT 0")
+        # R53 wave-2 — THE ONE-SHOT REMINDER: a reminder with an explicit
+        # run_at fires ONCE (kind='once') and is deleted after firing; kind=''
+        # (or NULL) keeps every pre-existing row a REPEATING schedule. The
+        # same table, the same tick, zero migration for existing rows.
+        if "kind" not in names:
+            db.execute("ALTER TABLE schedules ADD COLUMN kind TEXT DEFAULT ''")
+        if "run_at" not in names:
+            db.execute("ALTER TABLE schedules ADD COLUMN run_at TEXT DEFAULT ''")
     except Exception:  # noqa: BLE001 — migration is best-effort, never fatal
         pass
 
@@ -252,7 +394,10 @@ def list_schedules() -> list[Schedule]:
     """Every persisted schedule (the operator's real task table)."""
     db = _store()
     _ensure_table(db)
-    q = db.query("SELECT id, command, every_minutes, hour_of_day, minute_of_hour, last_run, active FROM schedules ORDER BY id")
+    q = db.query(
+        "SELECT id, command, every_minutes, hour_of_day, minute_of_hour, "
+        "last_run, active, kind, run_at FROM schedules ORDER BY id"
+    )
     if not q.get("ok"):
         return []
     out: list[Schedule] = []
@@ -265,6 +410,8 @@ def list_schedules() -> list[Schedule]:
             minute_of_hour=int(r["minute_of_hour"] or 0),
             last_run=str(r["last_run"] or ""),
             active=bool(int(r["active"])),
+            kind=str(r.get("kind") or ""),
+            run_at=str(r.get("run_at") or ""),
         ))
     return out
 
@@ -274,6 +421,15 @@ def _next_due(schedule: Schedule, now: datetime | None = None) -> datetime | Non
     current = now or datetime.now()
     if not schedule.active:
         return None
+    # R53 wave-2 — a one-shot reminder is due exactly at its run_at (LOCAL,
+    # the operator's clock — the one-clock law), never before, never after.
+    if schedule.kind == "once":
+        if not schedule.run_at:
+            return None  # an armless one-shot is honestly never due
+        try:
+            return datetime.fromisoformat(schedule.run_at)
+        except ValueError:
+            return None  # a malformed run_at never fires blindly
     if not schedule.last_run:
         return current  # never ran → due immediately
     try:
@@ -415,6 +571,25 @@ def run_due(max_runs: int = 5, *, contest: bool = True) -> dict[str, Any]:
                     entry["contest"] = goal_run_report(goal_result).replace("\n", " ")[:100]
                 mark_run(schedule.schedule_id)
                 fired.append(entry)
+                continue
+            if schedule.kind == "once":
+                # R53 wave-2 — A ONE-SHOT REMINDER: the body IS the message.
+                # Toast it, say it (the mute law applies), then DELETE the row:
+                # a fired reminder that stays in the list is a lie.
+                from universal_mind.real_notify import NotifyTool
+                from universal_mind.speech_tool import SpeechTool
+
+                NotifyTool().notify("یادآور", schedule.command)
+                try:
+                    SpeechTool().speak(schedule.command)
+                except Exception:  # noqa: BLE001 — the voice is a bonus
+                    pass
+                delete_schedule(schedule.schedule_id)
+                fired.append({
+                    "schedule_id": schedule.schedule_id,
+                    "command": schedule.command,
+                    "ok": True, "route": ["reminder"], "once": True,
+                })
                 continue
             payload: dict[str, Any] = route_and_run(schedule.command)
             cmd_entry: dict[str, Any] = {

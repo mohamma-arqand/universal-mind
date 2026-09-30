@@ -395,12 +395,93 @@ def route_and_run(
     # a SCHEDULE, not an instant toast. Any «یادآور» carrying a recurring
     # time pattern registers in the scheduler and answers with the real
     # next-due — a reminder without a registered time is only hope.
-    if forced_route is None and ("یادآور" in command or "یادآوری" in command):
-        from universal_mind.scheduler import parse_schedule, register
+    if forced_route is None and (
+        "یادآور" in command or "یادآوری" in command or "یادم بنداز" in command or "یادم باشه" in command
+    ):
+        from universal_mind.scheduler import (
+            delete_schedule,
+            list_schedules,
+            parse_one_shot,
+            parse_schedule,
+            register,
+            register_one_shot,
+        )
 
         _body = command
         for _m in ("توضیح بده", "فقط بگو چه میکنی", "فقط بگو چه کار میکنی"):
-            _body = _body.replace(_m, "")
+            _body = _body.replace(_m, "").strip()
+        _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+        # R53 wave-2 — «یادآورهای من»: the REAL list, with each next-due in Persian.
+        if ("یادآورهای" in _body or "یادآوریهای" in _body) and (
+            "من" in _body or "لیست" in _body or "فهرست" in _body or "چی" in _body
+        ):
+            from datetime import datetime
+
+            rows = list_schedules()
+            lines = []
+            for s in rows:
+                if s.kind == "once":
+                    try:
+                        fire = datetime.fromisoformat(s.run_at)
+                        lines.append(f"«{s.command}» — یکبار، {fire.strftime('%H:%M')} روز {fire.strftime('%Y-%m-%d')}")
+                    except ValueError:
+                        lines.append(f"«{s.command}» — یکبار (زمان ناخوانا)")
+                elif s.hour_of_day >= 0:
+                    lines.append(f"«{s.command}» — هر روز ساعت {str(s.hour_of_day).translate(_FA)}")
+                else:
+                    lines.append(f"«{s.command}» — هر {str(s.every_minutes).translate(_FA)} دقیقه")
+            _msg = (
+                "یادآورهایت:\n" + "\n".join(f"• {ln}" for ln in lines)
+                if lines else "هیچ یادآوری ثبت نشده — «یادم بنداز که فردا ساعت ۸ ...» بگو."
+            )
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"count": len(rows)},
+                "agent_report": _msg,
+                "_registry": registry or ToolRegistry(),
+            }
+
+        # R53 wave-2 — «یادآور X را حذف کن»: explicit deletion by match.
+        import re as _re
+
+        _del = _re.search(r"یادآور\s+«?([^»!،]+?)»?\s+را حذف", _body) or _re.search(
+            r"حذف کن یادآور\s+«?([^»!،]+)", _body)
+        if _del and "حذف" in _body:
+            _needle = _del.group(1).strip()
+            rows = list_schedules()
+            hit = next((s for s in rows if _needle and _needle in s.command), None)
+            if hit is None:
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"deleted": 0},
+                    "agent_report": f"یادآوری با متن «{_needle}» پیدا نکردم — «یادآورهای من» را ببین.",
+                    "_registry": registry or ToolRegistry(),
+                }
+            delete_schedule(hit.schedule_id)
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"deleted": hit.schedule_id},
+                "agent_report": f"یادآور «{hit.command}» حذف شد.",
+                "_registry": registry or ToolRegistry(),
+            }
+
+        # R53 wave-2 — ONE-SHOT FIRST: «یادم بنداز فردا ساعت ۸ ...» carries a
+        # moment, not an interval. A bare «فردا/امشب/ساعت H» never parses as
+        # repeating — the old answer was «نشناختم» for the most human reminder.
+        _shot = parse_one_shot(_body)
+        if _shot is not None and "هر" not in _body.split("ساعت")[0][:40]:
+            _res = register_one_shot(_body)
+            if _res.get("ok"):
+                return {
+                    "ok": True, "command": command, "route": ["scheduler"],
+                    "result": {"once": True, "run_at": _res["run_at"]},
+                    "agent_report": (
+                        f"یادآور یکبارمصرف ثبت شد: {_res['when_fa']} — «{_res['reminder']}». "
+                        "«یادآورهای من» فهرستشان را نشان میدهد."
+                    ),
+                    "_registry": registry or ToolRegistry(),
+                }
         _spec = parse_schedule(_body)
         if _spec is not None:
             _res = register(_body)
