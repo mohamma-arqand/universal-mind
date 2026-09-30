@@ -27,6 +27,48 @@ def _fa_num(value: int | float | str) -> str:
     return str(value).translate(_FA)
 
 
+_FA_MONTHS = {
+    1: "فروردین", 2: "اردیبهشت", 3: "خرداد", 4: "تیر", 5: "مرداد", 6: "شهریور",
+    7: "مهر", 8: "آبان", 9: "آذر", 10: "دی", 11: "بهمن", 12: "اسفند",
+}
+
+
+def _windows_uptime_fa() -> str:
+    """The REAL uptime from WMI LastBootUpTime, in Persian words.
+
+    An unreadable WMI is honest («نمیدانم»), never a fabricated number.
+    """
+    try:
+        import subprocess
+
+        out = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-Command",
+             "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToString('yyyy-MM-dd HH:mm:ss')"],
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+        raw = (out.stdout or "").strip()
+        if out.returncode != 0 or not raw or "T" not in raw and "-" not in raw:
+            return "مدت روشنبودن دستگاه را نتوانستم بخوانم."
+        from datetime import datetime
+
+        # CIM prints locale-dependent text by default; we asked for ISO —
+        # take the leading 19 chars either way and parse.
+        boot = datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S")
+        delta = datetime.now() - boot
+        days, seconds = delta.days, delta.seconds
+        hours, minutes = seconds // 3600, (seconds % 3600) // 60
+        parts = []
+        if days:
+            parts.append(f"{_fa_num(days)} روز")
+        if hours:
+            parts.append(f"{_fa_num(hours)} ساعت")
+        if minutes and not days:
+            parts.append(f"{_fa_num(minutes)} دقیقه")
+        return "دستگاه " + " و ".join(parts) + " است که روشن است."
+    except Exception:  # noqa: BLE001 — the reflex never crashes the router
+        return "مدت روشنبودن دستگاه را نتوانستم بخوانم."
+
+
 def _query(db: DatabaseSuite, sql: str) -> list[dict[str, Any]]:
     try:
         q = db.query(sql)
@@ -124,6 +166,32 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         if not rows:
             return _reflex_answer(c, "هنوز چیزی نساختهایم.")
         return _reflex_answer(c, f"آخرین کار موفق: «{rows[0]['command']}» ({rows[0]['route']}).")
+
+    # R53 — «امروز چندمه؟ / امروز چه روزی است؟ / ساعت چنده؟» — the LOCAL
+    # clock in the operator's own calendar (Jalali), real, from persian_date.
+    if (
+        ("امروز" in c and ("چندمه" in c or "چند مه" in c or "چه روزی" in c or "تاریخ" in c))
+        or "تاریخ امروز" in c
+        or c in ("تاریخ چنده؟", "تاریخ؟", "ساعت چنده؟", "ساعت چند است؟")
+    ):
+        from datetime import datetime
+
+        from universal_mind.persian_date import jalali_date
+
+        if "ساعت" in c:
+            now = datetime.now()
+            return _reflex_answer(
+                c,
+                f"ساعت {_fa_num(now.strftime('%H:%M'))} است — {_fa_num(now.strftime('%A')) if False else ''}"
+                f"امروز {_fa_num(now.day)} {_FA_MONTHS.get(now.month, '')}، تاریخ {jalali_date()}",
+            )
+        return _reflex_answer(c, f"امروز {jalali_date()} است.")
+
+    # «چند وقته دستگاه روشن است؟» — the REAL Windows uptime (WMI), honest.
+    if ("دستگاه" in c or "سیستم" in c or "کامپیوتر" in c) and (
+        "روشن" in c and ("چند" in c or "وقت" in c or "مدت" in c)
+    ):
+        return _reflex_answer(c, _windows_uptime_fa())
 
     # «راهنما / چیکار میتونی بکنی؟ / چی بلدی؟ / قابلیتهات» — the list, counted.
     if (

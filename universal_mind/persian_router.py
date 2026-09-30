@@ -86,6 +86,17 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("تصویر", "image"),
     ("هوش مصنوعی", "llm"),      # R45-15 — a live chat model, env-wired
     ("مدل زبانی", "llm"),
+    # R53 — THE KNOWLEDGE CLASS: «هویج چیه؟» / «پایتخت فرانسه؟» / «تعریف X»
+    # are WORLD questions. When a live LLM endpoint is wired they answer
+    # through it; without one the answer is the HONEST «نمیدانم» + the
+    # question is harvested (unknown_harvest) so the day the endpoint
+    # arrives, the knowledge gap is already mapped.
+    ("چیه؟", "llm"),
+    ("چیست؟", "llm"),
+    ("چی هست", "llm"),
+    ("تعریف", "llm"),
+    ("یعنی چی", "llm"),
+    ("چند وقته", "llm"),
     ("عکس", "image"),
     ("تغییر اندازه", "image"),
     ("برش", "image"),
@@ -1352,6 +1363,30 @@ def route_and_run(
     if anaphora_subject and forced_route is None:
         payload["result"]["anaphora_of"] = anaphora_subject
         _ANAPHORA_SUBJECT.clear()
+    # R53 — THE KNOWLEDGE FALLBACK: a world question («هویج چیه؟») that
+    # routed to llm and failed BECAUSE no endpoint is wired is answered
+    # honestly — «نمیدانم» + the exact wiring recipe — and the question is
+    # HARVESTED, so the day an endpoint arrives the gap is already mapped.
+    if (
+        payload.get("ok") is not True
+        and "llm" in (payload.get("route") or [])
+        and "llm" in (payload.get("errors") or {})
+        and any(w in command for w in ("چیه؟", "چیست؟", "چی هست", "تعریف", "یعنی چی"))
+    ):
+        try:
+            from universal_mind.unknown_harvest import harvest_unknown
+
+            harvest_unknown([command])
+        except Exception:  # noqa: BLE001 — harvesting never blocks the answer
+            pass
+        payload["agent_report"] = (
+            "این پرسش دانشی است و پاسخش به یک مدل زبانی زنده نیاز دارد — "
+            "الان وصل نیست.\n"
+            "برای وصلکردن: UM_LLM_BASE_URL را ست کن (مثلاً http://127.0.0.1:8000/v1) "
+            "و UM_LLM_KEY را در محیط بگذار.\n"
+            "پرسشت را یادداشت کردم تا وقتی مدل وصل شد، همین را جواب بدهم."
+        )
+        payload["errors"]["llm"] = "مدل زبانی وصل نیست — پرسش برای بعد نگه داشته شد"
     # R38-L1: the fluent report rides IN the payload — CLI, API, the chat tab
     # and the goal loop all read ONE source instead of re-rendering. Only
     # when empty (the reflex/conversational classes fill theirs themselves).
