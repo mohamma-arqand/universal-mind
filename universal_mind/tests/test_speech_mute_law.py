@@ -72,30 +72,49 @@ class TestMutedSpeakIsHonest:
             prefs.set("voice_muted", "")
 
     def test_unmuted_speak_still_works_and_has_no_muted_field(self) -> None:
-        """UM_MUTE absent + row cleared => the REAL voice path (SAPI); on a
+        """UM_MUTE absent + row cleared => the REAL voice path; on a
         Persian-less Windows it fails honestly — that is the honest contract,
-        and it must NOT be the muted fast-path."""
+        and it must NOT be the muted fast-path. R54: the conftest forces
+        UM_MUTE=1 session-wide AND redirects the wire to a wav sink, so
+        this test isolates its OWN env and checks the un-muted shape via
+        the row channel only (nothing audible can escape: the conftest
+        sink wrapper still applies to the real call)."""
         from universal_mind.speech_tool import SpeechTool
 
-        os.environ.pop("UM_MUTE", None)
-        res = SpeechTool().speak("hello world")
-        assert "muted" not in res or res.get("muted") is not True
+        env_holder = os.environ.pop("UM_MUTE", None)
+        from universal_mind import operator_preferences as prefs
+        prefs.set("voice_muted", "")
+        try:
+            res = SpeechTool().speak("hello world")
+            assert "muted" not in res or res.get("muted") is not True
+        finally:
+            if env_holder is not None:
+                os.environ["UM_MUTE"] = env_holder
+            prefs.set("voice_muted", "1")  # the operator's standing choice
 
 
 class TestMuteSurvivesAndIsReadLive:
     def test_the_switch_is_read_live_not_cached(self) -> None:
-        """set row => muted; clear row => unmuted, no process restart."""
+        """set row => muted; clear row => unmuted, no process restart.
+        R54: conftest forces UM_MUTE=1 session-wide (the silent test
+        floor); this test isolates its OWN env to prove the ROW is read
+        live — nothing audible escapes (the conftest sink wrapper still
+        routes the wire to a wav)."""
+        import os as _os
         from universal_mind import operator_preferences as prefs
         from universal_mind.speech_tool import SpeechTool
 
+        held = _os.environ.pop("UM_MUTE", None)
         try:
             prefs.set("voice_muted", "1")
             assert SpeechTool().speak("یک").get("muted") is True
             prefs.set("voice_muted", "")
-            got = SpeechTool().speak("hello world")  # english => real SAPI
+            got = SpeechTool().speak("hello world")
             assert got.get("muted") is not True
         finally:
-            prefs.set("voice_muted", "")
+            prefs.set("voice_muted", "1")  # the operator's standing choice
+            if held is not None:
+                _os.environ["UM_MUTE"] = held
 
     def test_scheduler_voice_is_muted_by_the_same_law(self) -> None:
         """scheduler.py's goal-outcome voice runs through SpeechTool().speak —

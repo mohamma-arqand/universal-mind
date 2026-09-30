@@ -23,6 +23,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 
 def tick(*, notify_summary: bool = True) -> dict[str, object]:
+    # R54 (2026-09-30, operator decree): the scheduled tick runs hourly
+    # unattended — it must NEVER use the loudspeaker. UM_MUTE is the mute
+    # law's env channel; the operator can still unmute interactively
+    # (the desktop path does not go through this env).
+    import os as _os
+    _os.environ.setdefault("UM_MUTE", "1")
     """One honest tick: back up the store, fire everything due, then SAY it.
 
     The rotating backup runs FIRST (the corrupted-db lesson: an external

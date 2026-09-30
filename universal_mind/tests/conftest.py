@@ -51,6 +51,40 @@ def _isolated_shared_store(request: object) -> Iterator[object]:
 
 
 @pytest.fixture(autouse=True, scope="session")  # type: ignore[untyped-decorator]
+def _no_loudspeaker_in_tests() -> None:
+    """R54 THE SILENT TEST FLOOR (2026-09-30, operator decree).
+
+    The operator heard the machine SPEAK ("hello world", "done") from
+    parallel verify runs: live speech tests were exercising the real
+    SAPI loudspeaker. The decree: no test may use the loudspeaker —
+    ever. Two permanent layers:
+      1. UM_MUTE=1 for the whole session — the mute law's env channel
+         silences every ordinary speak() (composed-but-silent).
+      2. a speech-tool guard: ANY speak that would reach the real wire
+         is redirected to a throwaway wav (SetOutputToWaveFile) — the
+         engine still runs (the live-wire contract keeps its honest
+         failure paths) but nothing is audible. Tests that explicitly
+         set out_wav keep their own file.
+    """
+    import os
+    import tempfile as _tf
+
+    os.environ["UM_MUTE"] = "1"
+
+    from universal_mind import speech_tool as _st
+
+    _real_speak = _st.SpeechTool.speak
+
+    def _silent_speak(self, text, *, voice_hint="fa", out_wav="", rate=0):
+        sink = out_wav or os.path.join(
+            _tf.gettempdir(), f"um_test_silent_{os.getpid()}.wav")
+        return _real_speak(self, text, voice_hint=voice_hint,
+                           out_wav=sink, rate=rate)
+
+    _st.SpeechTool.speak = _silent_speak  # type: ignore[assignment]
+
+
+@pytest.fixture(autouse=True, scope="session")  # type: ignore[untyped-decorator]
 def _purge_test_rows_after_suite() -> object:
     """After the whole session: remove obvious test rows from the live store.
 

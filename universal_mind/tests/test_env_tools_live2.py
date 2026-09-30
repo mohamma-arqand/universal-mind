@@ -19,23 +19,30 @@ import pytest
 class TestSpeechLive:
     """SAPI واقعی ویندوز: لیست صداها، صداقت صدای فارسی، مسیرهای خطا.
 
-    R53+THE PERMANENT MUTE: these tests exercise the REAL voice wire (a
-    missing engine, a failing engine, a broken wav) — the mute law would
-    short-circuit speak() before the wire is ever touched and the honest
-    failures under test would never happen. So the class LIFTS the mute
-    for its own duration and RESTORES the operator's permanent choice
-    (voice_muted='1') in teardown — the mute is the platform's law, and
-    these tests are the voice's own physical.
+    R54+THE SILENT PHYSICAL (2026-09-30, operator decree: no test may
+    use the loudspeaker — ever): these tests still exercise the REAL
+    SAPI wire (voice enumeration, engine failures, wav bytes) but every
+    synthesis is routed to a WAVE FILE — SetOutputToWaveFile means the
+    engine runs for real and the loudspeaker stays silent. The class
+    still lifts the mute row for the duration (the mute law would
+    short-circuit before the wire) and restores it in teardown; with
+    out_wav set, nothing audible can escape either way.
     """
 
     @pytest.fixture(autouse=True)  # type: ignore[untyped-decorator]
-    def _unmute_for_the_real_wire(self) -> Iterator[None]:
+    def _silent_real_wire(self, tmp_path: Path, monkeypatch) -> Iterator[Path]:
+        """Unmute BOTH channels for the real wire (env + row), sink all
+        audio to a wav — the wire runs, the loudspeaker never does."""
+        import os as _os
         from universal_mind import operator_preferences as prefs
 
+        monkeypatch.delenv("UM_MUTE", raising=False)  # conftest set it
         was = (prefs.get("voice_muted") or "").strip()
         prefs.set("voice_muted", "")
-        yield
+        self._sink = tmp_path / "sink.wav"  # every speak lands here, silently
+        yield tmp_path
         prefs.set("voice_muted", was or "1")  # restore the permanent choice
+        _os.environ["UM_MUTE"] = "1"  # restore the silent test floor
 
     def test_list_voices_is_real(self) -> None:
         from universal_mind.speech_tool import SpeechTool
@@ -58,7 +65,7 @@ class TestSpeechLive:
             "universal_mind.speech_tool.subprocess.run",
             side_effect=FileNotFoundError("no powershell"),
         ):
-            r = SpeechTool().speak("سلام")
+            r = SpeechTool().speak("سلام", out_wav=str(self._sink))
         assert r["ok"] is False
         assert "no powershell" in r["error"]
 
@@ -73,22 +80,25 @@ class TestSpeechLive:
         with mock_patch(
             "universal_mind.speech_tool.subprocess.run", return_value=_Bad()
         ):
-            r = SpeechTool().speak("hello")
+            r = SpeechTool().speak("hello", out_wav=str(self._sink))
         assert r["ok"] is False
         assert "engine broke" in r["error"]
 
     def test_english_speaks_and_names_the_voice(self) -> None:
         from universal_mind.speech_tool import SpeechTool
 
-        r = SpeechTool().speak("hello world")
+        r = SpeechTool().speak("hello world",
+                               out_wav=str(self._sink))  # silent: wav only
         assert r["ok"] is True
         assert r["voice"]  # WHICH voice, named — never silent
+        assert self._sink.exists() and self._sink.stat().st_size > 0
 
     def test_persian_without_a_farsi_voice_is_honest(self) -> None:
         """اگر صدای فارسی نصب نباشد، صادقانه نامیده میشود؛ اگر هست، راست میگوید."""
         from universal_mind.speech_tool import SpeechTool
 
-        r = SpeechTool().speak("سلام دنیا")
+        r = SpeechTool().speak("سلام دنیا",
+                               out_wav=str(self._sink))  # silent: wav only
         voices = SpeechTool().list_voices()
         has_fa = any(
             tag in str(v).lower() for v in voices["voices"] for tag in ("fa-", "farsi", "persian", "ar-")
