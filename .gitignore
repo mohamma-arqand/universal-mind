@@ -56,3 +56,4 @@ universal_mind/artifacts/
 # project is a pip/pyproject package, not a uv workspace).
 uv.lock
 .bwc-backup/
+universal_mind/docs/.night_shift.lock
