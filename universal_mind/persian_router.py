@@ -442,6 +442,22 @@ def route_and_run(
                 break
     explain_only = _explain
 
+    # R57 N2 — «تزریق‌ها را نشان بده»: the injection ledger read back from the
+    # real store. A defense the operator cannot inspect is a claim; this makes
+    # it an object. Read-only: nothing here deletes or forgets.
+    if forced_route is None and ("تزریق" in command or "نفوذ" in command) and any(
+        w in command for w in ("نشان بده", "بگو", "لیست", "فهرست", "چند", "چی", "را")
+    ):
+        from universal_mind.injection_ledger import count, list_attempts, render_fa
+
+        _attempts = list_attempts(limit=10)
+        return {
+            "ok": True, "command": command, "route": ["injection_ledger"],
+            "result": {"count": count(), "shown": len(_attempts)},
+            "agent_report": render_fa(_attempts),
+            "_registry": registry or ToolRegistry(),
+        }
+
     # R45-2 — THE DAILY REMINDER: «یادآور کن ... هر روز ساعت ۸ و نیم ...» is
     # a SCHEDULE, not an instant toast. Any «یادآور» carrying a recurring
     # time pattern registers in the scheduler and answers with the real

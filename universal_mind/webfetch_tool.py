@@ -209,6 +209,15 @@ class WebFetchToolConnector:
         result = self._tool.fetch(url, allow_private=bool(params.get("allow_private", False)))
         if result.get("ok") is not True:
             return ConnectorResult(ok=False, output=None, error=result.get("error", "failed"))
+        # R57 N2 — THE INJECTION LEDGER: a page that carried orders is an
+        # EVENT worth keeping. Recording is a lazy import + fail-safe: the
+        # ledger observes a fetch, it never breaks one.
+        try:
+            from universal_mind.injection_ledger import record_from_fetch
+
+            record_from_fetch(url, result)
+        except Exception:
+            pass
         return ConnectorResult(ok=True, output={
             k: v for k, v in result.items() if k != "ok"
         })

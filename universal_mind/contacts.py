@@ -31,7 +31,12 @@ def _db(db: DatabaseSuite | None = None) -> DatabaseSuite:
     store = db or DatabaseSuite.shared_persistent()
     store.execute(
         "CREATE TABLE IF NOT EXISTS contacts ("
-        "name TEXT PRIMARY KEY, address TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+        # ONE CLOCK: the writers below stamp local time, so the column default
+        # must be the same clock. CURRENT_TIMESTAMP is UTC — a row inserted by
+        # a path that omits the column would be hours off and every
+        # «امروز»-style read would silently miss it.
+        "name TEXT PRIMARY KEY, address TEXT, "
+        "updated_at TEXT DEFAULT (datetime('now','localtime')))"
     )
     return store
 
@@ -53,7 +58,7 @@ def save(name: str, address: str, *, db: DatabaseSuite | None = None) -> dict[st
     safe_addr = clean_addr.replace("'", "''")
     store.execute(
         f"INSERT INTO contacts (name, address, updated_at) VALUES "
-        f"('{safe_name}', '{safe_addr}', CURRENT_TIMESTAMP) "
+        f"('{safe_name}', '{safe_addr}', datetime('now','localtime')) "
         f"ON CONFLICT(name) DO UPDATE SET address = excluded.address, "
         f"updated_at = excluded.updated_at"
     )
