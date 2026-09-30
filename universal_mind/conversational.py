@@ -62,6 +62,18 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
         return _say(c, _greeting_state())
     if c in ("خسته نباشید", "خسته نباشی", "ممنون", "مرسی", "سپاس", "thanks", "thank you"):
         return _say(c, "خواهش میکنم! کاری بود، فرمان بده.")
+    # R53 wave-3 — IDENTITY: who am I, what can I do, how am I. A platform
+    # that answers statistics but goes mute on «اسمت چیه؟» has no face.
+    if c in ("اسمت چیه؟", "اسمت چیست؟", "اسم تو چیه؟", "اسمت؟") or "اسمت" in c and "چی" in c:
+        return _say(c, "اسمم «ذهن جهانی» است — دستیار فارسیزبانِ همین سیستم.")
+    if ("کی هستی" in c or "کیستی" in c or "خودت را معرفی" in c or "معرفی کن" in c):
+        return _say(c, _identity_intro())
+    if ("وضعیتت" in c or "وضعیت تو" in c) and ("چطور" in c or "چیه" in c or "چطوره" in c or "?" in c or "؟" in c):
+        return _say(c, _status_answer())
+    if ("چه کارهایی بلدی" in c or "چیکار میتونی بکنی" in c or "چه کارها میتونی" in c
+            or "چه کارهایی میتونی" in c or "چی بلدی" in c or "چه بلدی" in c
+            or "قابلیتهات" in c or "قابلیت هات" in c):
+        return _say(c, _abilities_answer())
     if ("چه یاد گرفتی" in c or "چه چیزهایی یاد گرفتی" in c
             or "یادگیریهایت" in c):
         try:
@@ -92,6 +104,46 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
     if c.startswith("سلام ") or "خوبی؟" in c:
         return _say(c, "سلام! فرمانت را بگو.")
     return None
+
+
+def _identity_intro() -> str:
+    """«تو کی هستی؟» — a three-sentence state-aware introduction."""
+    parts = ["من «ذهن جهانی» هستم؛ یک دستیار فارسیزبان که روی همین سیستم زندگی میکند."]
+    try:
+        from universal_mind.real_tool_registry import real_tool_registry
+
+        n_caps = len(real_tool_registry().capabilities())
+        parts.append(f"{_fa_num(n_caps)} قابلیت واقعی دارم؛ از نمودار و سند تا گفتار و یادآور.")
+    except Exception:  # noqa: BLE001 — the face never crashes
+        parts.append("از نمودار و سند تا گفتار و یادآور، با ابزار واقعی کار میکنم.")
+    parts.append("فرمانت را فارسی بگو؛ اگر چیزی را نشناختم، صادقانه میگویم.")
+    return " ".join(parts)
+
+
+def _status_answer() -> str:
+    """«وضعیتت چطوره؟» — the honest five-signal summary, one line each."""
+    try:
+        from universal_mind.self_status import self_status
+
+        rep = str(self_status().get("report", ""))
+        return rep if rep else "همهچیز روشن است؛ فرمانت را بگو."
+    except Exception:  # noqa: BLE001
+        return "در خدمتم — فرمانت را بگو."
+
+
+def _abilities_answer() -> str:
+    """«چه کارهایی بلدی؟» — the counted capability list + 3 live examples."""
+    try:
+        from universal_mind.real_tool_registry import real_tool_registry
+
+        caps = real_tool_registry().capabilities()
+        head = f"{_fa_num(len(caps))} قابلیت: " + "، ".join(sorted(caps))
+    except Exception:  # noqa: BLE001
+        return "برای فهرست کامل، «راهنما» بگو."
+    examples = (
+        "\nنمونه: «نمودار بکش»، «میانگین ۳ و ۹ را حساب کن»، «یادم بنداز فردا ساعت ۸ بیدارم کن»."
+    )
+    return head + examples
 
 
 def _greeting_state() -> str:

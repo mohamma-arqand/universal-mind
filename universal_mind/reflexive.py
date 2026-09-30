@@ -130,6 +130,9 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         c in ("راهنما", "help")
         or "چیکار میتونی" in c
         or "چی کار میتونی" in c
+        or "چه کار میتونی" in c
+        or "چه کارهایی میتونی" in c
+        or "چه کارهایی بلدی" in c
         or "چی بلدی" in c
         or "چه بلدی" in c
         or "قابلیتهات" in c
