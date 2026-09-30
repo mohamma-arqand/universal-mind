@@ -170,6 +170,7 @@ PROBES = [
     "probe_r48_mind.py",
     "probe_r53_waves.py",
     "probe_r57_adversarial.py",
+    "probe_r57_quarantine.py",
 ]
 
 

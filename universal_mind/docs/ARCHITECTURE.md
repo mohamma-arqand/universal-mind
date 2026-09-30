@@ -46,7 +46,7 @@
 | داده و محاسبه | `data_suite.py` (numpy)، `ai_suite.py` (sklearn)، `compute_adapter.py` (node)، `chart_suite.py` (matplotlib) |
 | ادراک | `screenshot_tool.py`، `ocr_tool.py`، `vision_suite.py`، `hearing.py` (STT) |
 | عمل سیستمی | `speech_tool.py` (SAPI TTS)، `real_notify.py` (toast)، `real_clipboard.py`، `real_media.py`، `real_archive.py` |
-| شبکه | `webfetch_tool.py`، `email_outbox.py` (RFC-822 + SMTP) |
+| شبکه | `webfetch_tool.py` + `content_quarantine.py`، `email_outbox.py` (RFC-822 + SMTP) |
 | **جدید R53** | `file_search_tool.py` (جستجوی دیسک، فقطخواندنی)، `file_dedupe_tool.py` (SHA-256، پیشنمایش-اول)، `system_status_tool.py` (uptime/RAM/دیسک/باتری) |
 | مدل زبانی | `llm_connector.py` (OpenAI-compatible؛ **نیازمند `UM_LLM_BASE_URL`** — فعلاً غیرفعال) |
 
