@@ -27,6 +27,9 @@ from universal_mind.connectors import ConnectorResult
 # one 16-minute suite that left 124,000 directories and ~60 GB on disk (the
 # live incident that made "No space left on device" the real gate).
 _SCRATCH_PREFIXES = (
+    "um-test-",  # the pytest conftest's mkdtemp suites (was MISSING: 84k
+                 # orphaned dirs / 9.6GB on C: Temp — the 2026-09-30 disk
+                 # audit; reap now clears them after the 1h age gate)
     "um-db-",
     "um-conn-",
     "um-chart-",
