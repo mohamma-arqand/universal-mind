@@ -79,12 +79,16 @@ def main() -> int:
         checks.append(("گفتگو بازپخش شد",
                        "نمودار فروش را بکش" in p["agent_report"] and "۲ پیام" in p["agent_report"]))
 
-        print("== R45-4 red team (time-passage hostility, 14 commands):")
-        from universal_mind.red_team import run_red_team
+        from universal_mind.red_team import HOSTILE_CORPUS, run_red_team
+
+        print(f"== R45-4 red team (whole corpus, {len(HOSTILE_CORPUS)} commands):")
         r = run_red_team()
         print(f"  total={r['total']} honest={r['honest']} findings={len(r['findings'])}")
-        checks.append(("پیکرهی خصمانه ۱۶تایی → ۱۴/۱۴ صادق",
-                       r["total"] == 14 and r["honest"] == 14 and not r["findings"]))
+        # THE CORPUS-SIZE LAW: the claim is "the WHOLE corpus stays honest" —
+        # never a magic count (R57 expanded 14 -> 32; the pin must not rot).
+        checks.append((f"پیکره‌ی خصمانه ({len(HOSTILE_CORPUS)}تایی) → همه صادق",
+                       r["total"] == len(HOSTILE_CORPUS)
+                       and r["honest"] == r["total"] and not r["findings"]))
 
     print()
     failed = [name for name, ok in checks if not ok]

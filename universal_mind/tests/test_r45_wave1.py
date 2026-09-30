@@ -187,8 +187,13 @@ class TestRedTeamTimeHostility:
     def test_the_whole_corpus_stays_honest(self) -> None:
         from universal_mind.red_team import run_red_team
 
+        from universal_mind.red_team import HOSTILE_CORPUS
+
         r = run_red_team()
-        assert r["total"] == 14
+        # THE CORPUS-SIZE LAW: never pin a magic number — an expanded corpus
+        # (R57 took it from 14 to 32) must not redden a test that only meant
+        # "the whole corpus stays honest". The invariant is total==len(corpus).
+        assert r["total"] == len(HOSTILE_CORPUS)
         assert r["honest"] == r["total"]
         assert not r["findings"]
 
