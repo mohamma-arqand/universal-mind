@@ -54,6 +54,19 @@ class SpeechTool:
         """
         if not text:
             return {"ok": False, "error": "empty text", "spoken": False}
+        # THE EMOJI LAW: SAPI cannot pronounce a glyph — it reads the emoji's
+        # NAME aloud ("White Heavy Checkmark" for ✅, "Done" from the operator's
+        # ears). Emoji are VISUAL: strip them from the spoken text (the words
+        # stay, the emoji never reaches the wire).
+        import re as _re
+
+        text = _re.sub(
+            "[\U0001F000-\U0001FAFF\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\uFE0F\u200d]+",
+            " ", text,
+        )
+        text = _re.sub(r"\s{2,}", " ", text).strip()
+        if not text:
+            return {"ok": False, "error": "empty text (emoji only)", "spoken": False}
         if _muted():
             # THE MUTE LAW: composed but silent — honest in every field.
             return {

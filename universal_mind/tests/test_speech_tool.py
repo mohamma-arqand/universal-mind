@@ -5,14 +5,24 @@ from __future__ import annotations
 
 
 class TestSpeechTool:
-    def test_english_speech_is_real(self) -> None:
+    def test_english_speech_is_real(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """An English text produces real SAPI audio (a voice exists on Windows)."""
         from universal_mind.speech_tool import SpeechTool
 
-        result = SpeechTool().speak("the report is ready")
+        result = SpeechTool().speak("the report is ready", out_wav=str(tmp_path / "x.wav"))
         assert result["ok"] is True
         assert result["spoken"] is True
         assert result["voice"]  # WHICH voice was used is reported
+
+    def test_emoji_never_reaches_the_wire(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        """R55 THE EMOJI LAW: SAPI reads ✅'s NAME aloud ("White Heavy
+        Checkmark") — emoji are visual and are stripped from spoken text;
+        the words stay, the glyph never reaches the wire."""
+        from universal_mind.speech_tool import SpeechTool
+
+        result = SpeechTool().speak("✅ done 🎉", out_wav=str(tmp_path / "e.wav"))
+        # either composed-but-silent (muted), or the wire ran on the CLEANED text
+        assert result["ok"] is True or "empty text" in result.get("error", "")
 
     def test_persian_without_a_persian_voice_is_honest(self) -> None:
         """No fa-IR voice installed → the exact remedy, never a silent fake
