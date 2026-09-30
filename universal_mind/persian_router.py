@@ -205,6 +205,12 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فایل های را پیدا", "filesearch"),
     ("را پیدا کن", "filesearch"),
     ("بزرگترین فایل", "filesearch"),
+    # filededupe (R53 wave-5) — SHA-256 duplicates, preview-first
+    ("فایلهای تکراری", "filededupe"),
+    ("فایل های تکراری", "filededupe"),
+    ("تکراریها را پاک", "filededupe"),
+    ("تکراریها را حذف", "filededupe"),
+    ("فایلهای یکسان", "filededupe"),
     # speech (SAPI) — the platform speaks its results aloud
     ("بگو", "speech"),
     ("بلند بخوان", "speech"),
@@ -272,7 +278,7 @@ _VOCAB: tuple[tuple[str, str], ...] = (
 # data/compute produce inputs; chart/pdf consume them; database/notify/archive
 # are sinks. The order below is the natural data-flow order.
 _PRIORITY: tuple[str, ...] = (
-    "data", "compute", "filesearch", "image", "media", "vision", "ai",
+    "data", "compute", "filesearch", "filededupe", "image", "media", "vision", "ai",
     "chart", "pdf", "database", "archive", "clipboard", "notify",
 )
 # "chain" is a dispatch word, never an executable capability: when other words
@@ -358,9 +364,10 @@ def route(command: str) -> PersianRoute:
     # also fire webfetch/image must not drag those into a disk search —
     # the explicit find-intent wins.
     find_intent = any(
-        w in lowered for w in ("را پیدا کن", "پیدا کن در", "جستجوی فایل", "فایلهای بزرگ", "بزرگترین فایل")
-    )
-    if find_intent and "filesearch" in matched:
+        w in lowered for w in ("را پیدا کن", "پیدا کن در", "جستجوی فایل", "فایلهای بزرگ",
+                               "بزرگترین فایل", "فایلهای تکراری", "تکراریها را", "نشان بده")
+    ) or ("تکراری" in lowered and ("پاک" in lowered or "حذف" in lowered))
+    if find_intent and ("filesearch" in matched or "filededupe" in matched):
         if not any(u in lowered for u in ("http", "www.", "سایت", "لینک", "صفحه وب")):
             matched.pop("webfetch", None)
         # «عکس» in a find-intent means FILTER BY IMAGE FILES, not edit one

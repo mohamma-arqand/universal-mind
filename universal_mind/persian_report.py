@@ -43,6 +43,7 @@ _CAP_FA: dict[str, str] = {
     "screenshot": "عکس صفحه",
     "goal": "عامل هدف",
     "filesearch": "جستجوی فایل",
+    "filededupe": "فایلهای تکراری",
     "scheduler": "زمانبند",
 }
 
@@ -213,6 +214,28 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                 f"با ستونهای {'، '.join(str(h) for h in result.get('headers', []))}."
             )
         return None
+    if cap == "filededupe" and isinstance(result, dict):
+        groups = result.get("groups", []) or []
+        if result.get("deleted"):
+            n = len(result["deleted"])
+            note = str(result.get("note", "")).strip()
+            line = f"{_fa_num(n)} فایل تکراری واقعا حذف شد (اصل هر گروه نگه داشته شد)"
+            if note:
+                line += f" — {note}"
+            return line
+        if not groups:
+            return "جستجوی تکراریها انجام شد — هیچ گروه تکراریای پیدا نشد."
+        wasted = int(result.get("wasted_bytes", 0))
+        mb = wasted / (1024 * 1024)
+        size_fa = (f"{_fa_num(round(mb, 1))} مگابایت" if mb >= 1
+                   else f"{_fa_num(round(wasted / 1024))} کیلوبایت")
+        first = groups[0]
+        return (
+            f"پیشنمایش: {_fa_num(len(groups))} گروه تکراری (SHA-256 یکسان) — "
+            f"با حذفشان {size_fa} آزاد میشود؛ "
+            f"بزرگترین گروه {_fa_num(len(first['files']))} فایل است. "
+            "برای حذف واقعی، «تأیید کن» بگو."
+        )
     if cap == "filesearch" and isinstance(result, dict):
         matches = result.get("matches", []) or []
         if not matches:

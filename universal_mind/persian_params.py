@@ -341,6 +341,18 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "write"}  # text comes from the flow
         return {"operation": "read"}
 
+    if capability == "filededupe":
+        # R53 wave-5 — «فایلهای تکراری در دانلودها را پاک کن».
+        from universal_mind.file_search_tool import extract_search_params
+
+        base = extract_search_params(command)
+        params_out: dict[str, Any] = {"operation": "find", "folder": base.get("folder")}
+        # THE DELETE LAW: only an explicit «پاک/حذف کن» arms the deletion,
+        # and only «تأیید کن» (or a repeat) actually fires it. Preview default.
+        if "پاک" in command or "حذف" in command:
+            params_out["operation"] = "clean"
+            params_out["confirm"] = "تأیید" in command
+        return params_out
     if capability == "filesearch":
         # R53 wave-4 — the search params come from the command itself:
         # «فایلهای بزرگ دیسک D»، «عکسها را پیدا کن»، «بزرگتر از ۱ گیگ».
