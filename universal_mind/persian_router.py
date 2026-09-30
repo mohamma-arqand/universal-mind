@@ -432,6 +432,39 @@ def route_and_run(
                 "_registry": registry or ToolRegistry(),
             }
 
+    # R53 — THE MUTE MODE-VERB: «بیصدا» / «صدا را خاموش کن» and «باز صدا» /
+    # «صدا را روشن کن» are STATE verbs — they flip the one mute switch (the
+    # persistent voice_muted preference every speak() reads live) and answer
+    # immediately. They precede keyword routing so «بیصدا» never reaches the
+    # SAPI voice as text-to-say (the old bug: the platform SAID «بیصدا» aloud).
+    if forced_route is None:
+        _norm = command.strip()
+        _is_mute_on = any(
+            w in _norm for w in ("بیصدا", "بی‌صدا", "صدا را خاموش", "صدا را قطع", "ساکت باش")
+        )
+        _is_mute_off = any(
+            w in _norm for w in ("باز صدا", "صدای را روشن", "صدا را روشن", "با صدا باش", "صدا روشن")
+        )
+        if _is_mute_on or _is_mute_off:
+            from universal_mind import operator_preferences as _prefs
+
+            _mute_flag = _is_mute_on
+            _prefs.set("voice_muted", "1" if _mute_flag else "")
+            _msg = (
+                "از این لحظه بی‌صدا هستم — هیچ صدایی از بلندگو نمیآید؛ "
+                "برای بازگشت صدا، «باز صدا» بگو."
+                if _mute_flag
+                else "صدا برگشت — دوباره بلند میگویم."
+            )
+            return {
+                "ok": True,
+                "command": command,
+                "route": ["mute"],
+                "result": {"muted": _mute_flag},
+                "agent_report": _msg,
+                "_registry": registry or ToolRegistry(),
+            }
+
     # THE REFLEXIVE CLASS — self-questions answered from the REAL store
     # (never a capability run, never a guess). The marker is a question
     # about the platform itself, and it precedes every other route.

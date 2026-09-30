@@ -9,6 +9,14 @@ fallback message when none exists (never a silent no-op).
 R44-9 adds the EARS: `listen()` dictates real speech-to-text through the same
 System.Speech channel, honestly reporting a missing engine or heard silence.
 
+R53 THE MUTE LAW: the whole platform's voice has ONE switch, read at the
+moment of speaking (never cached — «بیصدا» / «باز صدا» flip it live). The
+source of truth is the persistent `operator_preferences` row `voice_muted`
+(honored by every caller); UM_MUTE=1 in the environment is the same switch
+for headless runs. A muted speak is HONEST: the words are composed and the
+flow continues (ok=True, muted=True, voice="(muted)") — only the loudspeaker
+stays silent, so tests and reports stay truthful while the room stays quiet.
+
 Real effects only: the call either makes sound / returns heard text, or
 reports exactly why not.
 """
@@ -46,6 +54,13 @@ class SpeechTool:
         """
         if not text:
             return {"ok": False, "error": "empty text", "spoken": False}
+        if _muted():
+            # THE MUTE LAW: composed but silent — honest in every field.
+            return {
+                "ok": True, "spoken": True, "muted": True,
+                "voice": "(muted)", "error": "",
+                "note": "بیصدا — برای صدا، «باز صدا» بگو",
+            }
 
         # HONEST VOICE MATCHING: an English-only voice cannot speak Persian —
         # SAPI silently produces an empty wav. If the text carries Persian
@@ -217,6 +232,29 @@ def _b64(text: str) -> str:
     import base64
 
     return base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+def _muted() -> bool:
+    """The MUTE LAW's one source of truth, read LIVE at every speak.
+
+    Two honest channels, either alone suffices:
+      1. the persistent `operator_preferences` row ``voice_muted`` — set by
+         «بیصدا» / cleared by «باز صدا», survives restarts, works headless;
+      2. the environment (``UM_MUTE=1``) — for CI and service contexts.
+
+    Read failures are NEVER a crash (a preference row cannot take the
+    platform's voice down): unreadable => unmuted, the safe default.
+    """
+    import os
+
+    if os.environ.get("UM_MUTE", "").strip() in ("1", "true", "yes"):
+        return True
+    try:
+        from universal_mind import operator_preferences as prefs
+
+        return (prefs.get("voice_muted") or "").strip().lower() in ("1", "true", "yes", "on")
+    except Exception:  # noqa: BLE001 — the switch must never take speech down
+        return False
 
 
 class SpeechToolConnector:
