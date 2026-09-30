@@ -564,6 +564,45 @@ def route_and_run(
                 "_registry": registry or ToolRegistry(),
             }
 
+    # R56 — THE CONTACT BOOK VERBS: «آدرس ایمیل مدیر را یادت باشد: ali@x.com»
+    # and «مخاطبین من» — so a spoken NAME can become a real recipient.
+    if forced_route is None:
+        from universal_mind.contacts import parse_contact_request
+
+        _contact = parse_contact_request(command)
+        if _contact is not None:
+            from universal_mind.contacts import save as _save_contact
+
+            _res = _save_contact(_contact["name"], _contact["address"])
+            return {
+                "ok": _res.get("ok") is True,
+                "command": command,
+                "route": ["contacts"],
+                "result": _res,
+                "agent_report": (
+                    f"مخاطب «{_contact['name']}» با آدرس {_contact['address']} ذخیره شد — "
+                    "از این به بعد «به " + _contact["name"] + " ایمیل بزن» کار میکند."
+                    if _res.get("ok")
+                    else f"ذخیره نشد: {_res.get('error', '')}"
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
+        _c = command.strip()
+        if _c in ("مخاطبین من", "مخاطبهای من", "دفترچه مخاطبین", "لیست مخاطبین"):
+            from universal_mind.contacts import list_contacts
+
+            _rows = list_contacts()
+            _body = (
+                "مخاطبینت:\n" + "\n".join(f"• {r['name']} → {r['address']}" for r in _rows)
+                if _rows else
+                "هنوز مخاطبی نداری — بگو: «آدرس ایمیل مدیر را یادت باشد: ali@example.com»"
+            )
+            return {
+                "ok": True, "command": command, "route": ["contacts"],
+                "result": {"count": len(_rows)}, "agent_report": _body,
+                "_registry": registry or ToolRegistry(),
+            }
+
     # R53 — THE MUTE MODE-VERB: «بیصدا» / «صدا را خاموش کن» and «باز صدا» /
     # «صدا را روشن کن» are STATE verbs — they flip the one mute switch (the
     # persistent voice_muted preference every speak() reads live) and answer
@@ -1404,6 +1443,20 @@ def route_and_run(
         "durations_ms": {s.capability: round(s.duration_ms, 3) for s in syn.sub_outputs},
         "_registry": reg,  # kept internal: the caller may reuse the registry
     }
+    # R56 — THE UNKNOWN CONTACT, NAMED: «ایمیل بزن به رئیس» where «رئیس» is
+    # not in the book. The generic «گیرنده مشخص نیست» hides WHICH name failed
+    # and how to fix it; this names the operator's own word and the exact
+    # remedy sentence that would make it work next time.
+    try:
+        _unknown_c = (capability_params.get("email") or {}).get("_unknown_contact")
+        if _unknown_c and (payload.get("errors") or {}).get("email"):
+            payload["errors"]["email"] = (
+                f"مخاطبی به نام «{_unknown_c}» ندارم — آدرسش را یادم بده تا بعد از این "
+                f"با نام کار کند: «آدرس ایمیل {_unknown_c} را یادت باشد: someone@example.com»"
+            )
+    except Exception:  # noqa: BLE001 — naming the remedy never breaks the run
+        pass
+
     # R44-7: the A/B ruling rides the SHIPPED payload too — the judge read the
     # preview; the operator's report reads THIS.
     if _ab_note:

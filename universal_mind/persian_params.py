@@ -295,6 +295,27 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         params_email: dict[str, Any] = {"operation": "compose"}
         if addr:
             params_email["to"] = addr.group(0)
+        else:
+            # R56 THE CONTACT BOOK: «به مدیر ایمیل بزن» — a spoken NAME is
+            # resolved against the operator's own saved contacts before the
+            # honest refusal. A name the book does not know still refuses,
+            # but now the refusal can name the remedy with the operator's
+            # own word («مخاطبی به نام «مدیر» ندارم»).
+            m = _re.search(r"به\s+«?([^»\n،]+?)»?\s*(?:با موضوع|در مورد|که|$)", command)
+            if m:
+                spoken_name = m.group(1).strip()
+                if spoken_name:
+                    try:
+                        from universal_mind.contacts import resolve
+
+                        found = resolve(spoken_name)
+                        if found:
+                            params_email["to"] = found
+                            params_email["resolved_from"] = spoken_name
+                        else:
+                            params_email["_unknown_contact"] = spoken_name
+                    except Exception:  # noqa: BLE001 — the book is a lens
+                        pass
         return params_email
 
     if capability == "ocr":
