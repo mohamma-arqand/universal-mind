@@ -12,6 +12,7 @@ Exit 0 on READY, non-zero otherwise.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
