@@ -8,13 +8,34 @@ refusal branch is named.
 from __future__ import annotations
 
 import threading
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch as mock_patch
 
+import pytest
+
 
 class TestSpeechLive:
-    """SAPI واقعی ویندوز: لیست صداها، صداقت صدای فارسی، مسیرهای خطا."""
+    """SAPI واقعی ویندوز: لیست صداها، صداقت صدای فارسی، مسیرهای خطا.
+
+    R53+THE PERMANENT MUTE: these tests exercise the REAL voice wire (a
+    missing engine, a failing engine, a broken wav) — the mute law would
+    short-circuit speak() before the wire is ever touched and the honest
+    failures under test would never happen. So the class LIFTS the mute
+    for its own duration and RESTORES the operator's permanent choice
+    (voice_muted='1') in teardown — the mute is the platform's law, and
+    these tests are the voice's own physical.
+    """
+
+    @pytest.fixture(autouse=True)  # type: ignore[untyped-decorator]
+    def _unmute_for_the_real_wire(self) -> Iterator[None]:
+        from universal_mind import operator_preferences as prefs
+
+        was = (prefs.get("voice_muted") or "").strip()
+        prefs.set("voice_muted", "")
+        yield
+        prefs.set("voice_muted", was or "1")  # restore the permanent choice
 
     def test_list_voices_is_real(self) -> None:
         from universal_mind.speech_tool import SpeechTool
