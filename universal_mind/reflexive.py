@@ -120,6 +120,55 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             )
         # no hit: fall through — maybe another reflex class knows the answer
 
+    # R58 M4 — THE UPCOMING AGENDA: «برنامه‌ام را نشان بده» / «هفتهٔ بعد چی
+    # کار دارم؟» — the sweep measured that no view exists of what is COMING.
+    # The truth already lives in two tables: schedules (repeating + one-shot
+    # reminders) and named_memory (notes that mention a time). Read-only,
+    # sorted by when, Persian; empty is said honestly.
+    _AGENDA_WORDS = ("برنامه‌ام", "برنامهام", "برنامهٔ من", "برنامه من",
+                     "برنامه‌ی من", "هفتهٔ بعد", "هفته بعد")
+    if any(w in c for w in _AGENDA_WORDS) and any(
+        q in c for q in ("نشان بده", "بگو", "چی", "چه", "دارم", "است", "لیست")
+    ):
+        from universal_mind.scheduler import list_schedules
+
+        lines: list[str] = []
+        # ۱) one-shot reminders, soonest first
+        try:
+            upcoming = [s for s in list_schedules()
+                        if s.kind == "once" and s.active and s.run_at]
+            for s in sorted(upcoming, key=lambda s: s.run_at):
+                lines.append(f"• یادآور «{s.command}» — زمان {s.run_at}")
+        except Exception:  # noqa: BLE001 — the agenda is a lens, never fatal
+            pass
+        # ۲) repeating schedules (the daily/periodic backbone)
+        try:
+            for s in list_schedules():
+                if s.kind != "once" and s.active:
+                    if s.hour_of_day >= 0:
+                        lines.append(
+                            f"• هر روز ساعت {_fa_num(f'{s.hour_of_day:02d}:{s.minute_of_hour:02d}')} — «{s.command}»")
+                    else:
+                        lines.append(f"• هر {_fa_num(s.every_minutes)} دقیقه — «{s.command}»")
+        except Exception:  # noqa: BLE001
+            pass
+        # ۳) named notes that mention a time word (the soft agenda)
+        try:
+            for r in _query(db, "SELECT fact FROM named_memory ORDER BY id DESC LIMIT 100"):
+                fact = str(r["fact"])
+                if any(t in fact for t in ("ساعت", "شنبه", "یکشنبه", "دوشنبه",
+                                           "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه",
+                                           "فردا", "امروز")):
+                    lines.append(f"• (یادداشت) {fact}")
+        except Exception:  # noqa: BLE001
+            pass
+
+        if not lines:
+            return _reflex_answer(
+                c, "هیچ برنامه‌ای ثبت نشده — «یادم بنداز که …» یا «یادآور کن …» بگو.",
+            )
+        return _reflex_answer(c, "برنامه‌ات:\n" + "\n".join(lines))
+
     # «چند تا اجرا موفق داشتی؟» — the run counts, real.
     # N10-3 (R57): «چند فرمان اجرا کردی؟» — the same question in the other
     # spoken shape, measured live in the night's 14-command sweep.
