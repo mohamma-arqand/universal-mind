@@ -120,6 +120,42 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             )
         # no hit: fall through — maybe another reflex class knows the answer
 
+    # R59 P5 — MEMORY LISTINGS: «چه چیزهایی یادت هست؟» / «آخرین چیزی که یادت
+    # داشت چی بود؟» — the sweep measured both dying in «نشناختم» while
+    # named_memory already had recall_facts(). A LIST is not a recall-by-
+    # question (M3): no question marks needed, just the real rows, numbered.
+    if ("چه چیزهایی یادت" in c or "چی یادته" in c or "یادت هست" in c
+            or "یادداشتهایت" in c or "یادداشت‌هایت" in c) and "یادت باشد" not in c:
+        from universal_mind.named_memory import recall_facts
+
+        rows = []
+        try:
+            rows = recall_facts(limit=10)
+        except Exception:  # noqa: BLE001 — the listing is a lens, never fatal
+            rows = []
+        if not rows:
+            return _reflex_answer(
+                c, "هیچ چیزی یادم نیست — «یادت باشد …» بگو تا نگه دارم.",
+            )
+        lines = [f"{_fa_num(len(rows))} چیز یادم است:"]
+        for i, r in enumerate(rows, start=1):
+            lines.append(f"  {_fa_num(i)}. {str(r['fact'])}")
+        return _reflex_answer(c, "\n".join(lines))
+
+    if ("آخرین چیزی که یادت" in c or "آخرین یادداشت" in c) and "یادت باشد" not in c:
+        from universal_mind.named_memory import recall_facts
+
+        rows = []
+        try:
+            rows = recall_facts(limit=1)
+        except Exception:  # noqa: BLE001
+            rows = []
+        if not rows:
+            return _reflex_answer(
+                c, "هیچ چیزی یادم نیست — «یادت باشد …» بگو تا نگه دارم.",
+            )
+        return _reflex_answer(c, f"آخرین چیزی که یاد داشتم: «{rows[0]['fact']}».")
+
     # R59 P3+P4 — MACHINE VIEWS: «چه برنامه‌هایی الان باز است؟» and
     # «پروسه‌های پرمصرف را نشان بده» — two measured dead sentences. Both are
     # READ-ONLY PowerShell views of the real machine (the same CIM path the
