@@ -171,6 +171,38 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
 
     # R53 — «امروز چندمه؟ / امروز چه روزی است؟ / ساعت چنده؟» — the LOCAL
     # clock in the operator's own calendar (Jalali), real, from persian_date.
+    # R58 M2 — RELATIVE DATES: «فردا چندمه؟» / «دیروز چه روزی بود؟» /
+    # «پس‌فردا چندمه؟» — the same question about a NEIGHBOUR day, measured
+    # in the 18-command sweep. jalali_date(offset_days) already exists; the
+    # gate just never recognized the relative words.
+    _RELATIVE_DAYS = [
+        # ORDER MATTERS: longer words first — «پس‌فردا» contains «فردا»,
+        # so a dict-ordered lookup would answer "فردا" for "پس‌فردا" (a live
+        # witness caught exactly that). The longest match wins.
+        ("پس‌فردا", 2),
+        ("پسفردا", 2),
+        ("پریروز", -2),
+        ("فردا", 1),
+        ("دیروز", -1),
+    ]
+    _asked_relative = None
+    if any(w[0] in c for w in _RELATIVE_DAYS) and (
+        "چندمه" in c or "چند مه" in c or "چه روزی" in c or "تاریخ" in c
+        or "چندمه؟" in c or c.strip() in ("فردا؟", "دیروز؟")
+    ):
+        from universal_mind.persian_date import jalali_date as _jd
+
+        for _w, _off in _RELATIVE_DAYS:
+            if _w in c:
+                _asked_relative = (_w, _off, _jd)
+                break
+    if _asked_relative is not None:
+        _w, _off, _jd = _asked_relative
+        _d = f"{_w} {_jd(_off)} است"
+        if _off < 0:
+            _d = f"{_w} {_jd(_off)} بود"
+        return _reflex_answer(c, _d + ".")
+
     if (
         ("امروز" in c and ("چندمه" in c or "چند مه" in c or "چه روزی" in c or "تاریخ" in c))
         or "تاریخ امروز" in c
