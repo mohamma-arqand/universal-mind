@@ -179,6 +179,7 @@ PROBES = [
     "probe_night_watch.py",
     "probe_r58_sweep.py",
     "probe_r59_sweep.py",
+    "probe_r60_sweep.py",
 ]
 
 
