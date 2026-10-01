@@ -55,14 +55,37 @@ class LLMToolConnector(Connector):
             },
             method="POST",
         )
-        try:
-            with urllib.request.urlopen(req, timeout=int(params.get("timeout", 60))) as resp:  # noqa: S310
-                payload = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", "replace")[:300]
-            return ConnectorResult(ok=False, output=None,
-                                   error=f"مدل خطای HTTP {exc.code} داد: {detail}")
-        except Exception as exc:  # noqa: BLE001 — the wire's own error, surfaced
+        # R57 N7-2 — TRANSIENT-RETRY ON THE WIRE: a first connection to a
+        # local test server is sometimes aborted by Windows mid-handshake
+        # (WinError 10053 — the very race the R47 wave-1 suite documents).
+        # One retry with a short backoff turns that race into a success
+        # WITHOUT ever masking a real refusal: an HTTPError (the endpoint
+        # answered) and a malformed 200 are returned untouched, and the
+        # retry only fires on transport-level failure (URLError/Timeout/
+        # ConnectionError/OSError).
+        last_exc: Exception | None = None
+        payload = None
+        http_detail = ""
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=int(params.get("timeout", 60))) as resp:  # noqa: S310
+                    payload = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as exc:
+                # the endpoint ANSWERED — never retried, never masked
+                http_detail = exc.read().decode("utf-8", "replace")[:300]
+                return ConnectorResult(
+                    ok=False, output=None,
+                    error=f"مدل خطای HTTP {exc.code} داد: {http_detail}",
+                )
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+                last_exc = exc
+                if attempt == 0:
+                    import time as _t
+
+                    _t.sleep(0.4)  # one short backoff, then one retry
+        if payload is None:
+            exc = last_exc or RuntimeError("unreachable")
             return ConnectorResult(ok=False, output=None, error=f"ارتباط با مدل نشد: {exc}")
         try:
             text = str(payload["choices"][0]["message"]["content"]).strip()

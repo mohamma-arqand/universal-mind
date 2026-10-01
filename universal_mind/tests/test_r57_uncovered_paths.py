@@ -145,6 +145,104 @@ class TestPrivateTargetEdges:
         assert _is_private_target("http://[2606:4700:4700::1111]/") is False
 
 
+class TestLlmConnectorTransientRetry:
+    """R57 N7-2 — one dropped first connection must not fail the call.
+
+    The R47 wave-1 suite documents Windows aborting an in-flight first
+    connection to a local test server (WinError 10053). The connector now
+    retries ONCE on transport-level failure; an HTTP error is never retried.
+    """
+
+    def test_a_dropped_first_connection_is_retried(self) -> None:
+        import json
+        import os
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        from universal_mind.llm_connector import LLMToolConnector
+
+        calls = {"n": 0}
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    self.connection.close()  # abort the first request
+                    return
+                body = json.dumps(
+                    {"choices": [{"message": {"content": "ok"}}]}
+                ).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a: object) -> None:
+                return
+
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+        srv.daemon_threads = True
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        old = os.environ.get("UM_LLM_BASE_URL")
+        os.environ["UM_LLM_BASE_URL"] = f"http://127.0.0.1:{srv.server_port}/v1"
+        try:
+            res = LLMToolConnector().connect(
+                {}, {"prompt": "hi", "max_tokens": 5, "timeout": 10}
+            )
+            assert res.ok is True, f"the retry did not save the call: {res.error}"
+            assert calls["n"] == 2  # exactly one drop + one success
+        finally:
+            srv.shutdown()
+            srv.server_close()
+            if old is None:
+                os.environ.pop("UM_LLM_BASE_URL", None)
+            else:
+                os.environ["UM_LLM_BASE_URL"] = old
+
+    def test_an_http_error_is_never_retried(self) -> None:
+        import os
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        from universal_mind.llm_connector import LLMToolConnector
+
+        calls = {"n": 0}
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                calls["n"] += 1
+                body = b"{\"error\": \"nope\"}"
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a: object) -> None:
+                return
+
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+        srv.daemon_threads = True
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        old = os.environ.get("UM_LLM_BASE_URL")
+        os.environ["UM_LLM_BASE_URL"] = f"http://127.0.0.1:{srv.server_port}/v1"
+        try:
+            res = LLMToolConnector().connect(
+                {}, {"prompt": "hi", "max_tokens": 5, "timeout": 10}
+            )
+            assert res.ok is False
+            assert "HTTP 401" in str(res.error)
+            assert calls["n"] == 1  # the endpoint ANSWERED — no retry
+        finally:
+            srv.shutdown()
+            srv.server_close()
+            if old is None:
+                os.environ.pop("UM_LLM_BASE_URL", None)
+            else:
+                os.environ["UM_LLM_BASE_URL"] = old
+
+
 class TestQuarantineBoundaries:
     def test_none_is_treated_as_no_text(self) -> None:
         rep = scan_untrusted(None)  # type: ignore[arg-type]
