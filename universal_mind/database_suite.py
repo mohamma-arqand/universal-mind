@@ -37,6 +37,10 @@ _SCRATCH_PREFIXES = (
     "um-img-",
     "um-excel-",
     "um_dashboard_",
+    "tmp",  # R57: a bare tempfile.mkdtemp() prefix — several probes use it
+            # (probe_r44_red_team among them). Registering it lets the reaper
+            # clear probe scratch without each probe inventing a prefix;
+            # the 1h age gate keeps every LIVE suite safe.
 )
 _REAP_INTERVAL_S = 300.0  # at most one sweep every five minutes, per process
 _REAP_MAX_AGE_S = 3600.0  # only scratch older than an hour: never a live suite
