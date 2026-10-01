@@ -419,6 +419,7 @@ def route_and_run(
     params: dict[str, Any] | None = None,
     forced_route: list[str] | None = None,
     explain_only: bool = False,
+    provenance: str = "operator",
     _retry_of: int | None = None,
 ) -> dict[str, Any]:
     """Route a Persian command AND execute the resulting chain for real.
@@ -427,7 +428,44 @@ def route_and_run(
     steps are parsed, run under ARETĒ judgment, and the result carries the
     agent's report (the goal loop with its verdicts). Ordinary commands are
     never hijacked — the goal marker is explicit intent.
+
+    ``provenance`` says WHERE the sentence came from. ``"operator"`` (the
+    default) is the human at the keyboard. Any other value means the text was
+    harvested from OUTSIDE — a fetched page, a PDF, an OCR'd image, an email —
+    and text from outside is DATA: a hostile line is refused by name instead
+    of being executed.
     """
+    # R57 N5 — THE PROVENANCE GATE, and it runs FIRST: before any marker is
+    # parsed, before any keyword is matched, before any route is chosen. A
+    # caller that feeds outside text MUST declare it, and an order found in
+    # that text stops here. The operator's own sentences carry the default and
+    # are completely untouched — this gate can never silence the human.
+    if provenance != "operator":
+        from universal_mind.content_quarantine import scan_untrusted
+
+        _scan = scan_untrusted(command)
+        if _scan.hostile:
+            try:  # the ledger observes; it never breaks the refusal
+                from universal_mind.injection_ledger import record
+
+                record(f"provenance:{provenance}", _scan.as_dict())
+            except Exception:
+                pass
+            return {
+                "ok": False,
+                "command": command,
+                "route": ["external_content_refused"],
+                "result": {
+                    "verdict": _scan.verdict,
+                    "counts": {k: v for k, v in _scan.counts.items() if v},
+                },
+                "agent_report": (
+                    f"این متن از بیرون آمده ({provenance}) و فرمانی در خودش دارد — "
+                    "اجرا نشد.\n" + _scan.summary_fa()
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
+
     # R44-1 — «توضیح بده» / «فقط بگو چه میکنی»: the EXPLAIN marker strips
     # itself from the command and runs the plan EXPLAINED, never executed.
     # It precedes every route (even reflexive — «توضیح بده» means the NEXT

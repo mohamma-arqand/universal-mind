@@ -175,6 +175,7 @@ PROBES = [
     "probe_r57_ledger.py",
     "probe_r57_docs.py",
     "probe_r57_report.py",
+    "probe_r57_provenance.py",
 ]
 
 
