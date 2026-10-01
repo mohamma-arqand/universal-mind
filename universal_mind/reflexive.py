@@ -444,6 +444,24 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             )
         return _reflex_answer(c, f"امروز {jalali_date()} است.")
 
+    # R60 Q5 — «تنظیماتت را نشان بده» — the operator's OWN preferences, from
+    # the REAL store, read-only (changing one has its own sentence shape).
+    # Secret-looking keys are masked in all_prefs(); the count stays honest.
+    if (
+        ("تنظیمات" in c or "تنظیماتت" in c or "ترجیحات" in c)
+        and ("نشان" in c or "بگو" in c or "چیه" in c or "چیست" in c or "لیست" in c)
+    ):
+        from universal_mind import operator_preferences as _op
+
+        prefs = _op.all_prefs()
+        if not prefs:
+            return _reflex_answer(
+                c, "هیچ تنظیماتی ذخیره نکرده‌ام — با «X را Y کن» می‌سازم.")
+        lines = [f"{_fa_num(len(prefs))} تنظیم ذخیره کرده‌ام:"]
+        for k, v in prefs.items():
+            lines.append(f"• {k} = {v}")
+        return _reflex_answer(c, "\n".join(lines))
+
     # «چند وقته دستگاه روشن است؟» — the REAL Windows uptime (WMI), honest.
     if ("دستگاه" in c or "سیستم" in c or "کامپیوتر" in c) and (
         "روشن" in c and ("چند" in c or "وقت" in c or "مدت" in c)

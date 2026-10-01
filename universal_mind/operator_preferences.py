@@ -60,6 +60,34 @@ def get(key: str) -> str | None:
     return str(v) if v is not None else None
 
 
+def all_prefs() -> dict[str, str]:
+    """R60 Q5 — every stored preference, newest first, read-only.
+
+    «تنظیماتت را نشان بده» — the operator's OWN settings listed from the
+    real store. A secret-looking KEY is masked (a preference named like a
+    token is not shown aloud); the COUNT is honest either way.
+    """
+    import re as _re
+
+    secret_key = _re.compile(r"(key|token|secret|password|credential|api)",
+                             _re.IGNORECASE)
+    db = _db()
+    q = db.query(
+        "SELECT key, value FROM operator_preferences "
+        "ORDER BY updated_at DESC, key"
+    )
+    rows = q.get("rows", []) if q.get("ok") else []
+    out: dict[str, str] = {}
+    for row in rows:
+        k = str(row.get("key", ""))
+        v = str(row.get("value", ""))
+        if k and (secret_key.search(k) or len(v) > 120):
+            out[k] = "(مخفی — به نظر راز می‌رسد)"
+        else:
+            out[k] = v
+    return out
+
+
 def apply_to(capability_params: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Merge remembered preferences into the planned params — the command's
     OWN words always win (a preference never overrides an explicit intent).
