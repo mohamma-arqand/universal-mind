@@ -119,6 +119,24 @@ _MAX_SCAN_CHARS = 400_000
 # kinds that ALONE make a text hostile (an order, not a mention)
 _HOSTILE_KINDS = frozenset({"override", "destructive"})
 
+# The kind names as the OPERATOR reads them. A quarantine line rendered into
+# the Persian report must not leak an English family name — the same law that
+# forbids a Latin metric name or an English chart kind in the operator's report.
+_KIND_FA: dict[str, str] = {
+    "instruction": "فرمانِ کاشته",
+    "authority": "جعلِ اقتدار",
+    "override": "نادیده‌گرفتنِ فرمان",
+    "exfiltration": "افشای راز",
+    "destructive": "تخریب",
+}
+
+_FA_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def _fa_num(value: int) -> str:
+    """An integer with Persian digits — the operator's report is total."""
+    return str(value).translate(_FA_DIGITS)
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -145,17 +163,25 @@ class QuarantineReport:
         return self.verdict == "hostile"
 
     def summary_fa(self) -> str:
-        """One honest Persian sentence for the operator."""
+        """One honest Persian sentence for the operator.
+
+        Persian digits and Persian family names only — this sentence is
+        rendered VERBATIM into the operator's report (N3), so a Latin digit or
+        an English kind name here would be a leak in the report itself.
+        """
         if self.verdict == "clean":
             return "محتوای بیرونی اسکن شد — هیچ تلاش تزریقی نداشت (به‌عنوان داده خوانده شد)."
-        kinds = "، ".join(f"{k}×{n}" for k, n in sorted(self.counts.items()) if n)
+        kinds = "، ".join(
+            f"{_KIND_FA.get(k, k)}×{_fa_num(n)}"
+            for k, n in sorted(self.counts.items()) if n
+        )
         if self.verdict == "hostile":
             return (
-                f"⚠ محتوای بیرونی {len(self.findings)} تلاش تزریقی داشت ({kinds}) — "
+                f"⚠ محتوای بیرونی {_fa_num(len(self.findings))} تلاش تزریقی داشت ({kinds}) — "
                 "هیچ‌کدام اجرا نشد؛ متن فقط به‌عنوان داده خوانده می‌شود."
             )
         return (
-            f"محتوای بیرونی مشکوک است: {len(self.findings)} بند شبیه فرمان ({kinds}) — "
+            f"محتوای بیرونی مشکوک است: {_fa_num(len(self.findings))} بند شبیه فرمان ({kinds}) — "
             "به‌عنوان داده نگه داشته شد، اجرا نشد."
         )
 
@@ -241,10 +267,41 @@ def is_instruction_from_outside(text: str) -> bool:
     return scan_untrusted(text).hostile
 
 
+def summary_fa_from_dict(report: dict[str, Any]) -> str:
+    """The Persian sentence for a report already serialized by ``as_dict``.
+
+    A caller that kept only the JSON form (the fetch tool's ``quarantine``
+    field) gets the SAME wording as the live object — one source of truth for
+    the sentence, never a second hand-written variant.
+    """
+    findings = tuple(
+        Finding(
+            line=int(f.get("line", 0)),
+            kind=str(f.get("kind", "")),
+            snippet=str(f.get("snippet", "")),
+        )
+        for f in (report.get("findings") or [])
+        if isinstance(f, dict)
+    )
+    counts = {
+        str(k): int(v)
+        for k, v in (report.get("counts") or {}).items()
+        if isinstance(v, (int, float))
+    }
+    rebuilt = QuarantineReport(
+        verdict=str(report.get("verdict") or "clean"),
+        findings=findings,
+        counts=counts,
+        safe_text="",
+    )
+    return rebuilt.summary_fa()
+
+
 __all__ = [
     "Finding",
     "QuarantineReport",
     "is_instruction_from_outside",
     "normalize",
     "scan_untrusted",
+    "summary_fa_from_dict",
 ]

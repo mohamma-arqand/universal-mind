@@ -80,11 +80,15 @@ def main() -> int:
     try:
         tool = WebFetchTool()
 
-        calm = tool.fetch(f"{base}/calm")
+        # NOTE: the server is on 127.0.0.1, and R57-N1's SSRF guard now
+        # refuses loopback BY DEFAULT — a local read must be explicit. This
+        # probe was written BEFORE the guard existed; the guard is why the
+        # flag is here, not a workaround around it.
+        calm = tool.fetch(f"{base}/calm", allow_private=True)
         check(1, "a calm page scans clean and keeps its text verbatim",
               calm["ok"] and calm["quarantine"]["verdict"] == "clean")
 
-        evil = tool.fetch(f"{base}/evil")
+        evil = tool.fetch(f"{base}/evil", allow_private=True)
         q = evil.get("quarantine", {})
         check(2, "a hostile page (real socket) is verdict=hostile",
               evil["ok"] and q.get("verdict") == "hostile")

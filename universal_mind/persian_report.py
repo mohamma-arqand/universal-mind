@@ -340,6 +340,31 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     return f"{name} انجام شد."
 
 
+def _quarantine_note(result: Any) -> str | None:
+    """The honest quarantine line for one capability's result, or ``None``.
+
+    Reads what the fetch / OCR / document tool REALLY produced: the
+    pre-rendered Persian sentence when present, else the serialized verdict +
+    counts rebuilt through the one source of truth in ``content_quarantine``.
+    Never invents a finding — no quarantine report means no line.
+    """
+    if not isinstance(result, dict):
+        return None
+    summary = result.get("quarantine_summary")
+    if isinstance(summary, str) and summary.strip():
+        return summary.strip()
+    q = result.get("quarantine")
+    if not isinstance(q, dict):
+        return None
+    verdict = str(q.get("verdict", "")).strip()
+    if verdict not in ("hostile", "suspicious"):
+        return None
+    from universal_mind.content_quarantine import summary_fa_from_dict
+
+    note = summary_fa_from_dict(q)
+    return note or None
+
+
 def persian_report(payload: dict[str, Any]) -> str:
     """Render a full Persian, human-readable report of one run.
 
