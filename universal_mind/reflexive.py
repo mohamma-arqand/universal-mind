@@ -120,6 +120,37 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             )
         # no hit: fall through — maybe another reflex class knows the answer
 
+    # R59 P6 — MY CHAINS: «زنجیره‌های من را نشان بده» — the sweep measured
+    # «نشناختم» while ChainsStore().load() existed. The listing names each
+    # saved chain and its REAL steps (validated against the registry on
+    # load); empty is honest with the recipe for saving one.
+    if ("زنجیره" in c and ("زنجیره‌های من" in c or "زنجیرههای من" in c
+                           or "زنجیره‌هام" in c or "زنجیرههام" in c)) \
+            and any(w in c for w in ("نشان", "لیست", "فهرست", "چی", "دارم", "بگو")):
+        from universal_mind.chains_store import ChainsStore
+
+        try:
+            from universal_mind.database_suite import DatabaseSuite as _DS
+
+            saved = ChainsStore(db=_DS.shared_persistent()).load()
+        except Exception as exc:  # noqa: BLE001 — a listing is a lens, never fatal
+            return _reflex_answer(c, f"خواندن زنجیره‌ها نشد: {exc}")
+        if not saved:
+            return _reflex_answer(
+                c, "هنوز زنجیره‌ای ذخیره نکردی — مثلا: «زنجیره‌ی گزارش هفتگی را ذخیره کن».",
+            )
+        lines = [f"{_fa_num(len(saved))} زنجیره ذخیره شده:"]
+        # the Persian capability names from the ONE source of truth
+        # (persian_report._CAP_FA) — never a second translation table
+        try:
+            from universal_mind.persian_report import _CAP_FA as _CAP_FA_NAME
+        except Exception:  # noqa: BLE001
+            _CAP_FA_NAME = {}
+        for i, ch in enumerate(saved, start=1):
+            steps_fa = " ← ".join(_CAP_FA_NAME.get(s, s) for s in ch.capabilities)
+            lines.append(f"  {_fa_num(i)}. {ch.name} — {steps_fa}")
+        return _reflex_answer(c, "\n".join(lines))
+
     # R59 P5 — MEMORY LISTINGS: «چه چیزهایی یادت هست؟» / «آخرین چیزی که یادت
     # داشت چی بود؟» — the sweep measured both dying in «نشناختم» while
     # named_memory already had recall_facts(). A LIST is not a recall-by-

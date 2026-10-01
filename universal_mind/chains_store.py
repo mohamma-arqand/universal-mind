@@ -14,9 +14,13 @@ that no longer exists is skipped honestly (never executed blindly).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from universal_mind.real_tool_registry import _REAL_CONNECTORS
 from universal_mind.tool_registry import ToolRegistry
+
+if TYPE_CHECKING:  # R59 P6: the annotation-only import — the runtime import
+    from universal_mind.database_suite import DatabaseSuite  # noqa: F401
 
 
 @dataclass(frozen=True)
@@ -31,10 +35,16 @@ class SavedChain:
 class ChainsStore:
     """Save/load the operator's custom chains in the persistent SQLite database."""
 
-    def __init__(self, registry: ToolRegistry | None = None) -> None:
-        from universal_mind.database_suite import DatabaseSuite
+    def __init__(self, registry: ToolRegistry | None = None,
+                 db: DatabaseSuite | None = None) -> None:
+        from universal_mind.database_suite import DatabaseSuite as _DS
 
-        self._db = DatabaseSuite(persistent=True)
+        # R59 P6: an INJECTABLE store — the same pattern every other store
+        # takes. Tests must never touch the operator's real mind.db: before
+        # this, __init__ built DatabaseSuite(persistent=True) directly and no
+        # patch could isolate it (a test leaked two rows into the real store;
+        # they were found and removed with a named cleanup).
+        self._db = db if db is not None else _DS(persistent=True)
         self._db.execute(
             "CREATE TABLE IF NOT EXISTS custom_chains "
             "(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, capabilities TEXT)"
