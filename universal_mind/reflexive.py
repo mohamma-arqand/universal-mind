@@ -120,11 +120,30 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             )
         # no hit: fall through — maybe another reflex class knows the answer
 
+    # R59 P3+P4 — MACHINE VIEWS: «چه برنامه‌هایی الان باز است؟» and
+    # «پروسه‌های پرمصرف را نشان بده» — two measured dead sentences. Both are
+    # READ-ONLY PowerShell views of the real machine (the same CIM path the
+    # uptime uses). A PowerShell failure is surfaced by name, never faked.
+    if ("چه برنامه" in c or "چه پنجره" in c or "پنجره‌های باز" in c
+            or "برنامه‌های باز" in c):
+        from universal_mind.window_view import list_open_windows, windows_fa
+
+        res = list_open_windows()
+        return _reflex_answer(c, windows_fa(res))
+    if ("پروسه" in c or "پردازش" in c or "پروسس" in c) and any(
+        w in c for w in ("پرمصرف", "سنگین", "مصرف", "نشان بده", "ram", "رم", "cpu")
+    ):
+        from universal_mind.window_view import processes_fa, top_processes
+
+        res = top_processes(5)
+        return _reflex_answer(c, processes_fa(res))
+
     # R58 M4 — THE UPCOMING AGENDA: «برنامه‌ام را نشان بده» / «هفتهٔ بعد چی
     # کار دارم؟» — the sweep measured that no view exists of what is COMING.
     # The truth already lives in two tables: schedules (repeating + one-shot
     # reminders) and named_memory (notes that mention a time). Read-only,
     # sorted by when, Persian; empty is said honestly.
+
     _AGENDA_WORDS = ("برنامه‌ام", "برنامهام", "برنامهٔ من", "برنامه من",
                      "برنامه‌ی من", "هفتهٔ بعد", "هفته بعد")
     if any(w in c for w in _AGENDA_WORDS) and any(
