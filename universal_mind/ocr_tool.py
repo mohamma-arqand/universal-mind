@@ -136,7 +136,13 @@ class OcrToolConnector:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
         image_path = params.get("path", "")
         if not image_path:
-            return ConnectorResult(ok=False, output=None, error="no image path given")
+            # R58 M5 — a missing file is an honest ask, named in Persian with
+            # the exact sentence that fixes it (the sweep measured a bare
+            # English «no image path given» reaching the operator).
+            return ConnectorResult(
+                ok=False, output=None,
+                error="کدام تصویر؟ مسیرش را بده — مثلا: متن تصویر D:/pics/x.png را بخوان",
+            )
         result = self._tool.read(image_path)
         if result.get("ok") is not True:
             return ConnectorResult(ok=False, output=None, error=result.get("error", "failed"))
