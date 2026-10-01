@@ -176,6 +176,7 @@ PROBES = [
     "probe_r57_docs.py",
     "probe_r57_report.py",
     "probe_r57_provenance.py",
+    "probe_night_watch.py",
 ]
 
 
