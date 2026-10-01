@@ -87,6 +87,39 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     db = _store()
     c = command.strip()
 
+    # R58 M3 — RECALL THE NAMED MEMORY BY ASKING: «جلسه شنبه چه ساعتی است؟»
+    # The sweep measured that «یادت باشد جلسه شنبه ساعت ۱۰ است» SAVES a
+    # named_memory row, but asking the question back got «نشناختم». A
+    # question whose words overlap a stored fact is answered FROM that fact
+    # — never invented. Multiple hits are NAMED, not guessed.
+    _QUESTION_MARKS = ("چیه", "چیست", "چی بود", "چه ساعتی", "کجاست", "کی بود",
+                       "چند ساعته", "چیه؟", "کجاست؟")
+    if any(m in c for m in _QUESTION_MARKS) and "یادت باشد" not in c:
+        try:
+            _facts = _query(db, "SELECT fact FROM named_memory ORDER BY id DESC LIMIT 200")
+        except Exception:  # noqa: BLE001 — memory is a lens, never fatal
+            _facts = []
+        _stop = {"چه", "چیه", "چیست", "چی", "ساعتی", "کجاست", "کی", "بود", "است",
+                 "راست", "را", "؟", "؟", "جلسه", "چند", "ساعت"}
+        _words = [w for w in c.replace("؟", " ").replace("؟", " ").split()
+                  if len(w) > 2 and w not in _stop]
+        _hits = []
+        for _f in _facts:
+            _fact = str(_f["fact"])
+            _shared = [w for w in _words if w in _fact]
+            if len(_shared) >= max(1, min(2, len(_words))):
+                _hits.append((_fact, len(_shared)))
+        if len(_hits) == 1:
+            return _reflex_answer(
+                c, f"یادم است: «{_hits[0][0]}» — (از حافظهٔ نامدار خواندم)",
+            )
+        if len(_hits) > 1:
+            _named = "؛ ".join(f"«{h[0]}»" for h in _hits[:4])
+            return _reflex_answer(
+                c, f"چند مورد یادم آمد: {_named} — کدام را می‌خواهی دقیق بگویم؟",
+            )
+        # no hit: fall through — maybe another reflex class knows the answer
+
     # «چند تا اجرا موفق داشتی؟» — the run counts, real.
     # N10-3 (R57): «چند فرمان اجرا کردی؟» — the same question in the other
     # spoken shape, measured live in the night's 14-command sweep.
