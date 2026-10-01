@@ -76,8 +76,12 @@ def main() -> int:
     mins = int((mid - now).total_seconds() // 60)
     h, m = divmod(mins, 60)
     fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+    if h > 0:
+        ok5 = str(h).translate(fa) in r5 and str(m).translate(fa) in r5
+    else:
+        ok5 = str(m).translate(fa) in r5  # the answer is minutes-only near midnight
     check(5, f"midnight matches the independent math ({h}h {m}m)",
-          str(h).translate(fa) in r5 and str(m).translate(fa) in r5)
+          ok5 and "نیمه‌شب" in r5)
     days = [("شنبه", 5), ("یکشنبه", 6), ("دوشنبه", 0), ("سه‌شنبه", 1),
             ("چهارشنبه", 2), ("پنجشنبه", 3), ("جمعه", 4)]
     all_days = True
