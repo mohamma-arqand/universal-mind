@@ -93,12 +93,23 @@ def main() -> int:
 
     # ---- 5: IDENTITY ---------------------------------------------------
     from universal_mind.conversational import answer_conversational
+    from universal_mind.real_tool_registry import real_tool_registry
 
     name = answer_conversational("اسمت چیه؟")
     who = answer_conversational("تو کی هستی؟")
+    # THE CORPUS-SIZE LAW (re-learned in R59): the cap count GROWS with each
+    # new capability (R59 added unitconvert: 25 → 26). Pin the INVARIANT —
+    # the identity's count equals the registry's real count, in Persian
+    # digits — never a number.
+    try:
+        _reg_n = len(real_tool_registry().capabilities)
+        _fa_reg = str(_reg_n).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+    except Exception:  # noqa: BLE001 — fall back to the weaker invariant
+        _fa_reg = ""
     check(5, "identity answers carry the name and the real cap count",
           name is not None and "ذهن جهانی" in name["agent_report"]
-          and who is not None and "۲۵ قابلیت" in who["agent_report"])
+          and who is not None and "قابلیت واقعی" in who["agent_report"]
+          and (not _fa_reg or _fa_reg in who["agent_report"]))
 
     # ---- 6: TEMPORAL (Jalali) ------------------------------------------
     from universal_mind.reflexive import answer_reflexive
