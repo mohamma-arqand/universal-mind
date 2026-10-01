@@ -178,6 +178,7 @@ PROBES = [
     "probe_r57_provenance.py",
     "probe_night_watch.py",
     "probe_r58_sweep.py",
+    "probe_r59_sweep.py",
 ]
 
 
