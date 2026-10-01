@@ -219,6 +219,7 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فایل های تکراری", "filededupe"),
     ("تکراریها را پاک", "filededupe"),
     ("تکراریها را حذف", "filededupe"),
+    ("تکراریها را پیدا", "filededupe"),  # N10-2: «تکراری‌ها را در X پیدا کن» (measured)
     ("فایلهای یکسان", "filededupe"),
     # speech (SAPI) — the platform speaks its results aloud
     ("بگو", "speech"),
@@ -326,19 +327,33 @@ def route(command: str) -> PersianRoute:
     _VOCAB follows; a taught word wins over an equal static one.
     """
     lowered = command.lower()
+    # N10-2 (R57) — THE MATCH-FOLD: the operator types «فایل‌های تکراری» with
+    # a ZWNJ that no vocabulary entry carries («فایلهای تکراری» is spelled
+    # glued). Matching against a FOLDED view (ZWNJ/zero-width removed, Arabic
+    # kaf/yeh folded) while the keyword table stays untouched fixes the whole
+    # CLASS: any future word whose spelling varies by joiners matches too.
+    # The fold is exactly content_quarantine.normalize's spirit: a joiner is
+    # REMOVED (not spaced) so «فایل‌های» folds to «فایلهای» — the way it is
+    # written in the vocabulary.
+    try:
+        from universal_mind.content_quarantine import normalize as _fold
+
+        folded_text = _fold(lowered)
+    except Exception:  # noqa: BLE001 — the fold is a lens, never fatal
+        folded_text = lowered
     matched: dict[str, list[str]] = {}
 
     try:
         from universal_mind.learned_vocab import overlay
 
         for word, capability in overlay().items():
-            if word and word in lowered:
+            if word and (word in lowered or word in folded_text):
                 matched.setdefault(capability, []).append(word)
     except Exception:  # noqa: BLE001 — the learner is a lens, never fatal
         pass
 
     for word, capability in _VOCAB:
-        if word in lowered:
+        if word in lowered or word in folded_text:
             matched.setdefault(capability, []).append(word)
 
     if "chain" in matched and not any(c for c in matched if c != "chain"):

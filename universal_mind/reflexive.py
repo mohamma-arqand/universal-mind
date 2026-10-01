@@ -88,7 +88,9 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     c = command.strip()
 
     # «چند تا اجرا موفق داشتی؟» — the run counts, real.
-    if "چند تا" in c or "چندتا" in c:
+    # N10-3 (R57): «چند فرمان اجرا کردی؟» — the same question in the other
+    # spoken shape, measured live in the night's 14-command sweep.
+    if "چند تا" in c or "چندتا" in c or "چند فرمان" in c or "چند تا فرمان" in c:
         if "هدف" in c:
             rows = _query(db, "SELECT state, COUNT(*) AS n FROM goals WHERE state != 'archived' GROUP BY state")
             if not rows:

@@ -244,15 +244,35 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "evaluate"}
     if capability == "webfetch":
         # URL extraction: http(s)://... in the sentence, or a bare domain
-        # after «آدرس». Honest: without a recognizable URL the fetch refuses.
+        # after any of the site-words («سایت», «صفحه», «وب», «لینک»,
+        # «آدرس») or standing alone. Honest: without a recognizable URL the
+        # fetch refuses.
+        # N10-1 (R57): «سایت example.com را بخوان» fell through to the
+        # honest refusal because only «آدرس X» was recognized. A bare domain
+        # after ANY site-word now counts — the same class of bug as the
+        # anchored-regex trap: one narrow pattern doing a wide job.
         import re as _re
 
-        m = _re.search(r"https?://\S+", command)
+        m = _re.search(r"https?://[^\s،]+", command)
         if m:
             return {"operation": "fetch", "url": m.group(0)}
-        m2 = _re.search(r"آدرس ([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", command)
+        m2 = _re.search(
+            r"(?:سایت|صفحه|وب|لینک|آدرس)\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+/?[^\s،]*|www\.[^\s،]+)",
+            command,
+        )
         if m2:
-            return {"operation": "fetch", "url": "https://" + m2.group(1)}
+            url = m2.group(1).rstrip(".،;:!")
+            if not url.lower().startswith(("http://", "https://")):
+                url = "https://" + url
+            return {"operation": "fetch", "url": url}
+        # a bare domain standing alone («وب را بگیر example.com»)
+        m3 = _re.search(r"\b(?:www\.)?[a-zA-Z0-9-]+\.(?:com|ir|org|net|io|dev|ai|co|gov|edu|info)\b(?:/[^\s،]*)?",
+                        command)
+        if m3:
+            url = m3.group(0)
+            if not url.lower().startswith(("http://", "https://")):
+                url = "https://" + url
+            return {"operation": "fetch", "url": url}
         return {}  # no URL found — the connector will refuse honestly
 
     if capability == "pdfreader":
