@@ -14,6 +14,7 @@ Run once per cron tick. It:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import time
@@ -39,7 +40,14 @@ def _run(*args: str) -> str:
 
 
 def _lock_state() -> tuple[str, bool]:
-    """Return (message, may_proceed)."""
+    """Return (message, may_proceed).
+
+    The lock is taken ATOMICALLY (``O_CREAT|O_EXCL``): a plain
+    ``exists()``-then-``write`` is a TOCTOU race, and a real night proved it —
+    two runs both read "no lock" and both proceeded, editing the same files.
+    Creation-or-refusal in one syscall is the only version that holds.
+    """
+    fresh = False
     if _LOCK.exists():
         age = time.time() - _LOCK.stat().st_mtime
         if age < _STALE_SECONDS:
@@ -48,10 +56,38 @@ def _lock_state() -> tuple[str, bool]:
                 "working. DO NOTHING this tick: no edits, no commits, no tests.",
                 False,
             )
-        _LOCK.write_text(str(time.time()), encoding="utf-8")
-        return f"LOCK: replaced a stale lock ({int(age // 60)} min old) — proceed.", True
-    _LOCK.write_text(str(time.time()), encoding="utf-8")
-    return "LOCK: acquired — proceed.", True
+        # STALE: O_EXCL alone can never take an existing file, so the dead
+        # lock must be REMOVED first. Two runs may both unlink (one gets
+        # FileNotFoundError, ignored); the create below then decides the
+        # winner — the race is settled in one atomic syscall, not by trust.
+        try:
+            _LOCK.unlink()
+        except FileNotFoundError:
+            pass
+        fresh = True
+
+    try:
+        fd = os.open(str(_LOCK), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        # somebody created it between our check and our create — they won
+        age = time.time() - _LOCK.stat().st_mtime
+        if age < _STALE_SECONDS:
+            return (
+                "LOCK: LIVE — another run won the atomic create; it is "
+                "working. DO NOTHING this tick.",
+                False,
+            )
+        return (
+            "LOCK: a stale lock could not be taken atomically (race) — "
+            "DO NOTHING this tick; the next tick will retry.",
+            False,
+        )
+    with os.fdopen(fd, "w") as fh:
+        fh.write(f"{time.time():.3f}\n")
+    return (
+        f"LOCK: {'replaced a stale lock — ' if fresh else ''}acquired atomically — proceed.",
+        True,
+    )
 
 
 

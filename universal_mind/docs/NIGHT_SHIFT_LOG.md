@@ -11,3 +11,12 @@
 - [2026-10-01 03:15] run started (lock acquired)
 - [2026-10-01 03:37] watchdog: 3 commits in the last 2h, 8 open item(s)
 - [2026-10-01 02:55] N6 — docs/SECURITY.md: جدول مدل تهدید (۱۲ ردیف، هر ردیف گواه واقعی) به‌علاوهٔ بخش «سه شکست صادقانهٔ همین دوره». پروب تازه probe_r57_docs: هر ارجاع سند را می‌سنجد — فایل تست، نام تست، وجود probe، و ثبتش در verify. ادعا: «سند نمی‌تواند از کد جدا شود» — ۶ گواه، همه سبز.
+- [2026-10-01 04:23] run started (lock acquired)
+- [2026-10-01 04:23] run started (lock acquired)
+- [2026-10-01 05:38] watchdog: 2 commits in the last 2h, 7 open item(s)
+- [2026-10-01 07:39] watchdog: 0 commits in the last 2h, 7 open item(s)
+- [2026-10-01 09:12] run started (lock acquired)
+- [2026-10-01 09:29] run started (lock acquired)
+- [2026-10-01 09:29] run started (lock acquired)
+- [2026-10-01 04:35] N3 — خط قرنطینه در گزارش فارسی: `_quarantine_note` + درجِ 🔒 در `persian_report` (صفحهٔ خصمانه → «اجرا نشد» با نام‌های فارسی خانواده‌ها؛ صفحهٔ پاک → «اسکن شد، چیزی نبود»). ۱۲ تست سبز. | N8 — رفعِ باگِ مسابقهٔ قفل که خودِ رانِ شب کشف و ثبت کرده بود: قفل حالا اتمیک است (O_CREAT|O_EXCL) و قفلِ کهنه اول unlink سپس create می‌شود. پروب یک باگ در رفعِ اولم گرفت: O_EXCL روی فایلِ موجود شکست می‌خورد و مسیرِ تصرفِ کهنه هرگز اجرا نمی‌شد. اثبات زنده: ۶ شروع هم‌زمان → دقیقاً ۱ برنده؛ قفلِ تازه رد می‌کند، کهنه تصرف می‌شود. probe_r57_report (۸ گواه زنده، ثبت‌شده در verify)
+- [2026-10-01 09:40] watchdog: 0 commits in the last 2h, 5 open item(s)

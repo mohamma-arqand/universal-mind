@@ -347,6 +347,10 @@ def _quarantine_note(result: Any) -> str | None:
     pre-rendered Persian sentence when present, else the serialized verdict +
     counts rebuilt through the one source of truth in ``content_quarantine``.
     Never invents a finding — no quarantine report means no line.
+
+    A CLEAN read still gets a line («اسکن شد — هیچ تلاش تزریقی نداشت»): on a
+    fetch the operator asked for, "I looked and it was clean" is the honest
+    counterpart of the warning, not noise.
     """
     if not isinstance(result, dict):
         return None
@@ -404,6 +408,16 @@ def persian_report(payload: dict[str, Any]) -> str:
         # Persian digits inside the flow line too (a Latin '1' is a leak).
         rendered = rendered.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
         lines.append(f"🔗 {rendered}")
+
+    # R57 N3 — THE QUARANTINE, MADE VISIBLE: when this run was fed by content
+    # from OUTSIDE (a fetched page — later an OCR'd image or a read document),
+    # the operator's report SAYS what that content tried. A defense the
+    # operator cannot see in the report is only a claim; this is the honest
+    # line, printed verbatim from the scan that really ran.
+    for cap in route:
+        note = _quarantine_note(results.get(cap))
+        if note:
+            lines.append(f"🔒 {note}")
 
     # R44-7 — THE A/B RULING: an ambiguous kind ran as a real contest; the
     # report announces the winner and the margin (the ruling is visible).

@@ -174,6 +174,7 @@ PROBES = [
     "probe_r57_ssrf.py",
     "probe_r57_ledger.py",
     "probe_r57_docs.py",
+    "probe_r57_report.py",
 ]
 
 
