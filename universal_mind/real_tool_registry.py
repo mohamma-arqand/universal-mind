@@ -32,6 +32,7 @@ from universal_mind.system_status_tool import SystemStatusToolConnector
 from universal_mind.pdfreader_tool import PdfReaderToolConnector
 from universal_mind.screenshot_tool import ScreenshotToolConnector
 from universal_mind.webfetch_tool import WebFetchToolConnector
+from universal_mind.unit_convert_tool import UnitConvertToolConnector
 from universal_mind.ocr_tool import OcrToolConnector
 from universal_mind.speech_tool import SpeechToolConnector
 from universal_mind.email_outbox import EmailToolConnector
@@ -54,7 +55,8 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "email": EmailToolConnector,           # real RFC-822 outbox (.eml) + optional SMTP (R44-11)
     "ocr": OcrToolConnector,              # real Windows.Media.Ocr — the platform READS images
     "excel": ExcelSuiteConnector,         # real openpyxl workbooks (the 15th program)
-    "webfetch": WebFetchToolConnector,    # real urllib fetch — the 16th program
+    "webfetch": WebFetchToolConnector,
+    "unitconvert": UnitConvertToolConnector,    # real urllib fetch — the 16th program
     "pdfreader": PdfReaderToolConnector, # real pypdf — the 17th: reads PDFs
     "screenshot": ScreenshotToolConnector,  # real ImageGrab — the 18th: sees the screen
     "filesearch": FileSearchToolConnector,  # R53 wave-4 — real disk search (read-only)

@@ -46,6 +46,7 @@ _CAP_FA: dict[str, str] = {
     "filededupe": "فایلهای تکراری",
     "sysstatus": "وضعیت سیستم",
     "scheduler": "زمانبند",
+    "unitconvert": "تبدیل واحد",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -155,6 +156,10 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     name = _CAP_FA.get(cap, cap)
     if cap == "compute" and isinstance(result, (int, float)):
         return f"محاسبه انجام شد: نتیجه {_fa_num(result)}."
+    # R59 P2 — the conversion's own Persian sentence is already built by the
+    # tool (digits, units, family); render it verbatim — one source of truth.
+    if cap == "unitconvert" and isinstance(result, dict) and result.get("answer_fa"):
+        return str(result["answer_fa"])
     if not isinstance(result, dict):
         # A database read-back is a LIST of rows — fall through so the
         # database branch can narrate it (everything else needs a dict).

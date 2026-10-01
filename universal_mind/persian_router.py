@@ -276,6 +276,23 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("جاوااسکریپت", "compute"),
     ("جاوا اسکریپت", "compute"),
     ("نود", "compute"),
+    # R59 P2 — UNIT CONVERSION: «۱۰ کیلومتر چند مایل است؟». The unit words
+    # name the capability; the value and the unit pair come from the params
+    # layer's parser. A unit word in a NON-question sentence (e.g. a title)
+    # does not fire: the gate below requires «چند» too.
+    ("کیلومتر", "unitconvert"),
+    ("کیلوگرم", "unitconvert"),
+    ("فارنهایت", "unitconvert"),
+    ("سانتیگراد", "unitconvert"),
+    ("مایل", "unitconvert"),
+    ("پوند", "unitconvert"),
+    ("مگابایت", "unitconvert"),
+    ("گیگابایت", "unitconvert"),
+    ("کیلوبایت", "unitconvert"),
+    ("ترابایت", "unitconvert"),
+    ("یارد", "unitconvert"),
+    ("میلی‌متر", "unitconvert"),
+    ("سانتی‌متر", "unitconvert"),
     # R59 P1 — arithmetic QUESTIONS route here too: «جمع ۲ و ۵ چنده؟».
     # The measured gap: the question went «نشناختم» while compute (a real
     # node evaluator) sat right there. The verbs name the operation; the
@@ -401,6 +418,20 @@ def route(command: str) -> PersianRoute:
     # over the bare «بنویس» (clipboard paste). Explicit > inference, always.
     if "متن بنویس" in lowered:
         matched.pop("clipboard", None)
+
+    # R59 P2 — THE CONVERSION-SHAPE GATE: a unit word is a SUBSTRING trap
+    # («کیلومتراژ» contains «کیلومتر»), so the word alone must not fire the
+    # capability. unitconvert stays only when the WHOLE sentence parses as a
+    # conversion (value + two units + «چند») — the same explicit-intent law
+    # as the find-intent gate above.
+    if "unitconvert" in matched:
+        try:
+            from universal_mind.unit_convert_tool import parse_convert_request
+
+            if parse_convert_request(command) is None:
+                matched.pop("unitconvert", None)
+        except Exception:  # noqa: BLE001 — the gate is a lens, never fatal
+            pass
 
     # R53 wave-4 — FILE-SEARCH INTENT: «... را پیدا کن» with a folder/word
     # (no URL, no «سایت») is a DISK search. The words «دانلود»/«جستجو» that

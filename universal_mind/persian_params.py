@@ -237,6 +237,17 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if text:
             return {"operation": "compress", "content": text}
         return {"operation": "compress", "content": command}
+    if capability == "unitconvert":
+        # R59 P2 — the sentence carries the value and the unit pair:
+        # «۱۰ کیلومتر چند مایل است؟» → {value, source, target}.
+        from universal_mind.unit_convert_tool import parse_convert_request
+
+        parsed = parse_convert_request(command)
+        if parsed is None:
+            return {}  # not a conversion shape — the connector will ask
+        return {"operation": "convert", "value": parsed["value"],
+                "source": parsed["source"], "target": parsed["target"]}
+
     if capability == "compute":
         if numbers and len(numbers) > 1:
             # R59 P1 — THE OPERATOR THE SENTENCE NAMES: «جمع …» is + but
