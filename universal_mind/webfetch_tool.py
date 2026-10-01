@@ -30,7 +30,7 @@ import urllib.request
 from typing import Any
 
 from universal_mind.connectors import ConnectorResult
-from universal_mind.content_quarantine import scan_untrusted
+from universal_mind.content_quarantine import quarantine_fields
 
 _TIMEOUT = 20
 _MAX_BYTES = 1_048_576  # 1MB honest cap
@@ -176,14 +176,14 @@ class WebFetchTool:
         # R57 THE UNTRUSTED-CONTENT QUARANTINE: whatever this page says, a
         # sentence inside it that LOOKS like an order is data, not a command.
         # We scan the REAL fetched text and report what it tried; the caller
-        # keeps the text as data (never routed).
-        quarantine = scan_untrusted(text)
+        # keeps the text as data (never routed). A clean fetch still carries
+        # the honest "scanned, nothing found" sentence (N3).
+        qfields = quarantine_fields(text, include_clean_summary=True)
         return {
             "ok": True, "status": status, "bytes": len(raw), "chars": len(text),
             "truncated": truncated, "title": title,
             "preview": text[:500], "error": "",
-            "quarantine": quarantine.as_dict(),
-            "quarantine_summary": quarantine.summary_fa(),
+            **qfields,
         }
 
 

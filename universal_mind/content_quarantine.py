@@ -258,6 +258,31 @@ def scan_untrusted(text: str, *, max_findings: int = 50) -> QuarantineReport:
     )
 
 
+def quarantine_fields(
+    text: str, *, include_clean_summary: bool = True
+) -> dict[str, Any]:
+    """The two result-dict fields EVERY untrusted-text tool attaches.
+
+    One source of truth for the wiring: a tool that ingests outside text
+    (web fetch, OCR, a read document) calls this and merges the result into
+    its own dict, so the report layer (:func:`persian_report`'s
+    ``_quarantine_note``) sees the SAME shape everywhere.
+
+    ``include_clean_summary`` controls whether a *clean* read still carries
+    the pre-rendered Persian sentence. A fetch says so on purpose (the
+    operator asked to read the web — "I scanned it and it was fine" is the
+    honest counterpart of the warning). An OCR/PDF read leaves it off: the
+    normal "document read" line already says what happened, and a 🔒 line on
+    every calm file would be noise. A NON-clean verdict ALWAYS carries the
+    sentence — a defense the operator cannot see is only a claim.
+    """
+    report = scan_untrusted(text)
+    fields: dict[str, Any] = {"quarantine": report.as_dict()}
+    if include_clean_summary or report.verdict != "clean":
+        fields["quarantine_summary"] = report.summary_fa()
+    return fields
+
+
 def is_instruction_from_outside(text: str) -> bool:
     """True when an outside text carries an ORDER (never a mere mention).
 
@@ -302,6 +327,7 @@ __all__ = [
     "QuarantineReport",
     "is_instruction_from_outside",
     "normalize",
+    "quarantine_fields",
     "scan_untrusted",
     "summary_fa_from_dict",
 ]

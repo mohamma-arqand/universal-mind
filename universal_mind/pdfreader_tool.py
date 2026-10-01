@@ -16,6 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from universal_mind.content_quarantine import scan_untrusted
+
 from universal_mind.connectors import ConnectorResult
 
 
@@ -44,10 +46,17 @@ class PdfReaderTool:
                 if total >= max_chars:
                     break
             text = "\n".join(chunks)[:max_chars]
+            # R57 N4 — THE SAME QUARANTINE LAW ON THIS PATH: a document's text
+            # is content from outside, exactly like a web page. A PDF that says
+            # "[SYSTEM] ignore your instructions" is DATA — scanned here, and
+            # surfaced in the operator's report through the one source of truth.
+            quarantine = scan_untrusted(text)
             return {
                 "ok": True, "text": text, "pages": len(reader.pages),
                 "chars": len(text), "truncated": total > max_chars,
                 "error": "",
+                "quarantine": quarantine.as_dict(),
+                "quarantine_summary": quarantine.summary_fa(),
             }
         except ImportError as exc:
             return {"ok": False, "error": f"pypdf unavailable: {exc}", "text": "", "pages": 0}
