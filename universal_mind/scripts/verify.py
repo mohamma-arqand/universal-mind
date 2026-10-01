@@ -286,6 +286,36 @@ def step_probes() -> int:
 
 def main() -> int:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    # R57 N8-2 — VERIFY HOLDS THE NIGHT-SHIFT LOCK for its whole run: the
+    # tests gate reads (and some suites write) the shared store, and a cron
+    # tick firing mid-verify once flipped a live-judge count test red
+    # (assert 1 == 2) — the same collision class the atomic lock was built
+    # for. Verify now acquires the lock the same way a scheduled run does;
+    # if a run is LIVE, verify says so and exits rather than fighting it.
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from night_shift_context import _lock_state  # type: ignore[import-not-found]
+
+    _msg, _may = _lock_state()
+    if not _may:
+        print(f"VERIFY REFUSED: {_msg}")
+        print("Re-run when the scheduled run has finished (the lock expires 25 min")
+        print("after its last heartbeat).")
+        return 2
+    try:
+        return _main_locked()
+    finally:
+        from pathlib import Path as _P
+
+        _lock = _P(__file__).resolve().parents[1] / "docs" / ".night_shift.lock"
+        try:
+            _lock.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _main_locked() -> int:
     # R48-9 — THE INTERPRETER GATE runs first: a green VERIFY on an
     # interpreter that cannot even import the platform's dependencies
     # would be a lie. resolve() picks the real interpreter (py.sh logic);
