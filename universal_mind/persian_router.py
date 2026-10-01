@@ -203,6 +203,12 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("جستجوی فایل", "filesearch"),
     ("فایلها را پیدا", "filesearch"),
     ("فایل های را پیدا", "filesearch"),
+    # R58 M1 — «پوشه X را نشان بده»: a FOLDER shown is a disk listing, not a
+    # web read. Measured gap: «پوشه دانلودها را نشان بده» went to webfetch
+    # because «دانلود» matched and nothing filesearch-shaped did.
+    ("پوشه را نشان بده", "filesearch"),
+    ("پوشه دانلود", "filesearch"),
+    ("فولدر را نشان بده", "filesearch"),
     ("را پیدا کن", "filesearch"),
     ("بزرگترین فایل", "filesearch"),
     # sysstatus (R53 wave-6) — the REAL machine vitals in one report

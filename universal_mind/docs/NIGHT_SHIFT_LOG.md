@@ -89,3 +89,4 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-01 16:22] run started (lock acquired)
 - [2026-10-01 16:22] run started (lock acquired)
 - [2026-10-01 16:23] run started (lock acquired)
+- [2026-10-01 16:50] M1 — «پوشه دانلودها را نشان بده» به webfetch می‌رفت (کلمهٔ «دانلود» دزدید). سه واژهٔ پوشه به filesearch اضافه شد؛ گواه زنده: جستجوی واقعی ۱۰ فایل بزرگ؛ «سایت example.com» هنوز webfetch. ۶ تست (یکی ادعای اشتباهِ خودم را اصلاح کرد: تکراری‌ها filededupe است نه filesearch).
