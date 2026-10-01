@@ -2,19 +2,23 @@
 
 > این سند برای **بازیابی** نوشته شده: هر کسی (یا هر عاملی) با خواندن این فایل بفهمد سیستم از چه لایههایی ساخته شده، کجا چیست، و چطور راستیآزمایی میشود. همهی اعداد اندازهگیریشدهاند.
 
-## اعداد زنده (اندازهگیریشده)
+## اعداد زنده (اندازه‌گیری‌شده — بازاندازه‌گیری در R57)
 
-| سنجه | مقدار |
-|---|---|
-| ماژولهای پایتون | **۱۱۲** |
-| خطوط کد مؤثر (بدون تست) | **~۱۷٫۷۴۲** |
-| فایلهای تست | **۲۵۳** |
-| تستها | **~۲٫۰۱۴** |
-| probeهای زنده | **۹۰** |
-| قابلیتهای واقعی ثبتشده | **۲۵** |
-| گیتهای verify | **۵** (interpreter / lint / mypy-ratchet / tests / receipt / probes) |
+> هر عدد این جدول با فرمان اندازه‌گیری شده، نه از حافظه. اگر بعد از این خط
+> چیزی زیاد/کم شد، این جدول باید بازاندازه‌گیری شود (کامیت R57 بازاندازه شد).
 
-## نقشهی لایهها
+| سنجه | مقدار | چطور اندازه‌گیری شد |
+|---|---|---|
+| ماژول‌های سطح-بالا | **۱۱۷** | `ls -1 *.py \| wc -l` |
+| خطوط کد ماژول‌ها | **۲۳٬۲۵۸** | مجموع خطوط `*.py` سطح-بالا |
+| اسکریپت‌ها (probe/ابزار) | **۱۰۶** فایل / ۱۴٬۸۰۲ خط | `scripts/*.py` |
+| فایل‌های تست | **۲۶۳** / ۳۰٬۲۰۴ خط | `tests/test_*.py` |
+| probeهای زنده | **۹۷** | `scripts/probe_*.py` |
+| اسناد | **۸** | `docs/*.md` |
+| قابلیت‌های واقعی ثبت‌شده | **۲۵** | رجیستری |
+| گیت‌های verify | **۶** (interpreter / lint / mypy-ratchet / tests / receipt / probes) | `scripts/verify.py` |
+
+## نقشه‌ی لایه‌ها
 
 ### ۱. لایهی زبان (ورودی فارسی)
 | ماژول | نقش |
@@ -87,18 +91,46 @@
 4. **قانون ایموجی** — SAPI نام ایموجی را بلند میخواند؛ `speak()` ایموجیها را قبل از سیم حذف میکند.
 5. **قانون حذف** — هیچ فایلی بدون «تأیید کن» حذف نمیشود؛ پیشنمایش پیشفرض است؛ اصل هر گروه حفظ میشود.
 6. **قانون بکاپ** — بکاپ با API خود SQLite + `PRAGMA integrity_check`؛ چرخش keep=3.
+7. **قانون داده‌نه‌فرمان (R57)** — هر متنی که از **بیرون** آمده (صفحهٔ وب، PDF، تصویر OCR، ایمیل) داده است، نه فرمان. `content_quarantine.scan_untrusted` آن را در پنج خانواده می‌سنجد و متن فقط به‌عنوان داده می‌ماند. جزئیات و گواه‌ها: `docs/SECURITY.md`.
+8. **قانون متادیتا/منشأ (R57)** — روتر با `provenance` می‌داند جمله از کجا آمده؛ پیش‌فرض `operator` است و هر مقدار دیگر یعنی بیرونی → فرمانِ درونش با `route=["external_content_refused"]` رد می‌شود. این دروازه **پیش از هر مارکر و هر کلمه‌کلیدی** اجرا می‌شود.
+9. **قانون SSRF (R57)** — `webfetch` هیچ آدرس خصوصی/loopback/link-local/متادیتای ابری را پیش‌فرض نمی‌خواند (`kind=blocked_target`) و ریدایرکت هرگز نگهبان را باز نمی‌کند؛ خواندنِ محلی با `allow_private=True` یک **عملِ صریح** است.
+10. **قانون قفلِ اتمیک (R57)** — کار موازی روی همین ریپو ممنوع؛ قفل با `O_CREAT|O_EXCL` گرفته می‌شود (اثبات: ۶ شروع هم‌زمان → دقیقاً ۱ برنده) و در پایان هر ران آزاد می‌شود.
 
-## راستیآزمایی (Verification)
+## لایه‌ی امنیت (R57) — ماژول‌ها
+
+| ماژول | نقش |
+|---|---|
+| `content_quarantine.py` | اسکن متن بیرونی در ۵ خانواده (override/authority/exfiltration/destructive/instruction)، نورمال‌سازی هم‌شکل‌ها (کاف/ی عربی، ZWNJ حذف نه فاصله، bidi)، `safe_text` |
+| `injection_ledger.py` | جدول `injection_attempts` (ساعت محلی) + `render_fa`؛ فرمان «تزریق‌ها را نشان بده» |
+| `webfetch_tool.py` | نگهبان SSRF + ریدایرکتِ محافظت‌شده + حمل گزارش قرنطینه |
+| `red_team.py` | ۳۲ جملهٔ خصمانه در ۵ کلاس + **قانون دست‌نخوردگی استور** |
+| `restore_drill.py` | بازیابی واقعی بکاپ + مقایسهٔ شمارش هر جدول |
+| `scripts/probe_r57_*.py` | ۷ پروب: adversarial / quarantine / ssrf / ledger / report / provenance / docs |
+
+## شیفت شب (کارِ خودمختار)
+
+| قطعه | نقش |
+|---|---|
+| `docs/NIGHT_SHIFT.md` | **صف کار + قانون**: آیتم‌های شماره‌دار با شکاف، پذیرش، و گواهِ لازم |
+| `docs/NIGHT_SHIFT_LOG.md` | خط زمانی (هر ران یک خط + ضربان نگهبان) |
+| `scripts/night_shift_context.py` | قفل اتمیک + متن وضعیت (cursor، git، لاگ) که به پرامپت تزریق می‌شود |
+| cron `night-shift-universal-mind` | هر ۳۵ دقیقه، با `skills=[universal-mind-project]` و `workdir` |
+| cron `night-shift-watchdog` | **بدون LLM**: تا کامیت می‌رسد ساکت است؛ اگر ۲ ساعت کار نبود فریاد می‌زند |
+| cron `night-shift-final-report` | گزارش پایان شب از گیت/لاگ واقعی |
+
+## راستی‌آزمایی (Verification)
 
 ```bash
 cd D:/workspaces/baddanKhoda/universal_mind
-PYTHONPATH=.. python scripts/verify.py     # ۵ گیت: interpreter/lint/ratchet/tests/receipt/probes
-PYTHONPATH=.. python scripts/probe_r53_waves.py   # ۱۰ گواه زندهی قابلیتهای جدید
+PYTHONPATH=.. python scripts/verify.py     # ۶ گیت: interpreter/lint/ratchet/tests/receipt/probes
+PYTHONPATH=.. python scripts/probe_r53_waves.py   # ۱۰ گواه زنده‌ی قابلیت‌های جدید
+PYTHONPATH=.. python scripts/probe_r57_docs.py    # سند امنیت با کد نمی‌تواند از هم جدا شود
 ```
 
-- گیت تست با JUnit به `artifacts/junit.xml` مینویسد؛ `generate_receipt.py` رسید میسازد.
-- گیت lint در حالت آفلاین به ruff پینشدهی venv برمیگردد (fallback اندازهگیریشده).
+- گیت تست با JUnit به `artifacts/junit.xml` می‌نویسد؛ `generate_receipt.py` رسید می‌سازد.
+- گیت lint در حالت آفلاین به ruff پین‌شده‌ی venv برمی‌گردد (fallback اندازه‌گیری‌شده).
 - هر probe با `--junit-xml=` قابل ثبت در artifacts است.
+- **مدل تهدید و گواهِ هر دفاع**: `docs/SECURITY.md` (۱۲ ردیف، هر ردیف probe/تستِ واقعی).
 
 ## فرمانهای کلیدی برای شروع کار مجدد
 
