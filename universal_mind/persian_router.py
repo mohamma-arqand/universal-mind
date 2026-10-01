@@ -219,6 +219,12 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("حافظه چقدر", "sysstatus"),
     ("دیسک چقدر", "sysstatus"),
     ("فضای خالی", "sysstatus"),
+    # R60 Q4 — «فضای درایو C» / «فضای دیسک D»: the drive-space question;
+    # sysstatus already measures every drive, the words just never routed.
+    ("فضای درایو", "sysstatus"),
+    ("فضای دیسک", "sysstatus"),
+    ("فضای درایور", "sysstatus"),
+    ("جای خالی", "sysstatus"),
     ("باتری چقدر", "sysstatus"),
     # filededupe (R53 wave-5) — SHA-256 duplicates, preview-first
     ("فایلهای تکراری", "filededupe"),

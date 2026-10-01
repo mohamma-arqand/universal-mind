@@ -255,10 +255,20 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                 f"رم: {_fa_num(ram['used_pct'])}٪ در استفاده "
                 f"({_fa_num(ram['free_gb'])} گیگ از {_fa_num(ram['total_gb'])} آزاد)"
             )
+        asked = str(params.get("drive_letter") or "").upper().rstrip(":")
         for d in result.get("disks") or []:
+            drive = str(d["drive"]).upper().rstrip(":")
+            if asked and asked != drive:
+                continue  # «فضای درایو C» — only the drive the operator named
             lines.append(
                 f"دیسک {d['drive']} {_fa_num(d['free_gb'])} گیگ از {_fa_num(d['total_gb'])} آزاد ({_fa_num(d['free_pct'])}٪)"
             )
+        if asked and not any(
+            str(d["drive"]).upper().rstrip(":") == asked
+            for d in result.get("disks") or []
+        ):
+            lines.append(f"⚠ درایو {asked} را پیدا نکردم — درایوهای دیده‌شده: "
+                         + "، ".join(str(d["drive"]) for d in result.get("disks") or []))
         bat = result.get("battery_pct")
         if bat is not None:
             lines.append(f"باتری: {_fa_num(bat)}٪")

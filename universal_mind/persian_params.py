@@ -429,9 +429,16 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "read"}
 
     if capability == "sysstatus":
-        # R53 wave-6 — the machine's vitals; no parameters to extract,
-        # the probe reads everything it can and names what it cannot.
-        return {"operation": "status"}
+        # R53 wave-6 — the machine's vitals. R60 Q4: «فضای درایو C» names a
+        # SPECIFIC drive — the report highlights that drive (drive_letter),
+        # so the operator asking about C: does not get a five-drive wall.
+        import re as _re
+
+        # the colon is OPTIONAL — «فضای درایو C را نشان بده» names the drive
+        # with no colon; requiring one measured empty-handed (live witness).
+        m_drive = _re.search(r"درایو\s*([A-Za-z]):?|دیسک\s*([A-Za-z]):?", command)
+        letter = (m_drive.group(1) or m_drive.group(2)).upper() if m_drive else ""
+        return {"operation": "status", "drive_letter": letter}
     if capability == "filededupe":
         # R53 wave-5 — «فایلهای تکراری در دانلودها را پاک کن».
         from universal_mind.file_search_tool import extract_search_params
