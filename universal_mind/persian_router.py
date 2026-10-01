@@ -276,6 +276,15 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("جاوااسکریپت", "compute"),
     ("جاوا اسکریپت", "compute"),
     ("نود", "compute"),
+    # R60 Q1+Q2 — only the GLUED shapes that appear verbatim in speech; the
+    # file-WRITE shape («فایل … بنویس») has the path BETWEEN the words, so a
+    # substring keyword can never carry it — route_and_run's dedicated block
+    # handles that whole class (like the reminder block).
+    ("محتوای فایل", "textfile"),
+    ("محتوی فایل", "textfile"),
+    ("فایل رو بخون", "textfile"),
+    ("فایلهای متنی", "textfile"),
+    ("فایل‌های متنی", "textfile"),
     # R59 P2 — UNIT CONVERSION: «۱۰ کیلومتر چند مایل است؟». The unit words
     # name the capability; the value and the unit pair come from the params
     # layer's parser. A unit word in a NON-question sentence (e.g. a title)
@@ -419,6 +428,15 @@ def route(command: str) -> PersianRoute:
     if "متن بنویس" in lowered:
         matched.pop("clipboard", None)
 
+    # R60 Q2 — THE FILE-WRITE INTENT: «فایل … بنویس/بساز» means a FILE on
+    # disk, not a clipboard paste. The bare «بنویس» belongs to the clipboard
+    # (its old contract), but when the sentence names a FILE the explicit
+    # intent wins and the clipboard step must go — the sweep measured the
+    # write being stolen by clipboard and the file never created.
+    if "textfile" in matched and ("بنویس" in lowered or "بساز" in lowered) \
+            and "فایل" in lowered:
+        matched.pop("clipboard", None)
+
     # R59 P2 — THE CONVERSION-SHAPE GATE: a unit word is a SUBSTRING trap
     # («کیلومتراژ» contains «کیلومتر»), so the word alone must not fire the
     # capability. unitconvert stays only when the WHOLE sentence parses as a
@@ -544,6 +562,32 @@ def route_and_run(
                 _work_command = command.replace(marker, "").replace("  — ", "").replace(" — ", "").strip()
                 break
     explain_only = _explain
+
+    # R60 Q1+Q2 — THE TEXT-FILE WRITE BLOCK: «فایل متنی <path> را با محتوای
+    # X بنویس» has the path BETWEEN the words, so no vocabulary substring can
+    # carry it (measured: the glued keyword never matched and clipboard stole
+    # the sentence — the file was never created). Re-enter with forced_route,
+    # the platform's own mechanism for explicit intent.
+    if forced_route is None and "فایل" in command and ("بنویس" in command or "بساز" in command) \
+            and "متن بنویس" not in command:
+        import re as _re_tf
+
+        _m_tf_path = _re_tf.search(r"([A-Za-z]:[/\\](?:[^،!?؟\s]+))", command)
+        _m_content = _re_tf.search(
+            r"(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?)\s*(.+)$", command)
+        if _m_tf_path and _m_content and _m_content.group(1).strip():
+            return route_and_run(
+                command,
+                registry,
+                params={"textfile": {
+                    "operation": "write",
+                    "path": _m_tf_path.group(1),
+                    "content": _m_content.group(1).strip().rstrip("،."),
+                }},
+                forced_route=["textfile"],
+                provenance="operator",
+                _retry_of=_retry_of,
+            )
 
     # R57 N2 — «تزریق‌ها را نشان بده»: the injection ledger read back from the
     # real store. A defense the operator cannot inspect is a claim; this makes

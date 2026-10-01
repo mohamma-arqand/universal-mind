@@ -1,0 +1,150 @@
+"""THE TEXT-FILE TOOL — read and write the operator's plain-text files (R60).
+
+Two measured gaps: «محتوای فایل X را نشان بده» and «فایل رو بخون» returned
+«نشناختم», and «یک فایل متنی بنویس در D:/test» was stolen by the clipboard
+capability. A real text file is first-class data — the platform can read and
+write it honestly.
+
+Laws:
+  - READ: utf-8 (errors=replace, REPORTED), a size cap with the truncation
+    NAMED, a missing file refused BY NAME.
+  - WRITE: refuses to overwrite an existing file by default (the DELETE-law
+    spirit: silent overwrite is destruction) and says the remedy; the parent
+    directory is created when it does not exist.
+  - Every number the operator sees is Persian.
+  - No secrets: the tool never reads a file whose name looks like a
+    credential (.env, *.key, *credentials*, *secret*) — a read of the
+    operator's keys is a leak, not a feature.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from typing import Any
+
+from universal_mind.connectors import ConnectorResult
+
+_MAX_READ_CHARS = 60_000
+
+_FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+# files the platform must never read aloud: credentials are not content
+_FORBIDDEN = re.compile(r"(^|[/\\])(\.env|.*secret.*|.*credential.*|.*\.key)$",
+                         re.IGNORECASE)
+
+
+def _fa(value: object) -> str:
+    return str(value).translate(_FA)
+
+
+class TextFileTool:
+    """Read and write plain-text files, honestly."""
+
+    name = "textfile"
+    capability = "textfile"
+
+    def read(self, path: str, max_chars: int = _MAX_READ_CHARS) -> dict[str, Any]:
+        src = Path(path)
+        if not src.exists():
+            return {"ok": False, "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده.",
+                    "kind": "missing"}
+        if src.is_dir():
+            return {"ok": False, "error": f"«{path}» یک پوشه است، نه فایل — نام فایل را بده.",
+                    "kind": "is_dir"}
+        if _FORBIDDEN.search(str(src)):
+            return {"ok": False,
+                    "error": "این فایل به نظر راز می‌رسد (.env/کلید) — محتوایش را نمی‌خوانم.",
+                    "kind": "secret"}
+        try:
+            text = src.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return {"ok": False, "error": f"خواندن نشد: {exc}", "kind": "io"}
+        truncated = len(text) > max_chars
+        return {
+            "ok": True, "text": text[:max_chars], "chars": len(text),
+            "truncated": truncated, "path": str(src), "error": "",
+        }
+
+    def write(self, path: str, content: str) -> dict[str, Any]:
+        dst = Path(path)
+        if dst.exists():
+            return {
+                "ok": False, "kind": "exists",
+                "error": (f"«{path}» از قبل هست — دورنویسی نکنم؟ اگر آری بگو "
+                          "«روی همان فایل بنویس»؛ وگرنه نام دیگری بده."),
+            }
+        try:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(content, encoding="utf-8")
+        except OSError as exc:
+            return {"ok": False, "error": f"نوشتن نشد: {exc}", "kind": "io"}
+        return {"ok": True, "path": str(dst), "chars": len(content),
+                "bytes": len(content.encode("utf-8")), "error": ""}
+
+    def list_texts(self, folder: str) -> dict[str, Any]:
+        src = Path(folder)
+        if not src.exists() or not src.is_dir():
+            return {"ok": False,
+                    "error": f"پوشه‌ای در «{folder}» پیدا نکردم — مسیر را دقیق بده.",
+                    "kind": "missing"}
+        files = sorted(
+            p.name for p in src.iterdir()
+            if p.is_file() and p.suffix.lower() in (".txt", ".md", ".log", ".csv", ".json")
+        )
+        return {"ok": True, "files": files[:100], "count": len(files), "error": ""}
+
+
+class TextFileToolConnector:
+    """Adapts :class:`TextFileTool` to the ``Connector`` protocol."""
+
+    def __init__(self, tool: TextFileTool | None = None) -> None:
+        self._tool = tool if tool is not None else TextFileTool()
+
+    def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
+        operation = params.get("operation", "read") or "read"
+        if operation == "read":
+            path = str(params.get("path", "")).strip()
+            if not path:
+                return ConnectorResult(
+                    ok=False, output=None,
+                    error="کدام فایل؟ مسیرش را بده — مثلا: محتوای فایل D:/notes/x.txt را نشان بده",
+                )
+            out = self._tool.read(path)
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")
+            })
+        if operation == "write":
+            path = str(params.get("path", "")).strip()
+            content = str(params.get("content", ""))
+            if not path:
+                return ConnectorResult(
+                    ok=False, output=None,
+                    error="کجا بنویسم؟ مسیر را بده — مثلا: فایل متنی D:/notes/x.txt را با محتوای سلام بنویس",
+                )
+            out = self._tool.write(path, content)
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")
+            })
+        if operation == "list":
+            folder = str(params.get("path", "")).strip()
+            if not folder:
+                return ConnectorResult(
+                    ok=False, output=None,
+                    error="کدام پوشه؟ مسیرش را بده — مثلا: فایل‌های متنی D:/notes را نشان بده",
+                )
+            out = self._tool.list_texts(folder)
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")
+            })
+        return ConnectorResult(ok=False, output=None,
+                               error=f"unknown operation: {operation!r}")
+
+
+__all__ = ["TextFileTool", "TextFileToolConnector"]

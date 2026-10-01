@@ -237,6 +237,24 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if text:
             return {"operation": "compress", "content": text}
         return {"operation": "compress", "content": command}
+    if capability == "textfile":
+        # R60 Q1+Q2 — READ/LIST params. (The WRITE shape is handled by the
+        # dedicated route_and_run block, which passes its own params — the
+        # path there sits BETWEEN the sentence words and no glue could ever
+        # carry it.) The path regex keeps the DOT: «notes.txt» lost its
+        # extension to a char class that ate «.», a live witness caught it.
+        import re as _re
+
+        m_path = _re.search(r"([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+        path = m_path.group(1) if m_path else ""
+        op = "read"
+        if any(w in command for w in ("فایلهای متنی", "فایل‌های متنی")) \
+                and "محتو" not in command and "بنویس" not in command:
+            op = "list"
+        if not path:
+            return {}  # no path — the connector asks by name
+        return {"operation": op, "path": path}
+
     if capability == "unitconvert":
         # R59 P2 — the sentence carries the value and the unit pair:
         # «۱۰ کیلومتر چند مایل است؟» → {value, source, target}.

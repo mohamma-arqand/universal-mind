@@ -47,6 +47,7 @@ _CAP_FA: dict[str, str] = {
     "sysstatus": "وضعیت سیستم",
     "scheduler": "زمانبند",
     "unitconvert": "تبدیل واحد",
+    "textfile": "پروندهٔ متنی",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -160,6 +161,22 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     # tool (digits, units, family); render it verbatim — one source of truth.
     if cap == "unitconvert" and isinstance(result, dict) and result.get("answer_fa"):
         return str(result["answer_fa"])
+    # R60 Q1+Q2 — the text-file view: the content with an honest truncation
+    # note, or the written-file facts with Persian digits.
+    if cap == "textfile" and isinstance(result, dict):
+        if "text" in result:
+            note = " (ناقص خوانده شد — فایل بلندتر است)" if result.get("truncated") else ""
+            head = str(result["text"])[:600]
+            return f"محتوای «{result.get('path', '')}»{note}:\n{head}"
+        if "chars" in result and "text" not in result:
+            return (f"در «{result.get('path', '')}» نوشتم — "
+                    f"{_fa_num(result.get('chars', 0))} نویسه.")
+        if "files" in result:
+            files = result.get("files") or []
+            if not files:
+                return "پوشه فایل متنی ندارد."
+            return (f"{_fa_num(result.get('count', len(files)))} فایل متنی: "
+                    + "، ".join(files[:12]))
     if not isinstance(result, dict):
         # A database read-back is a LIST of rows — fall through so the
         # database branch can narrate it (everything else needs a dict).
