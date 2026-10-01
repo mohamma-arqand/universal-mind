@@ -371,6 +371,61 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             _d = f"{_w} {_jd(_off)} بود"
         return _reflex_answer(c, _d + ".")
 
+    # R60 Q3 — TIME-UNTIL and WEEKDAY-DISTANCE, both measured in the 19-command
+    # sweep: «چند دقیقه تا نیمه‌شب مانده؟» and «شنبه چند روز دیگه است؟».
+    # The clock is REAL (datetime.now), the weekday is REAL (the local
+    # calendar — Jalali context, Persian weekday names), and the answer
+    # Persianizes every digit.
+    if "مانده" in c or "مانده؟" in c or " مونده" in c or "مونده" in c:
+        from datetime import datetime, timedelta
+
+        _now = datetime.now()
+        # نیمه‌شب — the coming midnight
+        if "نیمه‌شب" in c or "نیمه شب" in c:
+            _mid = _now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            _delta = _mid - _now
+            _mins = int(_delta.total_seconds() // 60)
+            _h, _m = divmod(_mins, 60)
+            if _h > 0:
+                _txt = f"تا نیمه‌شب {_fa_num(_h)} ساعت و {_fa_num(_m)} دقیقه مانده"
+            else:
+                _txt = f"تا نیمه‌شب {_fa_num(_mins)} دقیقه مانده"
+            return _reflex_answer(c, _txt + ".")
+        # «تا ساعت بعدی» — the next whole hour
+        if "ساعت بعد" in c:
+            _nx = (_now.replace(minute=0, second=0, microsecond=0)
+                   + timedelta(hours=1))
+            _mins = int((_nx - _now).total_seconds() // 60)
+            return _reflex_answer(
+                c, f"تا ساعت بعدی {_fa_num(_mins)} دقیقه مانده.")
+
+    # R60 Q3 — «شنبه چند روز دیگه است؟» / «جمعه چند روز دیگه؟» — the REAL
+    # weekday distance on the operator's calendar (Saturday starts the
+    # Persian week). days_ahead computed from datetime.now().
+    # ORDER MATTERS (the پس‌فردا/فردا law): «شنبه» is a SUBSTRING of
+    # «یکشنبه/دوشنبه/سه‌شنبه/چهارشنبه» — the longer words must be tested
+    # first or «یکشنبه چند روز دیگه» would answer «شنبه».
+    _FA_WEEKDAYS = [
+        ("سه‌شنبه", 1), ("سهشنبه", 1),
+        ("یکشنبه", 6), ("دوشنبه", 0), ("چهارشنبه", 2),
+        ("پنجشنبه", 3), ("پنج شنبه", 3),
+        ("شنبه", 5), ("جمعه", 4),
+    ]  # Python weekday(): Monday=0 … Sunday=6
+    if "دیگه" in c or "دیگر" in c or ("مانده" in c and "هفته" in c):
+        from datetime import datetime
+
+        _wd = next((w for w, _ in _FA_WEEKDAYS if w in c), None)
+        if _wd is not None:
+            _now = datetime.now()
+            _target = next(o for w, o in _FA_WEEKDAYS if w == _wd)
+            _days_ahead = (_target - _now.weekday()) % 7
+            if _days_ahead == 0:
+                _txt = f"{_wd} امروز است."
+            else:
+                _txt = f"تا {_wd} {_fa_num(_days_ahead)} روز مانده."
+            return _reflex_answer(c, _txt)
+
+
     if (
         ("امروز" in c and ("چندمه" in c or "چند مه" in c or "چه روزی" in c or "تاریخ" in c))
         or "تاریخ امروز" in c
