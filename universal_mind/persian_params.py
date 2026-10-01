@@ -239,8 +239,25 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "compress", "content": command}
     if capability == "compute":
         if numbers and len(numbers) > 1:
-            # «جمع ۲ و ۳» → a real JS expression over the extracted numbers.
-            return {"operation": "evaluate", "expression": " + ".join(str(n) for n in numbers)}
+            # R59 P1 — THE OPERATOR THE SENTENCE NAMES: «جمع …» is + but
+            # «۵ منهای ۳» was built as `5.0 + 3.0` — the numbers were right
+            # and the operation was a lie. The verb in the sentence picks
+            # the operator; an unknown verb stays the honest `+` default
+            # (the pre-existing behaviour for «جمع …» sentences).
+            lowered_cmd = command
+            op = "+"
+            if "منهای" in lowered_cmd or "منها" in lowered_cmd or "تفریق" in lowered_cmd:
+                op = "-"
+            elif "ضرب" in lowered_cmd or "در " in lowered_cmd or "حاصل‌ضرب" in lowered_cmd \
+                    or "حاصلضرب" in lowered_cmd or "ضرب‌در" in lowered_cmd:
+                op = "*"
+            elif "تقسیم" in lowered_cmd or "خارج‌قسمت" in lowered_cmd or "خارجقسمت" in lowered_cmd \
+                    or "بر " in lowered_cmd:
+                op = "/"
+            elif "به توان" in lowered_cmd:
+                op = "**"
+            return {"operation": "evaluate",
+                    "expression": f" {op} ".join(str(n) for n in numbers)}
         return {"operation": "evaluate"}
     if capability == "webfetch":
         # URL extraction: http(s)://... in the sentence, or a bare domain

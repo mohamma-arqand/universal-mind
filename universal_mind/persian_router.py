@@ -276,6 +276,19 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("جاوااسکریپت", "compute"),
     ("جاوا اسکریپت", "compute"),
     ("نود", "compute"),
+    # R59 P1 — arithmetic QUESTIONS route here too: «جمع ۲ و ۵ چنده؟».
+    # The measured gap: the question went «نشناختم» while compute (a real
+    # node evaluator) sat right there. The verbs name the operation; the
+    # numbers are already extracted by the params layer.
+    # NOTE: «حساب کن» is deliberately NOT here — it also belongs to the
+    # data-analysis shape («میانگین … را حساب کن», pinned by an existing
+    # test), and keyword matching cannot tell them apart. The arithmetic
+    # shapes are the QUESTION shapes (چنده؟/چند است؟) and the explicit
+    # sum verbs.
+    ("جمع کن", "compute"),
+    ("جمع بزن", "compute"),
+    ("چنده؟", "compute"),
+    ("چند است؟", "compute"),
     # notify (Windows toast)
     ("اطلاع بده", "notify"),
     ("اعلان", "notify"),
