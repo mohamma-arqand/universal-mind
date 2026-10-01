@@ -165,6 +165,52 @@ class EmailToolConnector:
                 result = {"path": path, **send(path)}
             else:
                 result = composed
+        elif operation == "list":
+            # R60 Q6 — «ایمیل‌هایم را نشان بده»: the REAL sent-mail listing,
+            # newest first, from the REAL outbox directory.
+            from universal_mind.email_outbox import _outbox_dir
+
+            d = _outbox_dir(self._out_dir)
+            if not d.exists():
+                result = {"ok": True, "emails": [], "count": 0, "outbox": str(d)}
+            else:
+                rows = sorted(
+                    (p for p in d.iterdir() if p.suffix == ".eml"),
+                    key=lambda p: p.stat().st_mtime, reverse=True,
+                )
+                emails = []
+                from email.header import decode_header as _dh
+
+                def _decode_hdr(raw: str) -> str:
+                    # R60 Q6 — .eml headers are MIME-encoded
+                    # (=?utf-8?b?...?=); decoded IN FULL or the listing
+                    # shows base64 soup instead of the operator's Persian.
+                    try:
+                        return "".join(
+                            (part.decode(charset or "utf-8", errors="replace")
+                             if isinstance(part, bytes) else str(part))
+                            for part, charset in _dh(raw)
+                        ).strip()
+                    except Exception:  # noqa: BLE001 — a bad header must not
+                        return raw  # kill the listing; the raw is honest
+
+                for p in rows[:50]:
+                    head = {"path": p.name}
+                    try:
+                        text = p.read_text(encoding="utf-8", errors="replace")
+                        for line in text.splitlines()[:20]:
+                            if line.lower().startswith("subject:"):
+                                head["subject"] = _decode_hdr(line[8:].strip())
+                            elif line.lower().startswith("to:"):
+                                head["to"] = _decode_hdr(line[3:].strip())
+                            elif not line.strip() and "subject" in head:
+                                break
+                        head["mtime"] = p.stat().st_mtime
+                    except OSError:
+                        pass
+                    emails.append(head)
+                result = {"ok": True, "emails": emails, "count": len(emails),
+                          "outbox": str(d)}
         else:
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
         if result.get("ok") is not True:

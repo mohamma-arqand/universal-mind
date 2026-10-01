@@ -191,6 +191,15 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("برایم ایمیل", "email"),
     ("ایمیل بفرست", "email"),
     ("به ایمیل", "email"),
+    # R60 Q6 — «ایمیل‌هایم را نشان بده» — the LISTING shape. «نشان بده»
+    # alone belongs to chart; when the sentence names EMAILS the listing
+    # intent wins and chart must go (the sweep measured the steal).
+    ("ایمیلهایم", "email"),
+    ("ایمیل‌هایم", "email"),
+    ("ایمیلهای من", "email"),
+    ("ایمیل‌های من", "email"),
+    ("ایمیلهای ارسالی", "email"),
+    ("ایمیل‌های ارسالی", "email"),
     # ocr (Windows.Media.Ocr) — the platform READS images
     ("متنش را بخوان", "ocr"),
     ("متن تصویر", "ocr"),
@@ -433,6 +442,11 @@ def route(command: str) -> PersianRoute:
     # over the bare «بنویس» (clipboard paste). Explicit > inference, always.
     if "متن بنویس" in lowered:
         matched.pop("clipboard", None)
+
+    # R60 Q6 — THE EMAIL-LISTING INTENT: «ایمیل‌هایم را نشان بده» — «نشان بده»
+    # is chart's word, but the sentence names EMAILS; chart must go.
+    if "email" in matched and ("ایمیل" in lowered) and ("نشان" in lowered or "بگو" in lowered):
+        matched.pop("chart", None)
 
     # R60 Q2 — THE FILE-WRITE INTENT: «فایل … بنویس/بساز» means a FILE on
     # disk, not a clipboard paste. The bare «بنویس» belongs to the clipboard

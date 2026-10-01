@@ -60,8 +60,14 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
     # the most valuable moment of the conversation.
     if c in ("سلام", "درود", "سلام علیکم", "هلو", "hi", "hello"):
         return _say(c, _greeting_state())
-    if c in ("خسته نباشید", "خسته نباشی", "ممنون", "مرسی", "سپاس", "thanks", "thank you"):
+    if c in ("خسته نباشید", "خسته نباشی", "ممنون", "متشکرم", "تشکر", "مرسی",
+             "سپاس", "سپاسگزارم", "thanks", "thank you"):
         return _say(c, "خواهش میکنم! کاری بود، فرمان بده.")
+    # R60 Q6 — «حال شما چطوره؟» — the social question. The answer is honest
+    # about what the platform is (no fake feelings): state-aware, one line.
+    if c in ("حال شما چطوره؟", "حال شما چطوره", "حالت چطوره؟", "حالت چطوره",
+             "حال شما چطور است؟", "حال چطوره؟", "خوبی؟", "چطوری؟"):
+        return _say(c, "سالم و آماده‌ام — " + _status_answer())
     # R53 wave-3 — IDENTITY: who am I, what can I do, how am I. A platform
     # that answers statistics but goes mute on «اسمت چیه؟» has no face.
     if c in ("اسمت چیه؟", "اسمت چیست؟", "اسم تو چیه؟", "اسمت؟") or "اسمت" in c and "چی" in c:

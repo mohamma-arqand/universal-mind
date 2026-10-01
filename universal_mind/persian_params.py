@@ -351,6 +351,14 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             params_excel["total"] = True
         return params_excel  # OPEN rows/headers: the flow fills the real table
 
+    if capability == "email" and (
+        "ایمیلهایم" in command or "ایمیل‌هایم" in command
+        or "ایمیلهای من" in command or "ایمیل‌های من" in command
+        or "ایمیلهای ارسالی" in command or "ایمیل‌های ارسالی" in command
+    ):
+        # R60 Q6 — the listing shape, not the compose shape.
+        return {"operation": "list"}
+
     if capability == "email":
         # R44-11: the recipient rides the sentence («به آدرس ali@x.com ایمیل کن»);
         # without one the tool refuses honestly and names the remedy. The BODY

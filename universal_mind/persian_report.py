@@ -237,6 +237,18 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                 f"با ستونهای {'، '.join(str(h) for h in result.get('headers', []))}."
             )
         return None
+    if cap == "email" and isinstance(result, dict) and "emails" in result:
+        # R60 Q6 — the sent-mail listing: subjects real, count honest.
+        emails = result.get("emails") or []
+        if not emails:
+            return ("هنوز ایمیلی نساخته/ارسال نکرده‌ام — با «به X ایمیل بزن» "
+                    "می‌سازم.")
+        lines = [f"{_fa_num(result.get('count', len(emails)))} ایمیل در صندوق ارسالی:"]
+        for e in emails[:8]:
+            subj = str(e.get("subject", "(بدون موضوع)"))
+            to = str(e.get("to", ""))
+            lines.append(f"• {subj}" + (f" — به {to}" if to else ""))
+        return "\n".join(lines)
     if cap == "sysstatus" and isinstance(result, dict):
         lines = []
         up = result.get("uptime")
