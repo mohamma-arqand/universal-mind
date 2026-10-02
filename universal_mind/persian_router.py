@@ -295,6 +295,13 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # file-WRITE shape («فایل … بنویس») has the path BETWEEN the words, so a
     # substring keyword can never carry it — route_and_run's dedicated block
     # handles that whole class (like the reminder block).
+    ("خلاصه کن", "textsummarize"),
+    ("خلاصه کن این متن را", "textsummarize"),
+    ("خلاصه این متن", "textsummarize"),
+    ("این متن را خلاصه کن", "textsummarize"),
+    ("خلاصهش کن", "textsummarize"),
+    ("خلاصه کن متن", "textsummarize"),
+    # R60 Q1+Q2 — only the GLUED shapes that appear verbatim in speech; the
     ("محتوای فایل", "textfile"),
     ("محتوی فایل", "textfile"),
     ("فایل رو بخون", "textfile"),
@@ -442,6 +449,14 @@ def route(command: str) -> PersianRoute:
     # over the bare «بنویس» (clipboard paste). Explicit > inference, always.
     if "متن بنویس" in lowered:
         matched.pop("clipboard", None)
+
+    # R62 T3 — THE SUMMARY INTENT: «خلاصه کن این متن را: …» is ONE intent —
+    # the word «متن» drags `data` and any domain word in the TEXT drags
+    # `llm` into the chain, and both fail on what is a pure summarize
+    # sentence. When the summary shape matched, it owns the route.
+    if "textsummarize" in matched:
+        matched.pop("data", None)
+        matched.pop("llm", None)
 
     # R61-S1 — THE PERCENT INTENT: «۲۰ درصد از ۵۰۰ چنده؟» — «چنده؟» pulls
     # compute into the chain, but the percent question belongs to the data

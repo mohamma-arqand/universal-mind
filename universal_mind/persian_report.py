@@ -49,6 +49,7 @@ _CAP_FA: dict[str, str] = {
     "scheduler": "زمانبند",
     "unitconvert": "تبدیل واحد",
     "textfile": "پروندهٔ متنی",
+    "textsummarize": "خلاصه‌سازی متن",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -180,6 +181,16 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     # tool (digits, units, family); render it verbatim — one source of truth.
     if cap == "unitconvert" and isinstance(result, dict) and result.get("answer_fa"):
         return str(result["answer_fa"])
+    if cap == "textsummarize" and isinstance(result, dict) and "summary" in result:
+        # R62 T3 — the summary IS the text's own sentences: render them as
+        # bullet lines, with the honest count (how many from how many).
+        picked = result.get("picked", 0)
+        total = result.get("sentences", 0)
+        lines = [f"خلاصه — {_fa_num(picked)} جمله از "
+                 f"{_fa_num(total)} جملهٔ متن:"]
+        for s in result.get("summary", []):
+            lines.append(f"• {s}")
+        return "\n".join(lines)
     # R60 Q1+Q2 — the text-file view: the content with an honest truncation
     # note, or the written-file facts with Persian digits.
     if cap == "textfile" and isinstance(result, dict):

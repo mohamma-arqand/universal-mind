@@ -237,6 +237,19 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if text:
             return {"operation": "compress", "content": text}
         return {"operation": "compress", "content": command}
+    if capability == "textsummarize":
+        # R62 T3 — the text rides AFTER a colon (or the «را»): «خلاصه کن این
+        # متن را: X». The extraction keeps the WHOLE text verbatim — a
+        # summary's source must never be a truncated version of the truth.
+        import re as _re
+
+        m_txt = _re.search(r"[:：]\s*(.+)$", command)
+        text = m_txt.group(1).strip() if m_txt else ""
+        if not text:
+            m_alt = _re.search(r"متن را\s+(.+)$", command)
+            text = m_alt.group(1).strip().rstrip("،.") if m_alt else ""
+        return {"operation": "summarize", "text": text}
+
     if capability == "textfile":
         # R60 Q1+Q2 — READ/LIST params. (The WRITE shape is handled by the
         # dedicated route_and_run block, which passes its own params — the
