@@ -172,3 +172,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-03 02:24] run started (lock acquired)
 - [2026-10-03 02:24] run started (lock acquired)
 - [2026-10-03 02:24] run started (lock acquired)
+- [2026-10-03 03:16] run started (lock acquired)
+- [2026-10-03 03:16] run started (lock acquired)
+- [2026-10-03 03:16] run started (lock acquired)
+- [2026-10-03 03:15] ★ R62 SEALED — verify: 6/6 GREEN، overall=pass، ۲۴۴۵ تست / ۰ شکست / ۰ skip، probes ۱۲+۱۶+۱۰ سبز، mypy ۰، ruff پاک، receipt pin: e2ed3f1. سه ران لازم شد: ران-۱: ۳ probe قدیمی قرمز (قوانین T1/T2 رفتار را عوض کرده بودند) → مهاجرت probes؛ ران-۲: ۲ تست قرمز — «خبر چیست؟» به تلهٔ تاپیک‌های جهان-داده افتاد (رجوع به وضعیت ۵ سیگنال خودِ پلتفرم) → «خبر» آزاد شد و فقط «اخبار» جهان-داده ماند؛ فکتِ تستِ حافظه زمان‌دار بود (قانون T1: فکتِ زمان‌دار = قرار) → بی‌زمان شد؛ ران-۳: READY. ۶ کامیت: 729c5e1(T1) fcc7552(T2) dc18377(T4) d201424(T5) 6b9568f(T6-probe) ca76e89+e2ed3f1(مهاجرت‌ها).

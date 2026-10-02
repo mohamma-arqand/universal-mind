@@ -24,7 +24,7 @@ sees each layer actually run, not just read about it.
 Then verify the whole system claims what it claims:
 
 ```bash
-python scripts/verify.py     # lint + mypy-ratchet + tests + receipt + 102 probes -> READY
+python scripts/verify.py     # lint + mypy-ratchet + tests + receipt + ۱۰۴ probes -> READY
 ```
 
 - **Core**: identity, intent, clock, errors, and the Executive Mind.
@@ -221,7 +221,7 @@ numbers-in-sentence as parameters, Jalali dates, folder resolution, saved chains
 by name, fluent Persian reports, and a chain advisor that learns from the
 operator's own run history).
 
-- **2357+ tests** green, **102 probes** green, **mypy 0**, **ruff clean**.
+- **2357+ tests** green, **۱۰۴ probes** green, **mypy 0**, **ruff clean**.
 - The live architecture map for the whole super-platform (engine, 27 capabilities,
   9 synthesis flows, self-scheduling, 5 delivery faces, 3 learning layers,
   the honesty laws) is `ARCHITECTURE_SUPERPLATFORM.md` — kept current with
