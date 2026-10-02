@@ -63,6 +63,19 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
     if c in ("خسته نباشید", "خسته نباشی", "ممنون", "متشکرم", "تشکر", "مرسی",
              "سپاس", "سپاسگزارم", "thanks", "thank you"):
         return _say(c, "خواهش میکنم! کاری بود، فرمان بده.")
+    # R61-S5 — SENTENCE-SHAPED THANKS AND GREETINGS: real speech wraps the
+    # keyword in a sentence («ممنون که کمک کردی», «صبح بخیر، حالت چطوره؟»).
+    # The exact-match-only gate left them dead; the keyword inside a longer
+    # sentence is still the same social intent.
+    if any(w in c for w in ("ممنون", "متشکرم", "تشکر", "مرسی", "سپاسگزارم", "سپاس")) \
+            and len(c) <= 60:
+        return _say(c, "خواهش میکنم! کاری بود، فرمان بده.")
+    if "صبح بخیر" in c or "صبحبخیر" in c:
+        return _say(c, "صبح بخیر! روزِ پُرکاری داشته باشی — فرمان بده تا شروع کنیم.")
+    if "شب بخیر" in c:
+        return _say(c, "شب بخیر! من اینجام — هر وقت فرمان داشتی.")
+    if "خسته" in c and ("نیشی" in c or "نیستی" in c or " نیستی" in c or "چطور" in c):
+        return _say(c, "خسته نمیشوم — " + _status_answer())
     # R60 Q6 — «حال شما چطوره؟» — the social question. The answer is honest
     # about what the platform is (no fake feelings): state-aware, one line.
     if c in ("حال شما چطوره؟", "حال شما چطوره", "حالت چطوره؟", "حالت چطوره",

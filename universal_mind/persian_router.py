@@ -637,7 +637,9 @@ def route_and_run(
     # time pattern registers in the scheduler and answers with the real
     # next-due — a reminder without a registered time is only hope.
     if forced_route is None and (
-        "یادآور" in command or "یادآوری" in command or "یادم بنداز" in command or "یادم باشه" in command
+        "یادآور" in command or "یادآوری" in command or "یادم بنداز" in command
+        or any(w in command for w in ("یادم باشه", "یادم باشی", "یادم بشه", "یادم بشی",
+                                      "یادم بادی", "یادم باش", "یادت باشه", "یادت نره"))
     ):
         from universal_mind.scheduler import (
             delete_schedule,
@@ -763,11 +765,22 @@ def route_and_run(
         if _shot is not None and "هر" not in _body.split("ساعت")[0][:40]:
             _res = register_one_shot(_body)
             if _res.get("ok"):
+                # R61-S5 — THE DEFAULT-TIME CONFESSION: «یادم بشه فردا زنگ
+                # بزنم» carries no hour; the 08:00 default is fine but must
+                # SAY it is a default, not present itself as the operator's
+                # word (a silent default is a fabricated appointment).
+                import re as _re2
+
+                _hour_named = _re2.search(r"ساعت\s*[۰-۹0-9]", _body) is not None
+                _default_note = ""
+                if not _hour_named:
+                    _default_note = (" (ساعتی در جمله نبود — پیش‌فرض ۸ صبح گرفتم؛ "
+                                     "ساعت دیگری می‌خواهی بگو تا عوض کنم)")
                 return {
                     "ok": True, "command": command, "route": ["scheduler"],
                     "result": {"once": True, "run_at": _res["run_at"]},
                     "agent_report": (
-                        f"یادآور یکبارمصرف ثبت شد: {_res['when_fa']} — «{_res['reminder']}». "
+                        f"یادآور یکبارمصرف ثبت شد: {_res['when_fa']} — «{_res['reminder']}».{_default_note} "
                         "«یادآورهای من» فهرستشان را نشان میدهد."
                     ),
                     "_registry": registry or ToolRegistry(),

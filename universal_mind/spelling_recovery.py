@@ -61,12 +61,58 @@ def _edit_distance(a: str, b: str, cap: int = 3) -> int:
     return prev[-1]
 
 
+# R61-S5 — INTENT DOMAINS: a sentence that names a domain (یاد/نمودار/ایمیل/
+# فایل/عکس...) must get suggestions from THAT domain, not from whatever word
+# happens to be edit-distance-close («یادم باشی…» suggested «سایت/لبه/برش»).
+# The domain hint carries its own canonical starter command — a suggestion
+# that teaches the shape is worth more than a near word.
+_INTENT_DOMAINS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("یاد", "یادآور", "یادم", "بیدارم کن", "قرار"), "یادم بنداز که فردا ساعت ۸ ..."),
+    (("ایمیل", "میل", "نامه"), "به آدرس x@example.com ایمیل بزن با موضوع گزارش"),
+    (("نمودار", "چارت", "رسم"), "نمودار میلهای از ۳ و ۷ بکش"),
+    (("فایل", "پرونده", "پوشه", "دیسک"), "محتوای فایل D:/notes/x.txt را نشان بده"),
+    (("عکس", "تصویر", "اسکرین", "اسکن"), "از صفحه عکس بگیر"),
+    (("ساعت", "تاریخ", "امروز", "فردا", "چندمه"), "ساعت چنده؟"),
+    (("هوا", "قیمت", "خبر", "دلار"), "وضعیت سیستم را بگو"),
+)
+
+
 def suggest_for(command: str, limit: int = 3) -> list[str]:
-    """The nearest known words to this command's tokens (best-first)."""
+    """The nearest known words to this command's tokens (best-first).
+
+    R61-S5 — domain words come FIRST: a reminder-shaped sentence gets the
+    reminder recipe, not «سایت/لبه/برش». Edit-distance only fills the rest.
+    """
     lowered = command.lower()
+    # THE DOMAIN LENS: any domain keyword in the sentence promotes that
+    # domain's starter command to the top of the suggestions.
+    domain_hits: list[str] = []
+    for words, starter in _INTENT_DOMAINS:
+        if any(w in command for w in words):
+            if starter not in domain_hits:
+                domain_hits.append(starter)
+    if domain_hits:
+        rest = _edit_distance_suggestions(command, limit - len(domain_hits))
+        return (domain_hits + rest)[:limit]
     english: list[str] = []
     for en, fa in _ENGLISH_HINTS:
         if en in lowered and fa not in english:
+            english.append(fa)
+    tokens = _TOKEN_RE.findall(command)
+    if not tokens:
+        return english[:limit]
+    if english:
+        return english[:limit]
+    return _edit_distance_suggestions(command, limit)
+
+
+def _edit_distance_suggestions(command: str, limit: int) -> list[str]:
+    """The old behaviour: nearest known words by bounded edit distance."""
+    if limit <= 0:
+        return []
+    english: list[str] = []
+    for en, fa in _ENGLISH_HINTS:
+        if en in command.lower() and fa not in english:
             english.append(fa)
     tokens = _TOKEN_RE.findall(command)
     if not tokens:

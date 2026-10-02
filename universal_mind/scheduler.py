@@ -186,7 +186,9 @@ def register_one_shot(command: str, now: datetime | None = None) -> dict[str, An
         return {"ok": False, "error": "یک زمانِ یکبارمصرف در جمله پیدا نکردم", "id": None}
     body = command.strip()
     for noise in ("یادم بنداز که", "یادم بنداز", "یادآوری کن که", "یادآوری کن",
-                  "یادم باشه که", "یادم باشه", "به یادم بیار که", "به یادم بیار"):
+                  "یادم باشه که", "یادم باشه", "یادم باشی که", "یادم باشی",
+                  "یادم بشه", "یادم بشی", "یادم بادی", "یادم باش",
+                  "یادت باشه", "یادت نره", "به یادم بیار که", "به یادم بیار"):
         if body.startswith(noise):
             body = body[len(noise):].strip()
             break
