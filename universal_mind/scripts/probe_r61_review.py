@@ -54,8 +54,11 @@ def main() -> int:
 
     # S1 — the honesty four
     r1 = report("قیمت دلار الان چنده؟")
+    # R62-T2 evolution: world-data questions get the TOPIC-SPECIFIC refusal;
+    # both it and the S1 compute-refusal satisfy the honesty law (never «نتیجه»).
     check(1, "the knowledge question is refused, not answered with 2+2",
-          "نتیجه" not in r1 and "محاسبه‌ای نیست" in r1)
+          "نتیجه" not in r1
+          and ("محاسبه‌ای نیست" in r1 or "دادهٔ بیرونی" in r1))
     r2 = report("۲۰ درصد از ۵۰۰ چنده؟")
     check(2, "percent answers ۱۰۰ (never the ۵۲۰ sum)", "برابر ۱۰۰" in r2)
     r3 = report("ساعت چنده؟")

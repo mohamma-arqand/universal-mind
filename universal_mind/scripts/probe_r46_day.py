@@ -105,7 +105,10 @@ def main() -> int:
         all_ok &= check("قلم ۹", r2["ok"], "فرمانِ پس از تعریف مسیر درست گرفت")
 
         # ---- 08:05 — named memory (item 4) ---------------------------------
-        p3 = route_and_run("یادت باشد که جلسه با تیم فردا ساعت ۱۰ است")
+        # R62-T1 law: a fact WITH a moment is an APPOINTMENT (the reminder
+        # path takes it). The memory probe uses a fact WITHOUT a moment —
+        # that is the shape the fact-store owns.
+        p3 = route_and_run("یادت باشد که جلسه با تیم دربارهٔ بودجه است")
         p4 = route_and_run("نمودار جلسه تیم بکش")
         surfaced = p4["agent_report"].startswith("📌")
         say("حافظهی نامی", str(p3["agent_report"]))

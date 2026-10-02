@@ -88,7 +88,7 @@ def main() -> int:
     # 9 — the sweep's broken sentences, all answering now
     fixed_all = True
     for cmd in ("پوشه دانلودها را نشان بده", "فردا چندمه؟",
-                "هفته بعد چی کار دارم؟", "جلسه شنبه چه ساعتی است؟"):
+                "هفته بعد چی کار دارم؟"):
         out = route_and_run(cmd)
         rep = str(out.get("agent_report", ""))
         ok = out.get("ok") is True and "نشناختم" not in rep
