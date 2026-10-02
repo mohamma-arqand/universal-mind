@@ -134,7 +134,12 @@ class TestConnector:
         # "ai" is an officially registered real capability — no mutation of the
         # shared connector table (the mutate-then-delete pattern caused real
         # cross-test contamination before).
-        syn = orchestrate(reg, ["ai"], connector_factory=rtr.real_connector_factory)
+        # R61-S1: no-params ML is a NAMED refusal now (silent DEFAULT_XS
+        # training was fabricated data); the loop passes a real series.
+        syn = orchestrate(
+            reg, ["ai"], connector_factory=rtr.real_connector_factory,
+            capability_params={"ai": {"operation": "regression",
+                                      "xs": [[1.0], [2.0], [3.0]], "ys": [2.0, 4.0, 6.0]}},
+        )
         assert syn.ok is True
-        # The no-params call runs a real regression over the default data.
         assert "coefficients" in syn.output["synthesized_from"]["ai"]

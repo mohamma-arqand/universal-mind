@@ -195,6 +195,16 @@ class AISuiteConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "regression") or "regression"
+        # the unknown-operation check comes FIRST: an op we do not know is
+        # an op, not a data question (the old test pinned this order and the
+        # order is right — never mask a typo behind a data complaint).
+        method = {
+            "regression": "regression", "cluster": "cluster",
+            "classify": "classify", "fourier": "fourier",
+        }
+        if operation not in method:
+            return ConnectorResult(ok=False, output=None,
+                                   error=f"unknown operation: {operation!r}")
         # R61-S1 — THE HONEST MODEL: «رگرسیون روی این اعداد» with NO numbers
         # in the sentence silently trained on DEFAULT_XS — fabricated data
         # presented as the operator's own. A sentence that points at data

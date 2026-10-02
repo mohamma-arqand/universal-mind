@@ -45,13 +45,18 @@ def test_three_real_effects_fuse_in_one_orchestration() -> None:
     reg.register(_entry("gzip-archive", "archive"))
     reg.register(_entry("node-compute", "compute"))
 
-    syn = orchestrate(reg, ["media", "archive", "compute"], connector_factory=real_connector_factory)
+    # R61-S1: compute without an expression is a NAMED refusal now — the
+    # 2+2 default was a fabricated answer. The chain passes an explicit one.
+    syn = orchestrate(
+        reg, ["media", "archive", "compute"], connector_factory=real_connector_factory,
+        capability_params={"compute": {"operation": "evaluate", "expression": "2 + 2"}},
+    )
     assert syn.ok is True
     out = syn.output["synthesized_from"]
     # All three real effects produced real results.
     assert out["media"]["bytes"] > 0
     assert out["archive"]["bytes"] > 0
-    assert out["compute"] == 4  # default expression 2+2
+    assert out["compute"] == 4
 
 
 def test_factory_is_universal_in_orchestrate() -> None:
@@ -64,7 +69,11 @@ def test_factory_is_universal_in_orchestrate() -> None:
         connection=ToolConnectionSpec(mechanism=ConnectionMechanism.SUBPROCESS, command="echo hello"),
         absorbable=True,
     ))
-    syn = orchestrate(reg, ["compute", "sys"], connector_factory=real_connector_factory)
+    # R61-S1: the explicit expression (never the removed 2+2 default).
+    syn = orchestrate(
+        reg, ["compute", "sys"], connector_factory=real_connector_factory,
+        capability_params={"compute": {"operation": "evaluate", "expression": "2 + 2"}},
+    )
     assert syn.ok is True
     assert syn.output["synthesized_from"]["compute"] == 4
     assert syn.output["synthesized_from"]["sys"] == "hello"
