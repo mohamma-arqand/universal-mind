@@ -119,7 +119,13 @@ def run_ab(
             reasoning = f"داوری نتوانست جدا کند — تساوی ({'، '.join(variants)})؛ {variants[0]} پیشفرض ماند"
     else:
         winner_kind = winner
-        reasoning = f"مسابقهی A/B: «{winner_kind}» با برتری {margin:.2f} برنده شد"
+        # R61-S6 — the margin is PERSIAN: a Latin 0.75 in a Persian report
+        # is a digit leak (review finding 13).
+        _fa_d = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        reasoning = (
+            f"مسابقهی A/B: «{winner_kind}» با برتری "
+            f"{f'{margin:.2f}'.translate(_fa_d)} برنده شد"
+        )
 
     shipped = dict(results[winner_kind])
     shipped["ab_contest"] = {

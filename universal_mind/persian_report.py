@@ -132,7 +132,8 @@ def _sentence_ai(result: dict[str, Any]) -> str:
         return f"مدل با دقت {_fa_num(round(result['accuracy'] * 100, 1))}٪ آموزش دید."
     if "coefficients" in result:
         coeffs = result["coefficients"]
-        return f"مدل رگرسیون با {len(coeffs)} ضریب آموزش دید (ضریب اول {_fa_num(coeffs[0])})."
+        return (f"مدل رگرسیون با {_fa_num(len(coeffs))} ضریب آموزش دید "
+                f"(ضریب اول {_fa_num(coeffs[0])}).")
     if "centroids" in result:
         return f"خوشهبندی {_fa_num(len(result['centroids']))} خوشه پیدا کرد."
     if "dominant_frequencies" in result:
@@ -208,9 +209,16 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     if cap == "chart":
         kind = _CHART_KIND_FA.get((params or {}).get("operation", "line"), "")
         kind_fa = f" {kind}" if kind else ""
-        return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))})."
+        # R61-S6 — WHERE THE FILE IS: the review measured a stranger never
+        # finding their chart - the path existed in the result but was never
+        # rendered. An artifact the operator cannot find does not exist.
+        path = str(result.get("path", "") or "")
+        where = f" — در «{path}»" if path else ""
+        return f"نمودار{kind_fa} ساخته شد ({_kb(result.get('bytes'))}).{where}"
     if cap == "pdf":
-        return f"سند PDF ساخته شد ({_kb(result.get('bytes'))})."
+        path = str(result.get("path", "") or "")
+        where = f" — در «{path}»" if path else ""
+        return f"سند PDF ساخته شد ({_kb(result.get('bytes'))}).{where}"
     if cap == "goal" and isinstance(result, dict):
         # The agent's own run report — the step verdicts narrated as one goal.
         report_text = str(result.get("report", ""))

@@ -38,7 +38,12 @@ def validate_artifact(path_str: str) -> dict[str, Any]:
             n = len(PdfReader(str(p)).pages)
             if n < 1:
                 return {"ok": False, "kind": "pdf", "detail": "صفحهای ندارد", "path": path_str}
-            return {"ok": True, "kind": "pdf", "detail": f"PDF سالم با {n} صفحه", "path": path_str}
+            # R61-S6 — the page count is PERSIAN (a Latin digit in the
+            # operator's report is a leak; review finding 13).
+            _fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+            return {"ok": True, "kind": "pdf",
+                    "detail": f"PDF سالم با {str(n).translate(_fa)} صفحه",
+                    "path": path_str}
         if suffix in (".png", ".jpg", ".jpeg"):
             from PIL import Image
 
