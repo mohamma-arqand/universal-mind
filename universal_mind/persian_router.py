@@ -639,7 +639,8 @@ def route_and_run(
     if forced_route is None and (
         "یادآور" in command or "یادآوری" in command or "یادم بنداز" in command
         or any(w in command for w in ("یادم باشه", "یادم باشی", "یادم بشه", "یادم بشی",
-                                      "یادم بادی", "یادم باش", "یادت باشه", "یادت نره"))
+                                      "یادم بادی", "یادم باش", "یادت باشه", "یادت نره",
+                                      "یادت باشد"))
     ):
         from universal_mind.scheduler import (
             delete_schedule,
@@ -1170,6 +1171,16 @@ def route_and_run(
         nm_forget = command.strip()
         forget_hit = ("یادت نره" in nm_forget) or ("یادت نرود" in nm_forget)
         remember_req = parse_remember_request(command)
+        # R62 T1 — A FACT WITH A MOMENT IS AN APPOINTMENT: «جلسه شنبه ساعت ۱۰
+        # است — یادت باشد» carries a real moment (weekday+hour). Storing it
+        # as a passive fact would let the meeting pass unannounced; the
+        # one-shot reminder path (which runs earlier) owns it. Skip the
+        # fact-store when the sentence names a moment.
+        if remember_req is not None:
+            from universal_mind.scheduler import parse_one_shot as _pos
+
+            if _pos(remember_req["fact"]) is not None:
+                remember_req = None
         if remember_req is not None:
             saved = save_fact(remember_req["fact"])
             answer = (

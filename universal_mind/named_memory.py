@@ -43,6 +43,14 @@ def parse_remember_request(command: str) -> dict[str, Any] | None:
     if marker is None:
         return None
     rest = text.split(marker, 1)[1].strip(" :،.")
+    # R62 T1 — THE MARKER CAN TRAIL THE FACT: «جلسه شنبه ساعت ۱۰ است —
+    # یادت باشد» puts the marker AFTER the appointment. With nothing after
+    # the marker, the fact is what PRECEDES it (minus the dash/colon noise).
+    if not rest:
+        before = text.split(marker, 1)[0].strip(" :،.-—")
+        if not before:
+            return None
+        rest = before
     if not rest:
         return None
     # «که» often introduces the actual fact: «یادت باشد که فردا جلسه دارم»

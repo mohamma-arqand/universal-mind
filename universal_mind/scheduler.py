@@ -148,6 +148,34 @@ def parse_one_shot(command: str, now: datetime | None = None) -> dict[str, Any] 
         day = 0
         if hm is None:
             hm = re.search(r"امشب (\d{1,2})(?::(\d{1,2}))?", text)
+    # R62 T1 — WEEKDAY words: «جلسه شنبه ساعت ۱۰ است» names a WEEKDAY, not
+    # a relative day. The distance (0..6) is real (the same longest-first
+    # table the weekday-distance answer uses — شنبه is a SUBSTRING of
+    # یکشنبه/دوشنبه/…; the longer words are tested first). 0 = today.
+    # THE DISTANCE IS COMPUTED, NEVER TABLE-READ: the table maps a weekday
+    # WORD to Python's weekday() NUMBER (Monday=0…Sunday=6) — the live
+    # witness caught the first draft reading the table VALUE as an offset
+    # (شنبه fired on چهارشنبه while Saturday was TOMORROW). The real
+    # distance is (target - today) % 7; «آینده» forces the NEXT cycle.
+    _WD = None
+    # NOTE: the ZWNJ was normalized to a SPACE above («سه‌شنبه» arrives as
+    # «سه شنبه») — the table must carry BOTH spellings or the real spoken
+    # form falls through to a wrong day (a live witness caught Tuesday).
+    # THE SUBSTRING LAW, FOURTH BITE: «جلسه شنبه» CONTAINS «سه شنبه»
+    # (the س+ه of جلسه + space + شنبه) — a bare substring test matched
+    # THREE-SHANBE inside a sentence about SHANBE. A weekday must start at
+    # a WORD BOUNDARY (start-of-text or a space before it).
+    for _w, _py in (("سه شنبه", 1), ("سه‌شنبه", 1), ("سهشنبه", 1), ("یکشنبه", 6),
+                     ("دوشنبه", 0), ("چهار شنبه", 2), ("چهارشنبه", 2),
+                     ("پنج شنبه", 3), ("پنجشنبه", 3),
+                     ("شنبه", 5), ("جمعه", 4)):
+        if text.startswith(_w) or (" " + _w) in text:
+            _dist = (_py - datetime.now().weekday()) % 7
+            if _dist == 0 and "آینده" in text:
+                _dist = 7  # «شنبهٔ آینده» on a Saturday = NEXT Saturday
+            _WD = _dist
+            break
+
     if hm:
         hour = int(hm.group(1))
         minute = 0
@@ -158,7 +186,11 @@ def parse_one_shot(command: str, now: datetime | None = None) -> dict[str, Any] 
         elif hm.group(3) == "ربع":
             minute = 15
         if 0 <= hour <= 23 and 0 <= minute <= 59:
+            if _WD is not None:
+                day = _WD
             return {"run_at": _at(day, hour, minute).isoformat(), "day_offset": day}
+        if _WD is not None and (hour > 23 or minute > 59):
+            return {"run_at": _at(_WD, 8, 0).isoformat(), "day_offset": _WD}
 
     # bare day-words: صبح زود/فردا صبح → 08:00, ظهر → 12:00, امشب → 21:00
     if "پس فردا" in text or "پس‌فردا" in command:
@@ -188,11 +220,20 @@ def register_one_shot(command: str, now: datetime | None = None) -> dict[str, An
     for noise in ("یادم بنداز که", "یادم بنداز", "یادآوری کن که", "یادآوری کن",
                   "یادم باشه که", "یادم باشه", "یادم باشی که", "یادم باشی",
                   "یادم بشه", "یادم بشی", "یادم بادی", "یادم باش",
-                  "یادت باشه", "یادت نره", "به یادم بیار که", "به یادم بیار"):
+                  "یادت باشه", "یادت نره", "به یادم بیار که", "به یادم بیار",
+                  "یادت باشد", "— یادت باشد", "- یادت باشد"):
         if body.startswith(noise):
             body = body[len(noise):].strip()
             break
     body = body or command.strip()
+    # R62 T1 — a TRAILING marker is not part of the appointment text either:
+    # «جلسه شنبه ساعت ۱۰ است — یادت باشد» must SAY the meeting, not the
+    # marker. Strip trailing remember-markers (and the dash noise before them).
+    for trailer in ("— یادت باشد", "- یادت باشد", "یادت باشد",
+                    "— یادم باشه", "- یادم باشه", "یادم باشه"):
+        if body.endswith(trailer):
+            body = body[: -len(trailer)].strip(" :،.-—")
+            break
     db = _store()
     _ensure_table(db)
     db.insert_many("schedules", [{

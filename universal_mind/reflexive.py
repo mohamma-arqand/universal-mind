@@ -211,8 +211,11 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     # reminders) and named_memory (notes that mention a time). Read-only,
     # sorted by when, Persian; empty is said honestly.
 
+    # R62 T1 — «قرار» is the everyday word for the agenda (the review's
+    # daily-user persona says «قرارهایم», not «برنامه‌ام»).
     _AGENDA_WORDS = ("برنامه‌ام", "برنامهام", "برنامهٔ من", "برنامه من",
-                     "برنامه‌ی من", "هفتهٔ بعد", "هفته بعد")
+                     "برنامه‌ی من", "هفتهٔ بعد", "هفته بعد",
+                     "قرارهایم", "قرارهای من", "قرار‌هایم", "قرارام")
     if any(w in c for w in _AGENDA_WORDS) and any(
         q in c for q in ("نشان بده", "بگو", "چی", "چه", "دارم", "است", "لیست")
     ):
