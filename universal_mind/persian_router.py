@@ -662,16 +662,17 @@ def route_and_run(
             rows = list_schedules()
             lines = []
             for s in rows:
+                _sid = str(s.schedule_id).translate(_FA)
                 if s.kind == "once":
                     try:
                         fire = datetime.fromisoformat(s.run_at)
-                        lines.append(f"«{s.command}» — یکبار، {fire.strftime('%H:%M')} روز {fire.strftime('%Y-%m-%d')}")
+                        lines.append(f"({_sid}) «{s.command}» — یکبار، {fire.strftime('%H:%M')} روز {fire.strftime('%Y-%m-%d')}")
                     except ValueError:
-                        lines.append(f"«{s.command}» — یکبار (زمان ناخوانا)")
+                        lines.append(f"({_sid}) «{s.command}» — یکبار (زمان ناخوانا)")
                 elif s.hour_of_day >= 0:
-                    lines.append(f"«{s.command}» — هر روز ساعت {str(s.hour_of_day).translate(_FA)}")
+                    lines.append(f"({_sid}) «{s.command}» — هر روز ساعت {str(s.hour_of_day).translate(_FA)}")
                 else:
-                    lines.append(f"«{s.command}» — هر {str(s.every_minutes).translate(_FA)} دقیقه")
+                    lines.append(f"({_sid}) «{s.command}» — هر {str(s.every_minutes).translate(_FA)} دقیقه")
             _msg = (
                 "یادآورهایت:\n" + "\n".join(f"• {ln}" for ln in lines)
                 if lines else "هیچ یادآوری ثبت نشده — «یادم بنداز که فردا ساعت ۸ ...» بگو."
@@ -704,6 +705,54 @@ def route_and_run(
                 "ok": True, "command": command, "route": ["scheduler"],
                 "result": {"deleted": hit.schedule_id},
                 "agent_report": f"یادآور «{hit.command}» حذف شد.",
+                "_registry": registry or ToolRegistry(),
+            }
+
+        # R61-S4 — «یادآوری ۶۳ را حذف کن»: deletion BY ID, the operator's most
+        # literal form (the list shows rows; the row's number is what they hold).
+        _del_id = _re.search(r"یادآور[^۰-۹0-9]*([۰-۹0-9]+)\s*را حذف", _body)
+        if _del_id is None:
+            _del_id = _re.search(r"حذف کن یادآور[^۰-۹0-9]*([۰-۹0-9]+)", _body)
+        if _del_id is not None and "حذف" in _body:
+            _id_fa = _del_id.group(1).translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789"))
+            rows = list_schedules()
+            if not any(s.schedule_id == int(_id_fa) for s in rows):
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"deleted": 0},
+                    "agent_report": (f"یادآوری شمارهٔ {_del_id.group(1)} پیدا نکردم — "
+                                     "«یادآورهای من» شماره‌ها را نشان می‌دهد."),
+                    "_registry": registry or ToolRegistry(),
+                }
+            delete_schedule(int(_id_fa))
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"deleted": int(_id_fa)},
+                "agent_report": f"یادآوری شمارهٔ {_del_id.group(1)} حذف شد.",
+                "_registry": registry or ToolRegistry(),
+            }
+
+        # R61-S4 — «همه یادآوریها را حذف کن»: THE DELETE LAW for bulk — only
+        # an explicit «تأیید کن» arms it; without the confirmation the count
+        # and the confirmation recipe are named, nothing is destroyed.
+        if "حذف" in _body and "همه" in _body and "یادآور" in _body.replace("یادآوریها", "یادآور"):
+            rows = list_schedules()
+            if "تأیید" not in _body:
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"pending_delete_all": len(rows)},
+                    "agent_report": (
+                        f"{str(len(rows)).translate(_FA)} یادآوری داری — برای حذفِ همه، "
+                        "صریح بگو «همه یادآوریها را حذف کن — تأیید کن». بدون آن هیچ چیزی پاک نمی‌کنم."
+                    ),
+                    "_registry": registry or ToolRegistry(),
+                }
+            for s in rows:
+                delete_schedule(s.schedule_id)
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"deleted_all": len(rows)},
+                "agent_report": (f"همهٔ {str(len(rows)).translate(_FA)} یادآوری حذف شد."),
                 "_registry": registry or ToolRegistry(),
             }
 
