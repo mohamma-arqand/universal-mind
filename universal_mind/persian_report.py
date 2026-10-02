@@ -453,6 +453,12 @@ def persian_report(payload: dict[str, Any]) -> str:
     lines: list[str] = []
     chain_fa = " ← ".join(_CAP_FA.get(c, c) for c in route)
     lines.append(f"✅ اجرا انجام شد: {chain_fa}")
+    # R61-S3 — THE GATE SPEAKS: the quality gate's reasoning (including the
+    # shrunken-route confession) is part of the run's truth; a repair the
+    # operator cannot see is a silent mutation of their own sentence.
+    gate_reasoning = str(payload.get("gate_reasoning", "") or "").strip()
+    if gate_reasoning:
+        lines.append(f"⚖ {gate_reasoning}")
 
     # The dataflow — when one program's output became the next program's input,
     # the report SAYS SO (the fusion is the whole point, it must be visible).

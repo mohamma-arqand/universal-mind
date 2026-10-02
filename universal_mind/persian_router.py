@@ -1490,10 +1490,38 @@ def route_and_run(
             # The shipped attempt replaces the weak one; the operator sees the truth.
             # Surface the anaphora subject too — this is still the OUTER call.
             _subj = _ANAPHORA_SUBJECT.get("command")
-            shipped = {**gate.shipped.payload, "gate_reasoning": gate.reasoning, "attempts": len(gate.attempts)}
+            # R61-S3 — THE SHRUNKEN-ROUTE CONFESSION: a repair may ship a
+            # route SMALLER than planned (the semantic rival «گزارش بساز»
+            # dropped the email half of «گزارش بساز و برایم ایمیل کن»).
+            # A shipped run that silently lost part of the sentence is a
+            # lie by omission — the report MUST name what fell away.
+            _dropped = [c_ for c_ in caps if c_ not in gate.shipped.route]
+            _drop_note = ""
+            if _dropped:
+                from universal_mind.persian_report import _CAP_FA as _CapFa
+
+                _dropped_fa = "، ".join(_CapFa.get(c_, c_) for c_ in _dropped)
+                _drop_note = (
+                    f" ⚠ نکتهٔ صادقانه: بخشِ «{_dropped_fa}» از جملهٔ تو در این اجرا "
+                    "اجرا نشد (رانِ ترمیمی مسیر کوچک‌تری برد) — اگر همان بخش را "
+                    "می‌خواهی، جداگانه بگو تا اجرا کنم."
+                )
+            shipped = {**gate.shipped.payload,
+                       "gate_reasoning": gate.reasoning + _drop_note,
+                       "attempts": len(gate.attempts)}
             if _subj:
                 shipped.setdefault("result", {})["anaphora_of"] = _subj
                 _ANAPHORA_SUBJECT.clear()
+            # R61-S3 — the payload the gate shipped carries NEW fields
+            # (gate_reasoning); the Persian report must be REBUILT so the
+            # confession is not stored-but-never-shown (the exact bug the
+            # review caught: reasoning existed, the operator never saw it).
+            from universal_mind.persian_report import persian_report as _pr_fa
+
+            try:
+                shipped["agent_report"] = _pr_fa(shipped)
+            except Exception:  # noqa: BLE001 — the report is a lens
+                pass
             return shipped
     # R44-7: the A/B ruling rides the payload — the Persian report announces it.
     _ab_note = (capability_params.get("_ab_note") or {}).get("_note")
