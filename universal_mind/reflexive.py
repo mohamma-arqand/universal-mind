@@ -139,7 +139,7 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             return _reflex_answer(
                 c, "هنوز زنجیره‌ای ذخیره نکردی — مثلا: «زنجیره‌ی گزارش هفتگی را ذخیره کن».",
             )
-        lines = [f"{_fa_num(len(saved))} زنجیره ذخیره شده:"]
+        chain_lines = [f"{_fa_num(len(saved))} زنجیره ذخیره شده:"]
         # the Persian capability names from the ONE source of truth
         # (persian_report._CAP_FA) — never a second translation table
         try:
@@ -148,8 +148,8 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             _CAP_FA_NAME = {}
         for i, ch in enumerate(saved, start=1):
             steps_fa = " ← ".join(_CAP_FA_NAME.get(s, s) for s in ch.capabilities)
-            lines.append(f"  {_fa_num(i)}. {ch.name} — {steps_fa}")
-        return _reflex_answer(c, "\n".join(lines))
+            chain_lines.append(f"  {_fa_num(i)}. {ch.name} — {steps_fa}")
+        return _reflex_answer(c, "\n".join(chain_lines))
 
     # R59 P5 — MEMORY LISTINGS: «چه چیزهایی یادت هست؟» / «آخرین چیزی که یادت
     # داشت چی بود؟» — the sweep measured both dying in «نشناختم» while
@@ -218,13 +218,13 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     ):
         from universal_mind.scheduler import list_schedules
 
-        lines: list[str] = []
+        agenda_lines: list[str] = []
         # ۱) one-shot reminders, soonest first
         try:
             upcoming = [s for s in list_schedules()
                         if s.kind == "once" and s.active and s.run_at]
             for s in sorted(upcoming, key=lambda s: s.run_at):
-                lines.append(f"• یادآور «{s.command}» — زمان {s.run_at}")
+                agenda_lines.append(f"• یادآور «{s.command}» — زمان {s.run_at}")
         except Exception:  # noqa: BLE001 — the agenda is a lens, never fatal
             pass
         # ۲) repeating schedules (the daily/periodic backbone)
@@ -232,10 +232,10 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             for s in list_schedules():
                 if s.kind != "once" and s.active:
                     if s.hour_of_day >= 0:
-                        lines.append(
+                        agenda_lines.append(
                             f"• هر روز ساعت {_fa_num(f'{s.hour_of_day:02d}:{s.minute_of_hour:02d}')} — «{s.command}»")
                     else:
-                        lines.append(f"• هر {_fa_num(s.every_minutes)} دقیقه — «{s.command}»")
+                        agenda_lines.append(f"• هر {_fa_num(s.every_minutes)} دقیقه — «{s.command}»")
         except Exception:  # noqa: BLE001
             pass
         # ۳) named notes that mention a time word (the soft agenda)
@@ -245,15 +245,15 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
                 if any(t in fact for t in ("ساعت", "شنبه", "یکشنبه", "دوشنبه",
                                            "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه",
                                            "فردا", "امروز")):
-                    lines.append(f"• (یادداشت) {fact}")
+                    agenda_lines.append(f"• (یادداشت) {fact}")
         except Exception:  # noqa: BLE001
             pass
 
-        if not lines:
+        if not agenda_lines:
             return _reflex_answer(
                 c, "هیچ برنامه‌ای ثبت نشده — «یادم بنداز که …» یا «یادآور کن …» بگو.",
             )
-        return _reflex_answer(c, "برنامه‌ات:\n" + "\n".join(lines))
+        return _reflex_answer(c, "برنامه‌ات:\n" + "\n".join(agenda_lines))
 
     # «چند تا اجرا موفق داشتی؟» — the run counts, real.
     # N10-3 (R57): «چند فرمان اجرا کردی؟» — the same question in the other

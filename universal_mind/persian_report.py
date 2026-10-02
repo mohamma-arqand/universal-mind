@@ -293,7 +293,7 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                 f"رم: {_fa_num(ram['used_pct'])}٪ در استفاده "
                 f"({_fa_num(ram['free_gb'])} گیگ از {_fa_num(ram['total_gb'])} آزاد)"
             )
-        asked = str(params.get("drive_letter") or "").upper().rstrip(":")
+        asked = str((params or {}).get("drive_letter") or "").upper().rstrip(":")
         for d in result.get("disks") or []:
             drive = str(d["drive"]).upper().rstrip(":")
             if asked and asked != drive:

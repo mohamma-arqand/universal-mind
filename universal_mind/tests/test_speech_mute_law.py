@@ -126,7 +126,7 @@ class TestMuteSurvivesAndIsReadLive:
         spoken: list[str] = []
         real_speak = speech_tool.SpeechTool.speak
 
-        def _spy(self, text, **kw):
+        def _spy(self, text: object, **kw: object) -> None:
             spoken.append(text)
             return real_speak(self, text, **kw)
 

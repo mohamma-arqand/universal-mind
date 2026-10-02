@@ -85,8 +85,8 @@ class LLMToolConnector(Connector):
 
                     _t.sleep(0.4)  # one short backoff, then one retry
         if payload is None:
-            exc = last_exc or RuntimeError("unreachable")
-            return ConnectorResult(ok=False, output=None, error=f"ارتباط با مدل نشد: {exc}")
+            reason = last_exc or RuntimeError("unreachable")
+            return ConnectorResult(ok=False, output=None, error=f"ارتباط با مدل نشد: {reason}")
         try:
             text = str(payload["choices"][0]["message"]["content"]).strip()
         except (KeyError, IndexError, TypeError):

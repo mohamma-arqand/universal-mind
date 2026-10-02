@@ -99,7 +99,7 @@ class _Resp:
     def __enter__(self) -> "_Resp":
         return self
 
-    def __exit__(self, *a: object) -> bool:
+    def __exit__(self, *a: object) -> None:
         return False
 
 

@@ -102,7 +102,7 @@ def main() -> int:
     # the identity's count equals the registry's real count, in Persian
     # digits — never a number.
     try:
-        _reg_n = len(real_tool_registry().capabilities)
+        _reg_n = len(real_tool_registry().capabilities())
         _fa_reg = str(_reg_n).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
     except Exception:  # noqa: BLE001 — fall back to the weaker invariant
         _fa_reg = ""

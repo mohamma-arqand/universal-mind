@@ -13,6 +13,8 @@ soup) and a whole band of real speech («صبح بخیر», «ممنون که ک
 
 from __future__ import annotations
 
+from typing import Iterator
+
 import pytest
 
 from universal_mind.persian_router import route_and_run
@@ -20,7 +22,7 @@ from universal_mind.spelling_recovery import suggest_for
 
 
 @pytest.fixture()
-def probe_reminder():
+def probe_reminder() -> Iterator[None]:
     route_and_run("یادم باشه پس‌فردا ساعت ۶ گواه-آزمون-s5")
     yield
     from universal_mind.database_suite import DatabaseSuite

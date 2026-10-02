@@ -85,7 +85,8 @@ def main() -> int:
     # S4 — reminder deletion (isolated probe rows, named cleanup)
     route_and_run("یادم باشه پس‌فردا ساعت ۶ گواه-r61-probe")
     r10 = report("یادآورهای من")
-    check(10, "the listing numbers every row", "(۶" in r10 or re.search(r"\([۰-۹]+\)", r10))
+    check(10, "the listing numbers every row",
+          bool(re.search(r"\([۰-۹]+\)", r10)))
     m = None
     for ln in r10.splitlines():
         if "گواه-r61-probe" in ln:

@@ -164,7 +164,7 @@ class TestWebFetchWiring:
             def __enter__(self) -> "_Resp":
                 return self
 
-            def __exit__(self, *a: object) -> bool:
+            def __exit__(self, *a: object) -> object:
                 return False
 
         monkeypatch.setattr(
@@ -190,7 +190,7 @@ class TestWebFetchWiring:
             def __enter__(self) -> "_Resp":
                 return self
 
-            def __exit__(self, *a: object) -> bool:
+            def __exit__(self, *a: object) -> object:
                 return False
 
         monkeypatch.setattr(

@@ -18,7 +18,7 @@ from universal_mind.scheduler import list_schedules
 
 
 @pytest.fixture()
-def probe_reminder():
+def probe_reminder() -> None:
     """One throwaway reminder, removed by name at teardown."""
     route_and_run("یادم باشه پس‌فردا ساعت ۶ گواه-آزمون-۶۱")
     yield
@@ -28,7 +28,7 @@ def probe_reminder():
     db.execute("DELETE FROM schedules WHERE command LIKE '%گواه-آزمون-۶۱%'")
 
 
-def _real_rows():
+def _real_rows() -> list[object]:
     return list_schedules()
 
 

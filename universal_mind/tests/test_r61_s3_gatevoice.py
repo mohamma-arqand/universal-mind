@@ -63,8 +63,13 @@ class TestTheShrunkenRouteConfession:
 
 class TestEndToEnd:
     def test_the_two_verb_sentence_names_its_dropped_half(self) -> None:
-        # live: the gate ships the smaller route and the report says so
+        # live: BOTH outcomes are honest — (a) the gate ships the smaller
+        # route and the report confesses the dropped half, or (b) the whole
+        # chain runs and email's missing-recipient failure is NAMED in the
+        # report. Either way, no half of the sentence dies silently.
         from universal_mind.persian_router import route_and_run
 
         rep = str(route_and_run("گزارش بساز و برایم ایمیل کن").get("agent_report", ""))
-        assert ("اجرا نشد" in rep and "ایمیل" in rep) or ("email" in rep) or ("⚖" in rep)
+        dropped_confessed = "اجرا نشد" in rep and "ایمیل" in rep
+        whole_chain_named_failure = "ایمیل" in rep and "ناموفق" in rep
+        assert dropped_confessed or whole_chain_named_failure

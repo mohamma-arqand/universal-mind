@@ -76,7 +76,15 @@ def check_narration_is_fluent_persian() -> bool:
     report = persian_report(payload)
     ok = "ساختار تصویر خوانده شد" in report
     ok = ok and "خطِ بلند" in report
-    ok = ok and "chart" not in report and "vision" not in report
+    # R61-S6: the artifact's PATH now rides the report («— در «C:\...\line.png»)
+    # — a real path is honest DATA, not an English leak. Strip quoted paths
+    # before the leak check; capability names must still never appear in prose.
+    import re as _re_leak
+
+    _quoted = _re_leak.compile("«[^»]*»")
+
+    _prose = _quoted.sub("", report)
+    ok = ok and "chart" not in _prose and "vision" not in _prose
     first = " / ".join(report.splitlines()[:2])
     print(f"  report: {first[:90]}")
     return bool(ok)

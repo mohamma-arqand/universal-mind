@@ -81,7 +81,7 @@ def _no_loudspeaker_in_tests() -> None:
         return _real_speak(self, text, voice_hint=voice_hint,
                            out_wav=sink, rate=rate)
 
-    _st.SpeechTool.speak = _silent_speak  # type: ignore[assignment]
+    _st.SpeechTool.speak = _silent_speak  # type: ignore[method-assign]
 
 
 @pytest.fixture(autouse=True, scope="session")  # type: ignore[untyped-decorator]

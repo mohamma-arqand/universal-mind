@@ -101,7 +101,7 @@ def top_processes(limit: int = 5) -> dict[str, Any]:
     # sort in PYTHON too, not only in PowerShell: the view's contract is
     # "heaviest first", and trusting the wire's ordering makes the contract
     # a hope. A stable sort keeps equal-CPU processes in their given order.
-    procs.sort(key=lambda p: p["cpu_seconds"], reverse=True)
+    procs.sort(key=lambda p: float(str(p["cpu_seconds"])), reverse=True)
     return {"ok": True, "processes": procs, "error": ""}
 
 

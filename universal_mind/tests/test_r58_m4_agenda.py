@@ -20,7 +20,7 @@ def _fresh_db() -> DatabaseSuite:
     return DatabaseSuite(str(Path(mkdtemp(prefix="um-m4-")) / "agenda.db"))
 
 
-def _with_db(db: DatabaseSuite):  # type: ignore[no-untyped-def]
+def _with_db(db: DatabaseSuite) -> object:
     return patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: db))
 
 

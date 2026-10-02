@@ -23,9 +23,10 @@ STATUS = UM / "artifacts" / "verification_status.txt"
 _VERIFY = UM / "scripts" / "verify.py"
 
 
-def _verify_module():  # type: ignore[no-untyped-def]
+def _verify_module() -> object:
     """Load scripts/verify.py the way the probes load helpers — from file."""
     spec = importlib.util.spec_from_file_location("um_verify_for_test", _VERIFY)
+    assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(mod)

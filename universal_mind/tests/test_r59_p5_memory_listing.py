@@ -25,7 +25,7 @@ def _db_with_facts(*facts: str) -> DatabaseSuite:
     return db
 
 
-def _with(db: DatabaseSuite):  # type: ignore[no-untyped-def]
+def _with(db: DatabaseSuite) -> object:
     return patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: db))
 
 

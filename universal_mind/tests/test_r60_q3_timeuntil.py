@@ -19,6 +19,7 @@ class TestTimeUntil:
     def test_midnight_answered_from_the_real_clock(self) -> None:
         ans = answer_reflexive("چند دقیقه تا نیمه‌شب مانده؟")
         assert ans is not None
+        assert ans is not None
         rep = ans["agent_report"]
         now = datetime.now()
         mid = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
@@ -29,10 +30,12 @@ class TestTimeUntil:
     def test_next_hour_answered(self) -> None:
         ans = answer_reflexive("چند دقیقه تا ساعت بعدی مانده؟")
         assert ans is not None
+        assert ans is not None
         assert "دقیقه" in ans["agent_report"]
 
     def test_no_negative_or_zero_minutes(self) -> None:
         ans = answer_reflexive("چند دقیقه تا نیمه‌شب مانده؟")
+        assert ans is not None
         rep = ans["agent_report"]
         assert "۰ دقیقه" not in rep  # midnight is at least a minute away
 
@@ -43,6 +46,7 @@ class TestWeekdayDistance:
                  ("چهارشنبه", 2), ("پنجشنبه", 3), ("جمعه", 4)]
         for name, py_wd in pairs:
             ans = answer_reflexive(f"{name} چند روز دیگه است؟")
+            assert ans is not None
             assert ans is not None, name
             rep = ans["agent_report"]
             expected = (py_wd - datetime.now().weekday()) % 7
@@ -55,6 +59,7 @@ class TestWeekdayDistance:
         # «شنبه» is a substring of «دوشنبه» — the longest match must win
         ans = answer_reflexive("دوشنبه چند روز دیگه است؟")
         assert ans is not None
+        assert ans is not None
         rep = ans["agent_report"]
         expected = (0 - datetime.now().weekday()) % 7
         assert rep.startswith("تا دوشنبه") or "دوشنبه امروز است" in rep
@@ -62,6 +67,7 @@ class TestWeekdayDistance:
 
     def test_the_spelled_without_zwnj_shape_works(self) -> None:
         ans = answer_reflexive("سهشنبه چند روز دیگه است؟")
+        assert ans is not None
         assert ans is not None
         rep = ans["agent_report"]
         expected = (1 - datetime.now().weekday()) % 7

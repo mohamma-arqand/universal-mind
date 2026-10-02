@@ -11,6 +11,7 @@ with no extra wiring (one source of truth).
 
 from __future__ import annotations
 
+import subprocess
 import re
 
 from universal_mind.content_quarantine import scan_untrusted
@@ -79,7 +80,7 @@ class TestOcrScansItsText:
             stdout = f"LANG:fa\nTEXT64:{text64}\n"
             stderr = ""
 
-        monkeypatch.setattr(ocr.subprocess, "run", lambda *a, **k: _Done())
+        monkeypatch.setattr(subprocess, "run", lambda *a, **k: _Done())
         img = tmp_path / "page.png"
         img.write_bytes(b"\x89PNG\r\n\x1a\n")  # existence is all the stub needs
 
@@ -96,7 +97,7 @@ class TestOcrScansItsText:
             stdout = ""
             stderr = "engine missing"
 
-        monkeypatch.setattr(ocr.subprocess, "run", lambda *a, **k: _Fail())
+        monkeypatch.setattr(subprocess, "run", lambda *a, **k: _Fail())
         img = tmp_path / "page.png"
         img.write_bytes(b"\x89PNG\r\n\x1a\n")
         out = ocr.OcrTool().read(str(img))

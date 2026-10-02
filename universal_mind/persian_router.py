@@ -1096,16 +1096,16 @@ def route_and_run(
             "SELECT goal, next_step, state, outcomes FROM goals "
             "WHERE state != 'archived' ORDER BY id DESC LIMIT 10"
         )
-        rows = q["rows"] if q.get("ok") else []
+        goal_rows: list[dict[str, Any]] = list(q["rows"]) if q.get("ok") else []
         state_fa = {"done": "✅ تمام", "stopped": "⏸ متوقف", "active": "▶ فعال"}
-        if not rows:
+        if not goal_rows:
             report = "هنوز هدفی ثبت نشده. با «هدف: ...» شروع کن."
         else:
             import json as _json
 
             fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
             lines = []
-            for g in rows:
+            for g in goal_rows:
                 try:
                     outcomes = _json.loads(g.get("outcomes") or "[]")
                     last_exc = outcomes[-1]["excellence"] if outcomes else None

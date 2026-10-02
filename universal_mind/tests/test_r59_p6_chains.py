@@ -31,7 +31,7 @@ def _db_with_chain(db: DatabaseSuite, name: str, caps: list[str]) -> DatabaseSui
     return db
 
 
-def _with(db: DatabaseSuite):  # type: ignore[no-untyped-def]
+def _with(db: DatabaseSuite) -> object:
     # the reflex reads the store through shared_persistent(); the injected
     # store IS the patched one, so the listing reads the isolated db
     return patch.object(DatabaseSuite, "shared_persistent", classmethod(lambda cls: db))

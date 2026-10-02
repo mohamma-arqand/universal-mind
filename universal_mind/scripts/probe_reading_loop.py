@@ -106,7 +106,14 @@ def check_full_cycle_narrates_in_persian() -> bool:
     # own English title, and reading it honestly is the feature.)
     system_lines = [ln for ln in report.splitlines() if not ln.startswith("• متنِ تصویر")]
     joined = "\n".join(system_lines)
-    ok = ok and "chart" not in joined and "ocr" not in joined
+    # R61-S6: strip quoted paths («C:\...\line.png») — the artifact's real
+    # location is honest DATA; capability names must still never appear in prose.
+    import re as _re_leak
+
+    _quoted = _re_leak.compile("«[^»]*»")
+
+    _prose = _quoted.sub("", joined)
+    ok = ok and "chart" not in _prose and "ocr" not in _prose
     first = " / ".join(report.splitlines()[:2])
     print(f"  report: {first[:90]}")
     return bool(ok)

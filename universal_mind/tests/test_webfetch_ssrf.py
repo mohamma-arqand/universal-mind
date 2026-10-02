@@ -20,7 +20,7 @@ from universal_mind.webfetch_tool import (
     _is_private_target,
 )
 
-_PRIVATE_URLS = [
+_PRIVATE_URLS: list[str] = [
     "http://127.0.0.1/",
     "http://127.0.0.1:8080/health",
     "http://localhost/",
@@ -38,7 +38,7 @@ _PRIVATE_URLS = [
     "http://printer.internal/",
 ]
 
-_PUBLIC_URLS = [
+_PUBLIC_URLS: list[str] = [
     "https://example.com/",
     "http://example.com/path?q=1",
     "https://8.8.8.8/",
@@ -78,7 +78,7 @@ class TestFetchRefusesPrivate:
         r = WebFetchTool().fetch("http://127.0.0.1:9/")
         assert "آدرس داخلی مجاز است" in r["error"]
 
-    def test_the_refusal_happens_before_any_connection(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_the_refusal_happens_before_any_connection(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The guard must not dial the number first and apologise later."""
         import universal_mind.webfetch_tool as wf
 
@@ -96,7 +96,7 @@ class TestConnectorHonoursTheFlag:
         assert out.ok is False
         assert "داخلی" in str(out.error)
 
-    def test_connector_passes_allow_private_through(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_connector_passes_allow_private_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import universal_mind.webfetch_tool as wf
 
         seen: dict[str, object] = {}
