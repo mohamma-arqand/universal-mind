@@ -78,9 +78,16 @@ def main() -> int:
 
     # S3 — the gate speaks
     r8 = report("گزارش بساز و برایم ایمیل کن")
+    # BOTH honest outcomes pass (the gate picks per-run): (a) the shrunk
+    # route CONFESSES the dropped half, or (b) the whole chain runs and
+    # the email failure is NAMED. Either way no half dies silently.
+    r8_whole_chain_named_failure = "ایمیل" in r8 and "ناموفق" in r8
+    r8_dropped_confessed = "اجرا نشد" in r8 and "ایمیل" in r8
     check(8, "the two-verb sentence names its dropped half (or ran whole)",
-          ("اجرا نشد" in r8 and "ایمیل" in r8) or ("⚖" in r8 and "email" not in r8))
-    check(9, "the gate's reasoning is visible in the report", "⚖" in r8)
+          r8_whole_chain_named_failure or r8_dropped_confessed)
+    check(9, "the gate's reasoning is visible when the gate intervened "
+             "(or the chain ran whole with named failures)",
+          ("⚖" in r8) or r8_whole_chain_named_failure)
 
     # S4 — reminder deletion (isolated probe rows, named cleanup)
     route_and_run("یادم باشه پس‌فردا ساعت ۶ گواه-r61-probe")
