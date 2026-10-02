@@ -98,6 +98,23 @@ def _kb(bytes_value: Any) -> str:
 
 
 def _sentence_data(result: dict[str, Any]) -> str:
+    # R61-S1 — SCALAR ARITHMETIC answers with the RESULT in a real Persian
+    # sentence: «۲۰ درصد از ۵۰۰» must SAY «۲۰ درصد از ۵۰۰ برابر ۱۰۰ است»,
+    # never a bare «تحلیل انجام شد» that hides the very number asked for.
+    if isinstance(result.get("result"), (int, float)) and "scalar" in result:
+        op = str(result.get("scalar", ""))
+        val = result["result"]
+        if op == "percent":
+            return f"درصد محاسبه شد: برابر {_fa_num(round(val, 4))}."
+        if op == "multiply":
+            return f"ضرب انجام شد: نتیجه {_fa_num(round(val, 4))}."
+        if op == "divide":
+            return f"تقسیم انجام شد: نتیجه {_fa_num(round(val, 4))}."
+        if op == "power":
+            return f"توان محاسبه شد: نتیجه {_fa_num(round(val, 4))}."
+        if op == "sqrt":
+            return f"جذر گرفته شد: نتیجه {_fa_num(round(val, 4))}."
+        return f"محاسبه انجام شد: نتیجه {_fa_num(round(val, 4))}."
     mean = result.get("mean")
     if mean is None:
         return "تحلیل انجام شد."

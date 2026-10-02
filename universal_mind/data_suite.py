@@ -299,6 +299,10 @@ class DataSuiteConnector:
         output: Any = result.get("stats") if operation == "stats" else {
             k: v for k, v in result.items() if k not in ("ok", "error")
         }
+        # R61-S1 — the SCALAR name rides along so the report can say WHICH
+        # arithmetic ran («درصد محاسبه شد»), and the cross-exam stays honest.
+        if operation == "scalar_op":
+            output = {**output, "scalar": str(params.get("scalar", ""))}
         # R44-5: the echoed series rides along on stats — the cross-examiner
         # (independent pure-Python second verdict) reads it from the payload.
         if operation == "stats" and isinstance(output, dict):

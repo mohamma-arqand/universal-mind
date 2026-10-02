@@ -436,11 +436,16 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         from universal_mind.persian_date import jalali_date
 
         if "ساعت" in c:
+            from datetime import datetime
+
+            from universal_mind.persian_date import gregorian_to_jalali_parts
+
             now = datetime.now()
+            jy, jm, jd = gregorian_to_jalali_parts(now.year, now.month, now.day)
             return _reflex_answer(
                 c,
-                f"ساعت {_fa_num(now.strftime('%H:%M'))} است — {_fa_num(now.strftime('%A')) if False else ''}"
-                f"امروز {_fa_num(now.day)} {_FA_MONTHS.get(now.month, '')}، تاریخ {jalali_date()}",
+                f"ساعت {_fa_num(now.strftime('%H:%M'))} است — "
+                f"امروز {_fa_num(jd)} {_FA_MONTHS.get(jm, '')}، تاریخ {jalali_date()}",
             )
         return _reflex_answer(c, f"امروز {jalali_date()} است.")
 

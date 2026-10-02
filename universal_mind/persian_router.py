@@ -443,6 +443,13 @@ def route(command: str) -> PersianRoute:
     if "متن بنویس" in lowered:
         matched.pop("clipboard", None)
 
+    # R61-S1 — THE PERCENT INTENT: «۲۰ درصد از ۵۰۰ چنده؟» — «چنده؟» pulls
+    # compute into the chain, but the percent question belongs to the data
+    # suite's scalar_op ALONE (compute would sum the pair = ۵۲۰, a fabricated
+    # answer). When the sentence names a percent, compute steps aside.
+    if "data" in matched and "درصد" in lowered:
+        matched.pop("compute", None)
+
     # R60 Q6 — THE EMAIL-LISTING INTENT: «ایمیل‌هایم را نشان بده» — «نشان بده»
     # is chart's word, but the sentence names EMAILS; chart must go.
     if "email" in matched and ("ایمیل" in lowered) and ("نشان" in lowered or "بگو" in lowered):

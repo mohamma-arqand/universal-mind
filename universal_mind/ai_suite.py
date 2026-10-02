@@ -195,6 +195,16 @@ class AISuiteConnector:
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
         operation = params.get("operation", "regression") or "regression"
+        # R61-S1 — THE HONEST MODEL: «رگرسیون روی این اعداد» with NO numbers
+        # in the sentence silently trained on DEFAULT_XS — fabricated data
+        # presented as the operator's own. A sentence that points at data
+        # the platform does not have is REFUSED BY NAME, never default-fed.
+        if not (params.get("xs") or params.get("data")):
+            return ConnectorResult(
+                ok=False, output=None,
+                error="داده‌ای در جمله پیدا نکردم — مدل را روی چه اعدادی بسنجم؟ "
+                      "مثلا: «رگرسیون روی ۱ و ۲ و ۳» (یا ابتدا داده را بساز/ذخیره کن و بعد بگو «روی همین‌ها»)",
+            )
         default_xs = self._suite.DEFAULT_XS if hasattr(self._suite, "DEFAULT_XS") else [[i] for i in range(10)]
         default_ys = self._suite.DEFAULT_YS if hasattr(self._suite, "DEFAULT_YS") else [2 * i + 1 for i in range(10)]
         method = {

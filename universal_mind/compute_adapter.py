@@ -22,7 +22,20 @@ class ComputeToolConnector:
         operation = params.get("operation", "evaluate") or "evaluate"
         if operation != "evaluate":
             return ConnectorResult(ok=False, output=None, error=f"unknown operation: {operation!r}")
-        result = self._tool.evaluate(expression=params.get("expression", "2 + 2"))
+        # R61-S1 — THE HONEST COMPUTE: a sentence with NO arithmetic shape
+        # («قیمت دلار الان چنده؟») must never receive the 2+2 default — a
+        # fabricated answer to a knowledge question is the one thing this
+        # platform swore never to do. No expression -> a named refusal that
+        # names what the sentence actually asked for.
+        expression = str(params.get("expression", "") or "").strip()
+        if not expression:
+            return ConnectorResult(
+                ok=False, output=None,
+                error="این سوال محاسبه‌ای نیست (عددی در جمله پیدا نکردم) — "
+                      "اگر پرسش دانشی است، پاسخش به مدل زبانی زنده نیاز دارد؛ "
+                      "اگر محاسبه می‌خواهی، اعداد و عملگر را بگو (مثلا «۵ منهای ۳ چنده؟»)",
+            )
+        result = self._tool.evaluate(expression=expression)
         if result.get("ok") is not True:
             return ConnectorResult(ok=False, output=None, error=result.get("error", "failed"))
         return ConnectorResult(ok=True, output=result.get("value"))

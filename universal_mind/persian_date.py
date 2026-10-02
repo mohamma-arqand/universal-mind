@@ -47,6 +47,16 @@ def jalali_date(offset_days: int = 0, *, now: datetime | None = None) -> str:
     return f"{jy}/{jm:02d}/{jd:02d}".translate(fa_digits)
 
 
+def gregorian_to_jalali_parts(gy: int, gm: int, gd: int) -> tuple[int, int, int]:
+    """R61-S1 — public wrapper: (jy, jm, jd) for a Gregorian date.
+
+    The clock answer used to glue the GREGORIAN day number to a JALALI
+    month name («امروز ۲ دی» in October — two calendars in one sentence);
+    callers need the real Jalali parts, not a private helper.
+    """
+    return _gregorian_to_jalali(gy, gm, gd)
+
+
 def resolve_temporal(command: str, *, now: datetime | None = None) -> str | None:
     """A temporal word in the command («امروز»/«دیروز»/«پریروز») → a real Jalali date.
 

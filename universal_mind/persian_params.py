@@ -267,6 +267,12 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                 "source": parsed["source"], "target": parsed["target"]}
 
     if capability == "compute":
+        # R61-S1 — PERCENT IS DATA-SUITE'S OWN: «۲۰ درصد از ۵۰۰ چنده؟» was
+        # built as `20.0 + 500.0` (=520, a fabricated sum) while the data
+        # suite's scalar_op already computes the REAL percent (100). A
+        # percent sentence never becomes an expression; compute gets out.
+        if "درصد" in command:
+            return {}
         if numbers and len(numbers) > 1:
             # R59 P1 — THE OPERATOR THE SENTENCE NAMES: «جمع …» is + but
             # «۵ منهای ۳» was built as `5.0 + 3.0` — the numbers were right
