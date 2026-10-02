@@ -498,6 +498,32 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             "پرسشت را در فهرستِ ناشناخته‌ها ثبت کردم تا با اولین اتصال، جوابش را بگیرم.",
         )
 
+    # R62 T4 — SPEECH ACCESSIBILITY: «کندتر/سریع‌تر حرف بزن» changes the
+    # REMEMBERED SAPI rate (−10..+10) — the next «بلند بخوان» speaks at
+    # the operator's pace, and the answer states the new value and the
+    # way back. The setting is a PREFERENCE (persisted, applied at run),
+    # never a per-call guess.
+    if ("حرف بزن" in c or "بگو" in c or "صحبت کن" in c or "بلند بخوان" in c) and (
+        "کندتر" in c or "کند تر" in c or "آهسته‌تر" in c or "آهسته تر" in c
+        or "سریع‌تر" in c or "سریع تر" in c or "آرام‌تر" in c or "آرام تر" in c
+    ):
+        from universal_mind import operator_preferences as _op
+
+        current = int(_op.get("speech_rate") or 0)
+        if "کندتر" in c or "آهسته" in c or "آرام" in c:
+            new_rate = max(-10, current - 2)
+            word = "کندتر"
+        else:
+            new_rate = min(10, current + 2)
+            word = "سریع‌تر"
+        _op.set("speech_rate", str(new_rate))
+        return _reflex_answer(
+            c,
+            f"سرعت گفتارم را {word} کردم ({_fa_num(new_rate)} در مقیاس −۱۰ تا ۱۰) — "
+            "از این به بعد «بلند بخوان» با همین سرعت حرف می‌زند. "
+            "«سریع‌تر حرف بزن» یا «کندتر حرف بزن» هر وقت خواستی تنظیمش می‌کند.",
+        )
+
     # «چند وقته دستگاه روشن است؟» — the REAL Windows uptime (WMI), honest.
     if ("دستگاه" in c or "سیستم" in c or "کامپیوتر" in c) and (
         "روشن" in c and ("چند" in c or "وقت" in c or "مدت" in c)

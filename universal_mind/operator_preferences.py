@@ -23,6 +23,9 @@ from universal_mind.database_suite import DatabaseSuite
 _PREFERENCE_SHAPES: dict[str, tuple[str, str]] = {
     # "chart_kind" preference -> capability "chart", param "operation"
     "chart_kind": ("chart", "operation"),
+    # R62 T4 — speech accessibility: the remembered SAPI rate
+    # (-10..10) shapes every spoken run («کندتر حرف بزن» sets it once).
+    "speech_rate": ("speech", "rate"),
 }
 
 

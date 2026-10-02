@@ -281,9 +281,16 @@ class SpeechToolConnector:
 
         operation = params.get("operation", "speak") or "speak"
         if operation == "speak":
+            # R62 T4 — the remembered rate (the accessibility preference)
+            # rides in as an int; a bad value falls back to SAPI's default.
+            try:
+                rate = int(params.get("rate", 0) or 0)
+            except (TypeError, ValueError):
+                rate = 0
             result = self._tool.speak(
                 params.get("text", ""),
                 out_wav=params.get("out_wav", ""),
+                rate=rate,
             )
         elif operation == "voices":
             result = self._tool.list_voices()
