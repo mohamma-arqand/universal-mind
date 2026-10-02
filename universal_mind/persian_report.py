@@ -35,6 +35,7 @@ _CAP_FA: dict[str, str] = {
     "database": "دیتابیس",
     "notify": "اطلاعرسانی",
     "clipboard": "کلیپبورد",
+    "email": "ایمیل",
     "speech": "گفتار",
     "ocr": "متنخوان",
     "excel": "صفحهگسترده",
