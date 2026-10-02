@@ -3,7 +3,7 @@
 A local-first orchestration system, not a chatbot: one identity, one input gate,
 specialists that never see identity, judgment that is always backed by evidence,
 and a self-watching loop that reasons about its own reasoning. Everything below
-is implemented, tested (1052+ tests), probed (43+ self-verifying probes), and
+is implemented, tested (2357+ tests), probed (100+ self-verifying probes), and
 type-clean (mypy 0) — see **Status** at the bottom.
 
 ## The whole mind in one command (for a stranger)
@@ -24,7 +24,7 @@ sees each layer actually run, not just read about it.
 Then verify the whole system claims what it claims:
 
 ```bash
-python scripts/verify.py     # lint + mypy-ratchet + tests + receipt + 40 probes -> READY
+python scripts/verify.py     # lint + mypy-ratchet + tests + receipt + 102 probes -> READY
 ```
 
 - **Core**: identity, intent, clock, errors, and the Executive Mind.
@@ -221,8 +221,8 @@ numbers-in-sentence as parameters, Jalali dates, folder resolution, saved chains
 by name, fluent Persian reports, and a chain advisor that learns from the
 operator's own run history).
 
-- **1337+ tests** green, **61 probes** green, **mypy 0**, **ruff clean**.
-- The live architecture map for the whole super-platform (engine, 13 capabilities,
+- **2357+ tests** green, **102 probes** green, **mypy 0**, **ruff clean**.
+- The live architecture map for the whole super-platform (engine, 27 capabilities,
   9 synthesis flows, self-scheduling, 5 delivery faces, 3 learning layers,
   the honesty laws) is `ARCHITECTURE_SUPERPLATFORM.md` — kept current with
   every major commit.

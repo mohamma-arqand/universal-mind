@@ -1,0 +1,72 @@
+# Changelog — Universal Mind
+
+All notable changes to this project. The waves (R##) are the project's own
+release rhythm; each wave is measured live, fixed with pinned tests, and
+sealed only behind `python scripts/verify.py` printing READY.
+
+## R61 — 2026-10-02 — The Deep-Review Wave (honesty + safety + voice)
+
+Born from a 150-command live review through seven personas
+(docs/DEEP_REVIEW_R61.md), not from imagination.
+
+### Fixed — honesty law breaks
+- `«قیمت دلار الان چنده؟»` answered «نتیجه ۴» (the 2+2 default leaked):
+  compute without a real expression now refuses BY NAME.
+- `«۲۰ درصد از ۵۰۰ چنده؟»` answered ۵۲۰ (percent built as a sum): percent
+  belongs to the data suite alone; the answer is «برابر ۱۰۰».
+- `«ساعت چنده؟` mixed two calendars («۲ دی» + «۱۴۰۵/۰۷/۱۰»): one clock,
+  one calendar — Jalali day and month.
+- `«رگرسیون روی این اعداد»` silently trained on default data: no data in
+  the sentence is a named refusal.
+
+### Fixed — security
+- The file-WRITE path had no policy (the review wrote ~/.ssh/id_rsa live):
+  .ssh/.gnupg/hosts/sam/system and Windows/Program Files/ProgramData are
+  refused BY NAME, before the exists-check.
+
+### Fixed — the operator's voice
+- «گزارش بساز و برایم ایمیل کن» ran half the sentence silently: the
+  quality gate's shrunken route now CONFESSES the dropped half, and the
+  gate's reasoning renders in every report (⚖).
+- Reminder deletion: numbered listing, «یادآوری N را حذف کن», and the bulk
+  delete law (only with an explicit «تأیید کن»).
+- Suggestions are domain-aware («یادم باشی…» → the reminder recipe, not
+  «سایت/لبه/برش»); colloquial reminder forms (باشی/بشه/بادی…) and
+  sentence-shaped social talk answer; a defaulted reminder hour confesses.
+- Reports state WHERE the artifact is («— در «C:\...\line.png»») and keep
+  every digit Persian (A/B margin, coefficient count, page count).
+
+### Added
+- docs/DEEP_REVIEW_R61.md — the seven-persona review, with evidence.
+- scripts/probe_r61_review.py — 16 live proofs, registered in verify.
+- scripts/gen_commands.py — COMMANDS.md is now GENERATED from _VOCAB +
+  the registry (27 capabilities, 241 words).
+
+## R60 — 2026-10-01 — The Text-File Wave
+
+- New capability 27: textfile (read/write/list) — no silent overwrite,
+  secrets (.env/keys) never read aloud.
+- Time-until («تا نیمه‌شب … مانده») and weekday distance (all seven days,
+  longest-match-first against the شنبه/یکشنبه substring trap).
+- «فضای درایو C» shows one drive; unknown drives are named with the seen list.
+- «تنظیماتت را نشان بده» — the operator's own settings, secrets masked.
+- The email listing (MIME-decoded subjects) and social answers.
+
+## R59 — 2026-10-01 — The Sweep Wave (math, units, machine views)
+
+- Sentence-named arithmetic operators («۵ منهای ۳» = ۲, not the old + lie).
+- New capability: unit_convert — 30 units, factor families + the
+  temperature formula, with a conversion-shape gate.
+- window_view: real open windows (UTF-8 law) and heavy processes.
+- Memory/chain listings; ChainsStore injectable-db (a test leak, confessed
+  and cleaned).
+
+## R58 — 2026-09-30/01 — The Folder Wave
+
+- Folder routing, relative dates, named-memory recall, the agenda view,
+  the OCR remedy, the R58 sweep probe.
+
+Earlier waves (R37–R57): the pantheon registry, ARETĒ evidence judgment,
+the six-gate verify, the night shift, SSRF guard, quarantine, injection
+ledger, provenance gate, security drift probes — see docs/NIGHT_SHIFT_LOG.md
+for the wave-by-wave record.
