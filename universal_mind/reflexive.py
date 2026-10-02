@@ -470,6 +470,34 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             lines.append(f"• {k} = {v}")
         return _reflex_answer(c, "\n".join(lines))
 
+    # R62 T2 — KNOWLEDGE QUESTIONS WITHOUT DATA: «هوا تهران چطوره؟» /
+    # «قیمت طلا چنده؟» / «اخبار امروز چیست؟» ask the WORLD, and the world
+    # is not in this machine. The honest answer names the gap and gives
+    # BOTH real roads: a live model (if wired) or fetching a page —
+    # never «نشناختم» (the sentence IS understood; the data is what is
+    # missing) and never a fabricated number.
+    _KNOW_TOPICS = ("هوا", "دمای هوا", "قیمت", "نرخ", "اخبار", "خبر",
+                    "ارز", "دلار", "طلا", "سکه", "بورس", "تورم")
+    _KNOW_ASK = ("چطوره", "چطور است", "چیه", "چیست", "چنده", "چند است", "کیه", "چی شده")
+    if any(t in c for t in _KNOW_TOPICS) and any(a in c for a in _KNOW_ASK):
+        topic = next(t for t in _KNOW_TOPICS if t in c)
+        # the promise is real: the question is HARVESTED so the first live
+        # connection can answer it (the same ledger the LLM path uses).
+        try:
+            from universal_mind.unknown_harvest import harvest_unknown
+
+            harvest_unknown([c])
+        except Exception:  # noqa: BLE001 — harvesting never blocks the answer
+            pass
+        return _reflex_answer(
+            c,
+            f"پرسشِ «{topic}» دادهٔ بیرونی می‌خواهد و من به منبعِ زنده وصل نیستم — "
+            "جوابِ حدسی نمی‌سازم.\n"
+            "دو راهِ واقعی: (۱) اگر مدلِ زنده وصل است، همین را با «هوش مصنوعی» بپرس؛ "
+            "(۲) «سایت [آدرس] را بخوان» تا دادهٔ واقعی را برایت بیاورم و خلاصه کنم.\n"
+            "پرسشت را در فهرستِ ناشناخته‌ها ثبت کردم تا با اولین اتصال، جوابش را بگیرم.",
+        )
+
     # «چند وقته دستگاه روشن است؟» — the REAL Windows uptime (WMI), honest.
     if ("دستگاه" in c or "سیستم" in c or "کامپیوتر" in c) and (
         "روشن" in c and ("چند" in c or "وقت" in c or "مدت" in c)

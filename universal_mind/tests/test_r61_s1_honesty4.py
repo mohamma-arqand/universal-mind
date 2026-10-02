@@ -23,9 +23,11 @@ def _report(cmd: str) -> str:
 
 class TestHonestCompute:
     def test_a_knowledge_question_is_refused_not_answered_with_2p2(self) -> None:
+        # R62 T2 evolution: «قیمت…» now gets the TOPIC-SPECIFIC refusal
+        # (world-data needed, both roads offered) — still never «نتیجه ۴».
         rep = _report("قیمت دلار الان چنده؟")
         assert "نتیجه" not in rep
-        assert "محاسبه‌ای نیست" in rep
+        assert "محاسبه‌ای نیست" in rep or "دادهٔ بیرونی" in rep
 
     def test_no_expression_means_no_default(self) -> None:
         # even the bare question shape with no numbers never evaluates 2+2
