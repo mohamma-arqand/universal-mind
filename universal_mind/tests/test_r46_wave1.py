@@ -169,12 +169,14 @@ class TestNamedMemory:
         _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
-        r1 = route_and_run("یادت باشد که جلسه با زهرا فردا ساعت ۱۰ است")
+        # R62-T1 law: a fact WITH a moment is an APPOINTMENT (the reminder
+        # path owns it). The memory test's fact must be moment-free.
+        r1 = route_and_run("یادت باشد که جلسه با زهرا دربارهٔ بودجه است")
         assert r1["route"] == ["memory"]
         assert "یادداشت شد" in r1["agent_report"]
 
         # a RELEVANT run surfaces the fact at the top of its report
-        r2 = route_and_run("نمودار جلسه زهرا بکش")
+        r2 = route_and_run("نمودار جلسه زهرا بکش")  # «زهرا» still surfaces the fact
         assert r2["agent_report"].startswith("📌")
         assert "زهرا" in r2["agent_report"].splitlines()[0]
 
@@ -182,8 +184,9 @@ class TestNamedMemory:
         r3 = route_and_run("نمودار از ۳ و ۵ بکش")
         assert "📌" not in r3["agent_report"]
 
-        # and forgetting is honest
-        r4 = route_and_run("دیگه یادت نره که جلسه با زهرا فردا ساعت ۱۰ است")
+        # and forgetting is honest (R62-T1: the fact matches the stored
+        # moment-free fact — «دیگه یادت نره» targets the same sentence)
+        r4 = route_and_run("دیگه یادت نره که جلسه با زهرا دربارهٔ بودجه است")
         assert "پاک شد" in r4["agent_report"]
         r5 = route_and_run("نمودار جلسه زهرا بکش")
         assert "📌" not in r5["agent_report"]

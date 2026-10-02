@@ -476,7 +476,10 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     # BOTH real roads: a live model (if wired) or fetching a page —
     # never «نشناختم» (the sentence IS understood; the data is what is
     # missing) and never a fabricated number.
-    _KNOW_TOPICS = ("هوا", "دمای هوا", "قیمت", "نرخ", "اخبار", "خبر",
+    # NOTE: «خبر چیست؟» in everyday speech asks the PLATFORM's own state
+    # (the five-signal answer), not world news — only the explicit
+    # «اخبار» is a world-data topic (a live test caught the collision).
+    _KNOW_TOPICS = ("هوا", "دمای هوا", "قیمت", "نرخ", "اخبار",
                     "ارز", "دلار", "طلا", "سکه", "بورس", "تورم")
     _KNOW_ASK = ("چطوره", "چطور است", "چیه", "چیست", "چنده", "چند است", "کیه", "چی شده")
     if any(t in c for t in _KNOW_TOPICS) and any(a in c for a in _KNOW_ASK):
