@@ -498,6 +498,39 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             "پرسشت را در فهرستِ ناشناخته‌ها ثبت کردم تا با اولین اتصال، جوابش را بگیرم.",
         )
 
+    # R62 T5 — CANCEL/UNDO: «لغو کن» / «برگرد عقب» / «آخرین کار را پاک کن».
+    # An automatic universal undo would be a lie (a fired reminder, a
+    # written file, a spoken word — each unwinds differently). The honest
+    # answer names WHAT the last run did (from the real history) and
+    # teaches the exact per-effect remedy; never a fake "باطل شد".
+    if c.strip() in ("لغو کن", "لغو کن.", "برگرد عقب", "برگرد عقب.", "آخرین کار را پاک کن",
+                     "کنسل کن", "undo", "برگردون") or c.startswith("لغو"):
+        db = DatabaseSuite.shared_persistent()
+        q = db.query(
+            "SELECT id, command, route, succeeded FROM run_history "
+            "ORDER BY id DESC LIMIT 5"
+        )
+        rows = q.get("rows", []) if q.get("ok") else []
+        last = next((r for r in rows if str(r["command"]).strip() not in
+                     ("لغو کن", "لغو کن.", "برگرد عقب", "آخرین کار را پاک کن")), None)
+        if last is None:
+            return _reflex_answer(c, "کاری که بتوانم لغو کنم پیدا نکردم — هنوز چیزی اجرا نکردهام.")
+        cmd_fa = str(last["command"])[:40]
+        route = str(last["route"] or "")
+        if "scheduler" in route or "یادآور" in str(last["command"]):
+            remedy = "یادآورها با «یادآوری N را حذف کن» پاک می‌شوند — «یادآورهای من» شماره‌ها را نشان می‌دهد."
+        elif "textfile" in route:
+            remedy = "فایل نوشته‌شده را خودت پاک کن (من بدون «تأیید کن» چیزی حذف نمی‌کنم) — مسیرش در همان گزارش بود."
+        elif "chart" in route or "pdf" in route:
+            remedy = "خروجی در پوشهٔ موقت ساخته شد؛ اگر مسیرش را از گزارش برداشتی، همان را می‌توانی پاک کنی."
+        else:
+            remedy = "این اجرا اثرِ برگشت‌پذیرِ خودکار ندارد — اگر فایل/یادآور ساخته، راهِ همان را جداگانه بگو."
+        return _reflex_answer(
+            c,
+            f"لغوِ خودکار نمی‌کنم — اثرِ هر اجرا راهِ برگشتِ خودش را دارد.\n"
+            f"آخرین کار: «{cmd_fa}». {remedy}",
+        )
+
     # R62 T4 — SPEECH ACCESSIBILITY: «کندتر/سریع‌تر حرف بزن» changes the
     # REMEMBERED SAPI rate (−10..+10) — the next «بلند بخوان» speaks at
     # the operator's pace, and the answer states the new value and the

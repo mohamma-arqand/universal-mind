@@ -792,6 +792,19 @@ def route_and_run(
                 if not _hour_named:
                     _default_note = (" (ساعتی در جمله نبود — پیش‌فرض ۸ صبح گرفتم؛ "
                                      "ساعت دیگری می‌خواهی بگو تا عوض کنم)")
+                # R62 T5 — EVERY RUN LEAVES ITS HISTORY ROW: a registered
+                # reminder is a real run; without the row, «لغو کن» and
+                # «امروز چی کار کردی؟» both lied by omission (measured: the
+                # reminder never appeared in run_history).
+                try:
+                    from universal_mind.run_history import RunHistory
+
+                    RunHistory().record(
+                        command=command, route=["scheduler"], succeeded=True,
+                        outcome_class="",
+                    )
+                except Exception:  # noqa: BLE001 — history is a lens
+                    pass
                 return {
                     "ok": True, "command": command, "route": ["scheduler"],
                     "result": {"once": True, "run_at": _res["run_at"]},
