@@ -66,8 +66,29 @@ class TextFileTool:
             "truncated": truncated, "path": str(src), "error": "",
         }
 
+    # R61-S2 — WRITE-PATH POLICY: reading secrets is already refused; WRITING
+    # them is worse (a probe overwrote ~/.ssh/id_rsa on the live machine —
+    # caught by the deep review, removed with a named cleanup). Sensitive
+    # targets are refused BY NAME, and SYSTEM directories are read-only to
+    # us: the platform writes where the operator lives, not where Windows
+    # lives. C:\Windows and Program Files are never write targets.
+    _WRITE_FORBIDDEN = re.compile(
+        r"[/\\]\.ssh[/\\]|[/\\]\.gnupg[/\\]"
+        r"|[/\\](hosts|lmhosts\.sam|sam|sam\.sav|system|security)(\.log|\.sav|\.bak)?$"
+        r"|[A-Za-z]:[/\\](Windows|Program Files( \(x86\))?|ProgramData)[/\\]",
+        re.IGNORECASE)
+
+    def _write_refusal(self, path: str) -> str:
+        return (f"نمی‌نویسم — «{path}» مسیر حساس/سیستمی است (کلید، تنظیم شبکه یا پوشهٔ ویندوز). "
+                "خواستی، خودت با یک ابزار مناسب بازش کن؛ من جای آن‌ها را خراب نمی‌کنم.")
+
     def write(self, path: str, content: str) -> dict[str, Any]:
         dst = Path(path)
+        # R61-S2 — the write path policy applies BEFORE the exists-check:
+        # even a non-existing id_rsa is never created by us.
+        if self._WRITE_FORBIDDEN.search(str(dst)):
+            return {"ok": False, "error": self._write_refusal(str(dst)),
+                    "kind": "protected"}
         if dst.exists():
             return {
                 "ok": False, "kind": "exists",
