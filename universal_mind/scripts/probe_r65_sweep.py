@@ -27,6 +27,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from universal_mind.database_suite import DatabaseSuite  # noqa: E402
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -141,7 +143,7 @@ def main() -> int:
     return 0
 
 
-def _count(db: "DatabaseSuite", needle: str) -> int:
+def _count(db: DatabaseSuite, needle: str) -> int:
     q = db.query(f"SELECT COUNT(*) n FROM schedules WHERE command LIKE '%{needle}%'")
     return int(q["rows"][0]["n"]) if q.get("ok") else -1
 
