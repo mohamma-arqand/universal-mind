@@ -495,6 +495,18 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             return {"operation": "read"}
         if "بگذار" in command or "کپی" in command or "قرار بده" in command:
             return {"operation": "write"}  # text comes from the flow
+        # R66 P7 — «یادداشت X را بنویس»: a note-taking sentence is a
+        # clipboard WRITE (the spoken text rides in the params; the
+        # note really lands on the clipboard, never a silent read).
+        if ("بنویس" in command or "بنویسم" in command) and (
+                "یادداشت" in command or "نوت" in command):
+            import re as _re_p7
+
+            _m_note = _re_p7.search(
+                r"یادداشت\s+(?:امروز\s+)?(.+?)\s*(?:را|رو)?\s*بنویس", command)
+            if _m_note and _m_note.group(1).strip():
+                return {"operation": "write",
+                        "text": _m_note.group(1).strip()}
         return {"operation": "read"}
 
     if capability == "sysstatus":
