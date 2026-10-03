@@ -716,6 +716,23 @@ def route_and_run(
         _body = command
         for _m in ("توضیح بده", "فقط بگو چه میکنی", "فقط بگو چه کار میکنی"):
             _body = _body.replace(_m, "").strip()
+        # R64 P5 — THE PLEASANTRY IS NOT THE REMINDER: «خسته نباشی، یادم
+        # باشه فردا ساعت ۱۰ دارو بخورم» stored the whole sentence — the
+        # greeting rode into the reminder text. The pleasantries are
+        # stripped from the body and ACKNOWLEDGED by name in the answer.
+        _PLEASANTRIES = (
+            "خسته نباشی", "خسته نباشید", "سلام علیکم", "سلام.",
+            "سلام", "درود", "مرسی", "ممنونم", "ممنون", "با تشکر", "لطفا",
+            "خواهش میکنم", "لطفاً", "استوار باش",
+        )
+        _greet = ""
+        for _p in _PLEASANTRIES:
+            if _body.startswith(_p):
+                _rest = _body[len(_p):].lstrip("،, .؛")
+                if _rest:
+                    _greet = _p
+                    _body = _rest
+                break
         _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
         # R53 wave-2 — «یادآورهای من»: the REAL list, with each next-due in Persian.
@@ -856,7 +873,8 @@ def route_and_run(
                     "ok": True, "command": command, "route": ["scheduler"],
                     "result": {"once": True, "run_at": _res["run_at"]},
                     "agent_report": (
-                        f"یادآور یکبارمصرف ثبت شد: {_res['when_fa']} — «{_res['reminder']}».{_default_note} "
+                        (f"«{_greet}» — همبستی، ممنون. " if _greet else "")
+                        + f"یادآور یکبارمصرف ثبت شد: {_res['when_fa']} — «{_res['reminder']}».{_default_note} "
                         "«یادآورهای من» فهرستشان را نشان میدهد."
                     ),
                     "_registry": registry or ToolRegistry(),
