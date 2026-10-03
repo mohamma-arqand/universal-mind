@@ -755,12 +755,44 @@ def route_and_run(
         _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
         # R53 wave-2 — «یادآورهای من»: the REAL list, with each next-due in Persian.
+        # R65 P3 — a TIME FILTER in the listing sentence is a FILTER, not a
+        # registration («یادآورهای فردا را نشان بده» REGISTERED a reminder!):
+        # the listing gate takes the time-word shapes too and filters rows.
+        # R65 P3 — LONGEST FIRST: «فردا» is a substring of «پس‌فردا»; the
+        # wrong order matched the wrong day (live: پس‌فردا listed فردا).
+        _LIST_TIME = ("پس‌فردا", "پسفردا", "این هفته", "امروز", "هفته", "دیروز", "فردا")
         if ("یادآورهای" in _body or "یادآوریهای" in _body) and (
             "من" in _body or "لیست" in _body or "فهرست" in _body or "چی" in _body
+            or any(t in _body for t in _LIST_TIME)
         ):
-            from datetime import datetime
+            from datetime import datetime, timedelta
 
+            _want = next((t for t in _LIST_TIME if t in _body), "")
             rows = list_schedules()
+            if _want:
+                _today = datetime.now().date()
+                if _want == "امروز":
+                    _lo, _hi = _today, _today
+                elif _want == "فردا":
+                    _lo = _hi = _today + timedelta(days=1)
+                elif _want in ("پس‌فردا", "پسفردا"):
+                    _lo = _hi = _today + timedelta(days=2)
+                else:  # the week shapes
+                    _lo, _hi = _today, _today + timedelta(days=7)
+                _kept = []
+                for s in rows:
+                    if s.kind == "once":
+                        try:
+                            d = datetime.fromisoformat(s.run_at).date()
+                        except ValueError:
+                            continue
+                        if _lo <= d <= _hi:
+                            _kept.append(s)
+                    else:
+                        _kept.append(s)  # recurring: always shown in a filtered view
+                rows = _kept
+                _FILTER_FA = {"امروز": "امروز", "فردا": "فردا",
+                              "پس‌فردا": "پس‌فردا", "پسفردا": "پس‌فردا"}.get(_want, "این هفته")
             lines = []
             for s in rows:
                 _sid = str(s.schedule_id).translate(_FA)
@@ -774,9 +806,12 @@ def route_and_run(
                     lines.append(f"({_sid}) «{s.command}» — هر روز ساعت {str(s.hour_of_day).translate(_FA)}")
                 else:
                     lines.append(f"({_sid}) «{s.command}» — هر {str(s.every_minutes).translate(_FA)} دقیقه")
+            _head = f"یادآورهایت ({_FILTER_FA}):" if _want else "یادآورهایت:"
             _msg = (
-                "یادآورهایت:\n" + "\n".join(f"• {ln}" for ln in lines)
-                if lines else "هیچ یادآوری ثبت نشده — «یادم بنداز که فردا ساعت ۸ ...» بگو."
+                _head + "\n" + "\n".join(f"• {ln}" for ln in lines)
+                if lines else (
+                    f"هیچ یادآوریِ {_FILTER_FA} نداری — «یادم بنداز که {('فردا' if _want == 'فردا' else '…')} ساعت ۸ ...» بگو."
+                    if _want else "هیچ یادآوری ثبت نشده — «یادم بنداز که فردا ساعت ۸ ...» بگو.")
             )
             return {
                 "ok": True, "command": command, "route": ["scheduler"],
