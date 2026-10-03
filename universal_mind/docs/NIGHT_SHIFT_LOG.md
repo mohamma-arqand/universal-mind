@@ -244,3 +244,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-03 13:10] run started (lock acquired)
 - [2026-10-03 13:10] run started (lock acquired)
 - [2026-10-03 13:10] run started (lock acquired)
+- [2026-10-03 13:33] run started (lock acquired)
+- [2026-10-03 13:33] run started (lock acquired)
+- [2026-10-03 13:33] run started (lock acquired)
+- [2026-10-03 16:20] ★ R66 SEALED — verify: 6/6 GREEN، exit=0. مهر سه‌ران: ران-۱ r61-probe (قانون حذف تک) + r46-retry seed (بدون-داده) + r66-probe گواه-۳؛ ران-۲ گواه-۳ (ضمیر vs بدون-ضمیر: «نمودارش کن» ضمیرِ مشروع به حافظهٔ گفتگو است؛ گواه به «نمودار بکش» مهاجرت کرد)؛ ران-۳ READY. ۱۱ کامیت: f670c3d(P1) 286031b(P2) cf56695(P3) 5f0b411(P4) cf4116a(P5) 04dab5a(P6) f2e5601(P7) fc22990+e07181f(P8-probe) bd5d739 a6e2c4e(مهاجرت‌ها). ⚠ یادآور: یادآور واقعی ۶۸ در جارو حذف شد — دو بار از بکاپ mind.db.bak-20261003-112900 بازیابی شد؛ الان هست.
