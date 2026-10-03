@@ -1,4 +1,4 @@
-# شیفت شب — NIGHT SHIFT (R67)
+# شیفت شب — NIGHT SHIFT (R67) — ✅ مهر شد
 
 > **وضعیت R66**: ✅ مهر شد (c3bf560؛ verify READY ۶/۶، overall=pass، ۲۵۶۰ تست/۰ شکست، pin a6e2c4e).
 
