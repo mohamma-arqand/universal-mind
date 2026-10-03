@@ -499,6 +499,15 @@ def route(command: str) -> PersianRoute:
     if "textfile" in matched and "کپی" in lowered:
         matched.pop("clipboard", None)
 
+    # R67 P6 — A FOLDER VIEW IS filesearch ALONE: «پوشه دانلودها را نشان
+    # بده» — the new bare «پوشه» word pulls textfile into the chain and its
+    # empty listing turns the WHOLE run red while the real search succeeded
+    # (the r58 probe caught it). A folder SHOW belongs to the search alone;
+    # textfile keeps the folder BUILD («پوشه X را بساز») and the counts.
+    if "filesearch" in matched and "پوشه" in lowered and "بساز" not in lowered \
+            and "چند" not in lowered and "چقدر" not in lowered:
+        matched.pop("textfile", None)
+
     # R65 P7 — THE SCALAR-OP INTENT OWNS ITS QUESTION: «جذر ۱۶ چنده؟» —
     # «چنده؟» pulls compute into the chain, but جذر belongs to the data
     # suite's scalar_op ALONE (compute has no sqrt operator; its empty
