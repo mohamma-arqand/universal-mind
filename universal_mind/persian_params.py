@@ -201,6 +201,16 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     numbers_between = extract_numbers_between(command)
     text = extract_text(command)
     path = extract_path(command)
+    # R69 P6 — A SPOKEN COUNT IS NOT A DATA POINT: «جدول با سه سطر ذخیره
+    # کن» — the new word-number reader turned «سه» into the VALUE 3 and the
+    # table got ONE row (value=3) instead of THREE seeded rows. A «با N سطر»
+    # shape names the COUNT; that word-number never rides the data.
+    _m_count = re.search(r"با\s+(یک|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده)\s+سطر", command)
+    if _m_count is not None:
+        _W2N = {"یک": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج": 5,
+                "شش": 6, "هفت": 7, "هشت": 8, "نه": 9, "ده": 10}
+        _drop = float(_W2N[_m_count.group(1)])
+        numbers = [n2 for n2 in numbers if n2 != _drop]
     data = numbers_between or numbers
 
     if capability == "data":
