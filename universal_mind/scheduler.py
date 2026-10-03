@@ -329,6 +329,10 @@ def _strip_schedule_words(command: str) -> str:
     out = command
     while (m := pattern.search(_normalize_fa_numbers(out))):
         out = out[: m.start()] + out[m.end():]
+    # R65 P2 — «یکبار» after an interval is the REPEATING filler, not the
+    # action's first word («هر ۳۰ دقیقه یکبار بهم بگو آب بخورم» stored
+    # «یکبار بهم بگو …»).
+    out = re.sub(r"^یک\s*بار\s+", "", out.strip())
     return out.strip()
 
 

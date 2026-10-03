@@ -716,6 +716,12 @@ def route_and_run(
         # POSITION («نه منظورم دیشب بود»), not by name.
         or (("منظورم" in command or command.strip().startswith("نه")) and
             any(w in command for w in ("بود", "بشه", "باشه")))
+        # R65 P2 — a REPEATING interval IS a schedule even when the verb
+        # is «بگو» (the sweep caught «هر ۳۰ دقیقه بهم بگو آب بخورم»
+        # speaking ONCE immediately and storing nothing).
+        or (("هر" in command) and any(
+            w in command for w in ("دقیقه", "ساعت", "روز", "هفته", "ماه")))
+        and ("هر وقت" not in command or "پوشه" not in command)
     ):
         from universal_mind.scheduler import (
             delete_schedule,
@@ -968,10 +974,15 @@ def route_and_run(
                 _every = str(_res.get("every_minutes", 0)).translate(_FA)
                 _when = f"هر {_every} دقیقه"
             _ok = bool(_res.get("ok", _res.get("id") is not None))
+            # R65 P2 — the recurring registration NAMES the action too:
+            # «یادآور ثبت شد: هر ۳۰ دقیقه.» hid WHAT repeats.
+            _act = str(_res.get("command") or "")[:40]
             _msg = (
-                f"یادآور ثبت شد: {_when}."
-                if _ok
-                else "ثبت یادآور ناموفق بود — دوباره بگو."
+                (f"یادآور تکراری ثبت شد: {_when} — «{_act}». "
+                 "«یادآورهای من» فهرستشان را نشان میدهد.")
+                if _ok and _act
+                else (f"یادآور ثبت شد: {_when}." if _ok
+                      else "ثبت یادآور ناموفق بود — دوباره بگو.")
             )
             _schedule_id = _res.get("id") if _ok else None
             return {

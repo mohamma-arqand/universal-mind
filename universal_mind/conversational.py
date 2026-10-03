@@ -87,6 +87,29 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
         return _say(c, "اسمم «ذهن جهانی» است — دستیار فارسیزبانِ همین سیستم.")
     if ("کی هستی" in c or "کیستی" in c or "خودت را معرفی" in c or "معرفی کن" in c):
         return _say(c, _identity_intro())
+    # R65 P1 — THE OPERATOR'S OWN MEMORY ANSWERS FIRST: «اسمم چیه؟» went
+    # to the llm refusal while «یادت باشد اسم من علی است» sits in
+    # named_memory. A question about the OPERATOR's own facts is answered
+    # from the operator's own store; only with nothing stored does the
+    # knowledge-fallback path take it.
+    if (any(w in c for w in ("اسمم", "اسم من", "نامم", "نام من", "من کیم", "کی هستم"))
+            and any(q in c for q in ("چیه", "چیست", "چیه؟", "؟", "?", "کی هستم"))
+            and "یادت" not in c and "یادم" not in c):
+        from universal_mind.database_suite import DatabaseSuite
+
+        db = DatabaseSuite.shared_persistent()
+        q = db.query(
+            "SELECT fact FROM named_memory "
+            "WHERE fact LIKE '%اسم%' OR fact LIKE '%نام%' "
+            "ORDER BY id DESC LIMIT 3")
+        rows = q.get("rows", []) if q.get("ok") else []
+        if rows:
+            facts = "؛ ".join(str(r["fact"]) for r in rows[:2])
+            return _say(c, f"از خودت یادم هست: {facts}.")
+        return _say(
+            c,
+            "اسمت را یادم نیست — «یادت باشد اسم من … است» بگو تا دیگر هر "
+            "وقت بپرسی، از خودم جوابت را بدهم.")
     if ("وضعیتت" in c or "وضعیت تو" in c) and ("چطور" in c or "چیه" in c or "چطوره" in c or "?" in c or "؟" in c):
         return _say(c, _status_answer())
     if ("چه کارهایی بلدی" in c or "چیکار میتونی بکنی" in c or "چه کارها میتونی" in c
