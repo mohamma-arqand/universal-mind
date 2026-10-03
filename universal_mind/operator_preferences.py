@@ -114,12 +114,19 @@ def apply_to(capability_params: dict[str, dict[str, Any]]) -> dict[str, dict[str
 
 
 def parse_preference(command: str) -> tuple[str, str] | None:
-    """«همیشه نمودار میله‌ای دوست دارم» -> ("chart_kind", "bar").
+    """«همیشه نمودار میله‌ای دوست دارم» / «تنظیمات نمودار را تغییر بده به خطی».
 
     A tiny honest parser: only the shapes we actually apply. None = not a
     preference statement (most sentences are not).
     """
-    if "همیشه" not in command:
+    # R66 P6 — «تنظیمات نمودار را تغییر بده به خطی»: a SETTINGS-CHANGE
+    # sentence is a preference statement too (the operator is naming
+    # what future charts should look like — not asking to draw one).
+    _settings_change = (
+        ("تنظیمات" in command or "تنظیم" in command or "پیشفرض" in command or "پیش‌فرض" in command)
+        and ("تغییر" in command or "عوض" in command or "بده" in command)
+    )
+    if "همیشه" not in command and not _settings_change:
         return None
     if "نمودار" in command or "چارت" in command:
         for word, kind in (("دایرهای", "pie"), ("دایره", "pie"),
