@@ -92,8 +92,11 @@ class TestDataflowSynthesis:
         """chart → pdf: the PDF genuinely embeds the chart that was just made."""
         from universal_mind.real_tool_registry import real_connector_factory
 
+        # R63 P3: explicit real data — the silent default series is gone.
         syn = orchestrate(_real_registry(), ["chart", "pdf"],
-                          connector_factory=real_connector_factory, flow=True)
+                          connector_factory=real_connector_factory, flow=True,
+                          capability_params={"chart": {"operation": "line",
+                                                       "series": {"داده": [2, 3, 5, 7]}}})
         assert syn.ok is True
         # The flow is recorded honestly in the bundle.
         assert syn.output["flows"] == ["chart → pdf (گزارش فارسی با نمودار درونش)"]
@@ -107,7 +110,7 @@ class TestDataflowSynthesis:
         syn = orchestrate(
             _real_registry(), ["chart", "pdf"],
             connector_factory=real_connector_factory, flow=True,
-            capability_params={"pdf": {"operation": "document", "title": "گزارش"}},
+            capability_params={"chart": {"operation": "line", "series": {"داده": [2, 3, 5, 7]}}, "pdf": {"operation": "document", "title": "گزارش"}},
         )
         assert syn.ok is True
         assert syn.output.get("flows", []) == []  # no flow: explicit intent wins
@@ -117,7 +120,8 @@ class TestDataflowSynthesis:
         from universal_mind.real_tool_registry import real_connector_factory
 
         syn = orchestrate(_real_registry(), ["chart", "pdf"],
-                          connector_factory=real_connector_factory)
+                          connector_factory=real_connector_factory,
+                          capability_params={"chart": {"operation": "line", "series": {"داده": [2, 3, 5, 7]}}})
         assert syn.ok is True
         assert "flows" not in syn.output
 
@@ -129,7 +133,7 @@ class TestDataflowSynthesis:
         syn = orchestrate(
             _real_registry(), ["chart", "pdf"],
             connector_factory=real_connector_factory, flow=True,
-            capability_params={"pdf": {"operation": "persian_rtl", "title": "گزارش"}},
+            capability_params={"chart": {"operation": "line", "series": {"داده": [2, 3, 5, 7]}}, "pdf": {"operation": "persian_rtl", "title": "گزارش"}},
         )
         assert syn.ok is True
         assert syn.output["flows"] == ["chart → pdf (گزارش فارسی با نمودار درونش)"]
@@ -163,6 +167,8 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "pdf", "notify"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و گزارشش کن و اطلاع بده",
+            capability_params={"chart": {"operation": "line",
+                                         "series": {"داده": [2, 3, 5, 7]}}},  # R63 P3
         )
         assert syn.ok is True
         flow_strs = syn.output["flows"]
@@ -178,7 +184,7 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "notify"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و بهم بگو «تمام شد»",
-            capability_params={"notify": {"operation": "notify", "title": "T", "body": "تمام شد"}},
+            capability_params={"chart": {"operation": "line", "series": {"داده": [2, 3, 5, 7]}}, "notify": {"operation": "notify", "title": "T", "body": "تمام شد"}},
         )
         assert syn.ok is True
         assert not any("→ notify" in f for f in syn.output.get("flows", []))
@@ -211,7 +217,7 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "clipboard"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و کلیپبورد را بخوان",
-            capability_params={"clipboard": {"operation": "read"}},
+            capability_params={"chart": {"operation": "line", "series": {"داده": [2, 3, 5, 7]}}, "clipboard": {"operation": "read"}},
         )
         # locked or carried: the EXPLICIT READ intent is never overridden either way
         assert "→ clipboard" not in syn.output.get("flows", []) or not syn.ok
@@ -244,6 +250,8 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "vision"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و تحلیل تصویرش کن",
+            capability_params={"chart": {"operation": "line",
+                                         "series": {"داده": [2, 3, 5, 7]}}},  # R63 P3
         )
         assert syn.ok is True
         assert any("→ بینایی" in f for f in syn.output["flows"])
@@ -259,7 +267,7 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "vision"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و لبهها را پیدا کن",
-            capability_params={"vision": {"operation": "contours"}},
+            capability_params={"chart": {"operation": "line", "series": {"داده": [2, 3, 5, 7]}}, "vision": {"operation": "contours"}},
         )
         assert syn.ok is True
         assert not any("→ بینایی" in f for f in syn.output.get("flows", []))
@@ -274,6 +282,8 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "vision", "pdf"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و تحلیل تصویرش کن و گزارشش کن",
+            capability_params={"chart": {"operation": "line",
+                                         "series": {"داده": [2, 3, 5, 7]}}},  # R63 P3
         )
         assert syn.ok is True
         flow_strs = syn.output["flows"]
@@ -292,7 +302,9 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "vision"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و ساختارش را بخوان",
-            capability_params={"vision": {"operation": "chart_structure"}},
+            capability_params={"chart": {"operation": "line",
+                                         "series": {"داده": [2, 3, 5, 7]}},  # R63 P3
+                               "vision": {"operation": "chart_structure"}},
         )
         assert syn.ok is True
         vision_out = syn.output["synthesized_from"]["vision"]

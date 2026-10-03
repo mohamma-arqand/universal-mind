@@ -50,8 +50,18 @@ class TestExtendedCharts:
 
     def test_connector_dispatches_new_operations(self) -> None:
         conn = ChartSuiteConnector()
-        for op in ("barh", "boxplot", "violin", "stackplot", "step", "contour"):
-            result = conn.connect({}, {"operation": op})
+        # R63 P3: each op carries REAL explicit data — silent default series
+        # are gone (honesty law).
+        explicit = {
+            "barh": {"categories": ["الف", "ب"], "values": [2, 3]},
+            "boxplot": {"data": [[1, 2], [2, 3]]},
+            "violin": {"data": [[1, 2], [2, 3]]},
+            "stackplot": {"series": {"a": [1, 2], "b": [2, 1]}},
+            "step": {"series": {"a": [1, 3, 2]}},
+            "contour": {},
+        }
+        for op, params in explicit.items():
+            result = conn.connect({}, {"operation": op, **params})
             assert result.ok is True, f"{op}: {result.error}"
 
 

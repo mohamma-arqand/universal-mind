@@ -71,7 +71,13 @@ class ChartSuite:
         return {"ok": True, "path": str(out_path), "bytes": out_path.stat().st_size, "error": ""}
 
     def line(self, series: dict[str, list[float]] | None = None, title: str = "Line chart") -> dict[str, Any]:
-        data = series or {"a": [1, 3, 2, 5], "b": [2, 2, 4, 4]}
+        # R63 P3 — a chart without data is a NAMED refusal, never a silent
+        # default series (the «پیش‌فرضی که جواب می‌دهد» law, chart edition:
+        # «نمودار خطی از فروش ماهانه» drew {a:[1,3,2,5], b:[2,2,4,4]} —
+        # fabricated numbers presented as the operator's own data).
+        if series is None or not any(v for v in series.values()):
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        data = series
         if _has_persian(title, *data.keys()):
             _apply_persian_font()
         fig, ax = plt.subplots()
@@ -142,7 +148,10 @@ class ChartSuite:
         return self._save(fig, self._out_path("violin.png"))
 
     def stackplot(self, series: dict[str, list[float]] | None = None, title: str = "Stacked area") -> dict[str, Any]:
-        data = series or {"a": [1, 2, 3], "b": [2, 1, 2], "c": [1, 1, 1]}
+        # R63 P3 — same law: no silent default series
+        if series is None or not any(v for v in series.values()):
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        data = series
         labels = list(data.keys())
         fig, ax = plt.subplots()
         ax.stackplot(range(len(next(iter(data.values())))), *data.values(), labels=labels)
@@ -151,7 +160,10 @@ class ChartSuite:
         return self._save(fig, self._out_path("stackplot.png"))
 
     def step(self, series: dict[str, list[float]] | None = None, title: str = "Step chart") -> dict[str, Any]:
-        data = series or {"a": [1, 3, 2, 5]}
+        # R63 P3 — same law: no silent default series
+        if series is None or not any(v for v in series.values()):
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        data = series
         fig, ax = plt.subplots()
         for label, values in data.items():
             ax.step(range(len(values)), values, label=label, where="mid")

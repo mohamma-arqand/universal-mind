@@ -51,17 +51,12 @@ def run_ab(
     """
     from universal_mind.arete.run_judgment import judge_run
 
-    # A contest without data is theater: when the operator named no series,
-    # the DEFAULT real series rides every variant (the same one the default
-    # line chart draws) — both variants draw REAL data, the contest is real.
+    # R63 P3 — NO SILENT DEFAULT DATA: a contest the operator did not feed
+    # is theater; feeding DataSuite.DEFAULT_SERIES fabricated numbers as if
+    # they were the operator's own (the «پیش‌فرضی که جواب می‌دهد» law). When
+    # there is no data the variants honestly fail with the named refusal —
+    # the same one a direct chart draw gives — and the ruling stays honest.
     params_with_data = dict(base_params)
-    if not params_with_data.get("series") and not params_with_data.get("values"):
-        try:
-            from universal_mind.data_suite import DataSuite
-
-            params_with_data["series"] = {"داده": list(DataSuite.DEFAULT_SERIES)}
-        except Exception:  # noqa: BLE001 — the default series is a courtesy
-            pass
 
     results: dict[str, dict[str, Any]] = {}
     excellences: dict[str, float] = {}

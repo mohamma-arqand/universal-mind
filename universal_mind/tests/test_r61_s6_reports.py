@@ -86,5 +86,10 @@ class TestEndToEndPathStated:
     def test_a_live_chart_names_where_it_landed(self) -> None:
         from universal_mind.persian_router import route_and_run
 
+        # R63 P3 — «نمودار بکش» with NO data is a NAMED refusal now
+        # (the silent default series was fabricated data); a REAL chart
+        # names its path — tested with explicit numbers below.
         rep = str(route_and_run("نمودار بکش").get("agent_report", ""))
-        assert "در «" in rep and ".png" in rep
+        assert "نمودار بدون داده" in rep
+        rep2 = str(route_and_run("نمودار خطی از ۱ و ۴ و ۹ بکش").get("agent_report", ""))
+        assert "در «" in rep2 and ".png" in rep2

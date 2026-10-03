@@ -63,7 +63,12 @@ def test_chart_suite_joins_the_synthesis_loop() -> None:
     # "chart" is a registered real capability in real_tool_registry — no mutation
     # of the shared table needed (the earlier mutate-then-delete pattern here was
     # a real cross-test contamination bug).
-    syn = orchestrate(reg, ["chart"], connector_factory=real_connector_factory)
+    # R63 P3: a chart in a MECHANISM test still needs REAL explicit data —
+    # the silent default series is gone (honesty law), so the test feeds one.
+    syn = orchestrate(
+        reg, ["chart"], connector_factory=real_connector_factory,
+        capability_params={"chart": {"operation": "line",
+                                     "series": {"داده": [2, 3, 5, 7]}}})
     assert syn.ok is True
     assert syn.output["synthesized_from"]["chart"]["bytes"] > 0
 

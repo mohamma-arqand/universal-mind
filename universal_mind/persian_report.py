@@ -463,6 +463,14 @@ def persian_report(payload: dict[str, Any]) -> str:
         error = payload.get("error") or "; ".join(
             str(e) for e in (payload.get("errors") or {}).values()
         ) or "علت نامشخص"
+        # R63 P3 — the no-data chart refusal carries the exact roads:
+        # numbers in the sentence, or a real stored series.
+        if "نمودار بدون داده" in error:
+            return (
+                f"❌ اجرا ناموفق بود: {error}\n"
+                "داده را در جملهٔ خودت بیاور — مثلاً: «نمودار خطی از ۱ و ۴ و ۹ بکش»؛ "
+                "یا اول داده را بده («میانگین فروش ماهانه را یادت باشد …») بعد نمودارش را بخواه."
+            )
         return f"❌ اجرا ناموفق بود: {error}"
 
     route: list[str] = list(payload.get("route", []))
@@ -472,7 +480,14 @@ def persian_report(payload: dict[str, Any]) -> str:
 
     lines: list[str] = []
     chain_fa = " ← ".join(_CAP_FA.get(c, c) for c in route)
-    lines.append(f"✅ اجرا انجام شد: {chain_fa}")
+    # R63 P3 — the headline must match reality: when EVERY step failed the
+    # «✅ اجرا انجام شد» header was a lie sitting on top of honest rows
+    # (ARETĒ named the failure below). The header now confesses.
+    _ok_steps = [c for c in route if c not in errors or not errors[c]]
+    if route and not _ok_steps:
+        lines.append(f"❌ اجرا انجام نشد: {chain_fa} — همهٔ گام‌ها ناموفق بودند")
+    else:
+        lines.append(f"✅ اجرا انجام شد: {chain_fa}")
     # R61-S3 — THE GATE SPEAKS: the quality gate's reasoning (including the
     # shrunken-route confession) is part of the run's truth; a repair the
     # operator cannot see is a silent mutation of their own sentence.

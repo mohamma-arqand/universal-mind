@@ -73,7 +73,9 @@ class TestFlowNarration:
     def test_report_narrates_the_flow(self) -> None:
         from universal_mind.persian_router import route_and_run
 
-        payload = route_and_run("نمودار خطی بساز و گزارشش کن")
+        # R63 P3: the flow needs REAL data — numbers in the sentence
+        # (a dataless chart is a named refusal now, and no flow happens).
+        payload = route_and_run("نمودار خطی از ۲ و ۷ و ۹ بساز و گزارشش کن")
         assert payload["flows"], "the flow must be active for chart→pdf"
         report = persian_report(payload)
         assert "🔗" in report

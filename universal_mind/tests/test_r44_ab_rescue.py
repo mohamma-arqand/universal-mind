@@ -95,7 +95,9 @@ class TestTheRealChain:
                                classmethod(lambda cls: iso)):
             from universal_mind.persian_router import route_and_run
 
-            p = route_and_run("نمودارش کن")
+            # R63 P3: the AB duel needs REAL data now — numbers in the
+            # sentence (the silent default series is gone).
+            p = route_and_run("نمودار از ۲ و ۵ و ۹ کن")
         assert p["ok"] is True
         assert "مسابقهی A/B" in (p.get("ab_ruling") or "")
         assert "مسابقهی A/B" in (p.get("agent_report") or "")

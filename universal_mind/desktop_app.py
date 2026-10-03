@@ -816,7 +816,16 @@ class MindDesktopApp:
                         absorbable=True,
                     )
                 )
-            syn = orchestrate(registry, caps, connector_factory=_multi_factory(caps))
+            # R63 P3 — a chart in the demo chain carries REAL data; the
+            # silent default series is gone (honesty law).
+            _cap_params = {}
+            if "chart" in caps:
+                _cap_params["chart"] = {
+                    "operation": "line", "series": {"داده": [2, 3, 5, 7]}}
+            syn = orchestrate(
+                registry, caps,
+                connector_factory=_multi_factory(caps),
+                capability_params=_cap_params or None)
             payload = {
                 "ok": syn.ok,
                 "chain": caps,

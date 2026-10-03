@@ -1561,7 +1561,14 @@ def route_and_run(
                 if ab.get("ok"):
                     # the winner's chart result replaces the chart step's params —
                     # the orchestration below runs pdf on the WON artifact.
-                    capability_params["chart"] = {"operation": ab["ab_contest"]["winner"], "_ab_shipped": ab["result"]["chart"]}
+                    # R63 P3 — the operator's REAL data (series/values) must
+                    # ride along: the earlier overwrite dropped it and the
+                    # shipped chart silently drew nothing (fabrication bug).
+                    _won = {**capability_params["chart"],
+                            "operation": ab["ab_contest"]["winner"]}
+                    if ab.get("result", {}).get("chart", {}).get("path"):
+                        _won["_ab_shipped"] = ab["result"]["chart"]
+                    capability_params["chart"] = _won
                     capability_params["_ab_note"] = {"_note": ab["ab_contest"]["reasoning"]}
             except Exception:  # noqa: BLE001 — the contest is a lens, never a blocker
                 pass
