@@ -105,6 +105,57 @@ def top_processes(limit: int = 5) -> dict[str, Any]:
     return {"ok": True, "processes": procs, "error": ""}
 
 
+def processes_by_ram(min_mb: float = 0.0) -> dict[str, Any]:
+    """R63 P5 — processes above a RAM floor, sorted by RAM (real data).
+
+    «کدام پروسه‌ها بیشتر از ۱ گیگ رم می‌خورند؟» is a QUESTION WITH A
+    FILTER; the old view answered a generic top-5-by-CPU and ignored
+    the operator's actual question.
+    """
+    try:
+        raw = _run_ps(
+            "Get-Process | Sort-Object WorkingSet64 -Descending | "
+            "Select-Object -First 40 ProcessName, WorkingSet64 | "
+            "ConvertTo-Json -Compress"
+        )
+    except Exception as exc:  # noqa: BLE001 — surfaced by name, never faked
+        return {"ok": False, "error": f"خواندن پردازش‌ها نشد: {exc}", "processes": []}
+    import json
+
+    try:
+        data = json.loads(raw) if raw.strip() else []
+    except ValueError:
+        return {"ok": False, "error": "پاسخ PowerShell شکل شناخته نداشت", "processes": []}
+    if isinstance(data, dict):
+        data = [data]
+    procs = [
+        {
+            "process": str(p_.get("ProcessName", "")),
+            "ram_mb": round(float(p_.get("WorkingSet64") or 0) / (1024 * 1024), 1),
+        }
+        for p_ in data
+    ]
+    procs = [p_ for p_ in procs if p_["ram_mb"] >= min_mb]
+    return {"ok": True, "processes": procs, "error": ""}
+
+
+def ram_filter_fa(result: dict[str, Any], min_mb: float) -> str:
+    """The Persian answer for the RAM-filtered process question."""
+    if not result.get("ok"):
+        return str(result.get("error"))
+    procs = result.get("processes") or []
+    floor_fa = _fa(round(min_mb / 1024.0, 1)) if min_mb >= 1024 else _fa(min_mb)
+    unit = "گیگابایت" if min_mb >= 1024 else "مگابایت"
+    if not procs:
+        return f"هیچ پردازشی بیش از {floor_fa} {unit} رم نمی‌خورد — همه سبک‌اند."
+    lines = [f"{_fa(len(procs))} پردازش بیش از {floor_fa} {unit} رم می‌خورد:"]
+    for p_ in procs[:10]:
+        ram_fa = _fa(p_["ram_mb"] / 1024.0) if min_mb >= 1024 else _fa(p_["ram_mb"])
+        unit2 = "گیگ" if min_mb >= 1024 else "مگابایت"
+        lines.append(f"  • {p_['process']} — رم: {ram_fa} {unit2}")
+    return "\n".join(lines)
+
+
 def windows_fa(result: dict[str, Any]) -> str:
     """The Persian answer for the open-windows view."""
     if not result.get("ok"):

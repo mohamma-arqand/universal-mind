@@ -216,6 +216,25 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     if ("پروسه" in c or "پردازش" in c or "پروسس" in c) and any(
         w in c for w in ("پرمصرف", "سنگین", "مصرف", "نشان بده", "ram", "رم", "cpu")
     ):
+        # R63 P5 — a RAM FLOOR in the question changes the answer's kind:
+        # «کدام پروسه‌ها بیشتر از ۱ گیگ رم می‌خورند؟» is a FILTER, not a
+        # generic top-5 — the old path answered something else entirely.
+        import re as _re_ram
+
+        m_ram = _re_ram.search(r"بیشتر\s+از\s+([\d۰-۹.,]+)\s*(گیگ|گیگابایت|مگ|مگابایت)", c)
+        if m_ram and "رم" in c:
+            from universal_mind.window_view import processes_by_ram, ram_filter_fa
+
+            num = m_ram.group(1).translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789"))
+            num = num.replace(",", ".")
+            try:
+                amount = float(num)
+            except ValueError:
+                amount = 0.0
+            unit = m_ram.group(2)
+            min_mb = amount * 1024.0 if unit.startswith("گیگ") else amount
+            res = processes_by_ram(min_mb=min_mb)
+            return _reflex_answer(c, ram_filter_fa(res, min_mb))
         from universal_mind.window_view import processes_fa, top_processes
 
         res = top_processes(5)
