@@ -44,19 +44,37 @@ def ensure_table(db: DatabaseSuite) -> None:
 
 
 def parse_definition(command: str) -> dict[str, str] | None:
-    """«واژهی X یعنی Y» → {word, cap} (None = not a definition)."""
+    """«واژهی X یعنی Y» → {word, cap} (None = not a definition).
+
+    R63-P1: only SMALL definition sentences qualify — the pattern must
+    span the whole command (a colon-clause sentence like «قابلیت جدید
+    یاد بگیر: وقتی گفتم برق رفت یعنی ...» is NOT a word definition;
+    grabbing its last «X یعنی Y» poisoned the route overlay with
+    word='رفت' → cap='برق' and every «رفت» sentence mis-routed).
+    """
     m = _DEFINE_RE.search(command)
     if not m:
         return None
+    # the definition must BE the sentence, not a clause inside it
+    outside = command.replace(m.group(0), "", 1).strip()
+    if outside and not re.fullmatch(r"[.،؛:!?…\"'«»\s]*", outside):
+        return None
     word = m.group("word").strip()
     cap_raw = m.group("cap").strip().rstrip(".,،؛:؟!")
-    if word in ("واژه", "واژهی", "که"):
+    if word in ("واژه", "واژهی", "که", "چیزی", "یکی"):
         return None
     return {"word": word, "cap": cap_raw}
 
 
 def teach(word: str, capability: str, *, db: DatabaseSuite | None = None) -> dict[str, Any]:
-    """Store word→capability (redefinition overwrites, honestly)."""
+    """Store word→capability (redefinition overwrites, honestly).
+
+    R63-P1: the capability must be REAL — a known operator word (mapped
+    through _CAP_WORDS) or an actual registry capability. Anything else
+    is a NAMED refusal, never a silent overlay entry that misroutes
+    every later sentence (the live sweep caught word='رفت' → cap='برق'
+    slipping through: «command 'unused' is not allowlisted»).
+    """
     store = db or DatabaseSuite.shared_persistent()
     ensure_table(store)
     word = word.strip()
@@ -64,10 +82,37 @@ def teach(word: str, capability: str, *, db: DatabaseSuite | None = None) -> dic
     if not word or not capability:
         return {"ok": False, "error": "تعریفِ ناقص"}
     cap = _CAP_WORDS.get(capability, capability)
+    if cap not in _CAP_WORDS.values() and not _is_real_capability(cap):
+        known = "، ".join(sorted(set(_CAP_WORDS.values())))
+        return {
+            "ok": False,
+            "error": (
+                f"«{capability}» قابلیتی که بشناسم نیست — نمی‌توانم واژه را "
+                f"به چیزی ناشناخته وصل کنم. قابلیت‌های شناخته‌شده: {known}."
+            ),
+        }
     esc = word.replace("'", "''")
     store.execute(f"DELETE FROM learned_vocab WHERE word = '{esc}'")
     store.insert_many("learned_vocab", [{"word": word, "capability": cap}])
     return {"ok": True, "error": "", "word": word, "capability": cap}
+
+
+def _is_real_capability(cap: str) -> bool:
+    """True when `cap` is a capability the registry actually has."""
+    try:
+        from universal_mind.real_tool_registry import real_tool_registry
+
+        reg = real_tool_registry()
+        for attr in ("tools", "_tools", "registry"):
+            table = getattr(reg, attr, None)
+            if isinstance(table, dict):
+                return cap in table
+        names = getattr(reg, "names", None)
+        if callable(names):
+            return cap in names()
+    except Exception:  # noqa: BLE001 — the lens never breaks the run
+        return False
+    return False
 
 
 def learned_words(*, db: DatabaseSuite | None = None) -> list[dict[str, str]]:
