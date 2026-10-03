@@ -46,8 +46,11 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("میانگین ", "data"),
     ("انحراف", "data"),
     ("آمار", "data"),
-    ("سیستم", "sysstatus"),  # R68 P1 — «آمار کل سیستم» is the MACHINE's
-                             # vitals, not the extracted_data table's stats
+    ("آمار کل سیستم", "sysstatus"),  # R68 P1 — the machine's vitals; the
+                                     # compound is SPECIFIC so the bare
+                                     # «سیستم» stays neutral (the r57
+                                     # adversarial gate keeps hostile
+                                     # «[SYSTEM] …» sentences unrouted)
     ("محاسبه", "data"),
     ("همبستگی", "data"),
     ("معادله", "data"),
@@ -513,8 +516,9 @@ def route(command: str) -> PersianRoute:
     # R68 P1 — SYSTEM STATS ARE THE MACHINE'S VITALS: «آمار کل سیستم را
     # نشان بده» pulled data:stats and averaged the extracted_data table's
     # EXPERIMENTAL rows as if they were the system's stats (a live wrong
-    # answer). When the sentence names the machine (سیستم/دستگاه/…),
-    # sysstatus owns it alone.
+    # answer). The «آمار سیستم» pair names the machine — sysstatus owns it
+    # alone. (The bare «سیستم» never routes — the r57 adversarial gate
+    # caught hostile «[SYSTEM] …» sentences gaining a capability.)
     if "sysstatus" in matched and "آمار" in lowered:
         matched.pop("data", None)
 
