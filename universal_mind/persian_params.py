@@ -232,9 +232,13 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                 "a": a_val, "b": b_val,
                 "scalar": _matched_scalar,
             }
-        # R71 P1 — «۵ بزرگتر از ۳ است؟»: the comparison. Two numbers in
-        # the sentence + a comparison word = a DATA question (never llm).
-        if numbers and len(numbers) >= 2 and any(
+        # R71 P1 — «۵ بزرگتر از ۳ است؟»: the comparison. THE SUBSTRING LAW,
+        # SEVENTH BITE: «بزرگترین/کوچکترین» CONTAIN «بزرگتر/کوچکتر» — the
+        # extremes (R69-P5) must be tested FIRST or «بزرگترین از ۵ و ۹ و ۲؟»
+        # answers a pairwise comparison of the first two numbers.
+        _is_extreme71 = any(w in command for w in (
+            "بزرگترین", "بزرگ ترین", "کوچکترین", "کوچک ترین"))
+        if not _is_extreme71 and numbers and len(numbers) >= 2 and any(
                 w in command for w in ("بزرگتر", "بزرگ تر", "کوچکتر", "کوچک تر",
                                       "مساوی", "برابر است")):
             return {"operation": "compare", "a": numbers[0], "b": numbers[1]}
