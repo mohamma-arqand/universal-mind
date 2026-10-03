@@ -650,12 +650,27 @@ def route_and_run(
         _m_tf_path = _re_tf.search(r"([A-Za-z]:[/\\](?:[^،!?؟\s]+))", command)
         _m_content = _re_tf.search(
             r"(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?|داخلش\s+بنویس[:：]?)\s*(.+?)\s*(?:را)?\s*بنویس\s*$"
+            r"|(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?|داخلش\s+بنویس[:：]?)\s*(.+?)"
+            r"\s*و\s+(?:محتواش|محتویاتش)\s+را\s+(?:به\s+من\s+)?نشان\s+بده\s*$"
+            r"|(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?|داخلش\s+بنویس[:：]?)\s*(.+?)\s*بساز\s*$"
             r"|(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?|داخلش\s+بنویس[:：]?)\s*(.+)$", command)
         _tf_content = ""
         if _m_content is not None:
-            _tf_content = (_m_content.group(1) or _m_content.group(2) or "").strip()
+            _tf_content = (
+                _m_content.group(1) or _m_content.group(2)
+                or _m_content.group(3) or _m_content.group(4) or ""
+            ).strip()
+            # R66 P3 — the create-verb is NOT content: «با محتوای X بساز و
+            # محتواش را نشان بده» must write X, not «X بساز».
+            _tf_content = _re_tf.sub(
+                r"\s*بساز\s*$", "", _tf_content).strip()
         if _m_tf_path and _tf_content:
-            return route_and_run(
+            # R66 P3 — «فایل X را بساز و محتواش را نشان بده»: the SAME
+            # sentence asks to create AND to show. The write runs first,
+            # then the read names the content back (the operator asked
+            # for both halves — answering only the write is a half-truth).
+            _want_show = "نشان بده" in command or "نشون بده" in command
+            _w = route_and_run(
                 command,
                 registry,
                 params={"textfile": {
@@ -667,6 +682,18 @@ def route_and_run(
                 provenance="operator",
                 _retry_of=_retry_of,
             )
+            if _want_show and _w.get("ok"):
+                from pathlib import Path as _P3
+
+                _fp = _P3(_m_tf_path.group(1))
+                if _fp.exists():
+                    _shown = _fp.read_text(encoding="utf-8", errors="replace")[:400]
+                    _w = dict(_w)
+                    _w["agent_report"] = (
+                        f"{_w.get('agent_report', '')}\n"
+                        f"محتوای فایل: «{_shown}»"
+                    )
+            return _w
         # R63 P2 — bare filename, real content, no drive letter: the file
         # lands in the platform's working area (documents root), honestly
         # named in the report. «فایل گزارش.md بساز و داخلش بنویس X»
@@ -689,6 +716,33 @@ def route_and_run(
                 provenance="operator",
                 _retry_of=_retry_of,
             )
+        # R66 P3 — «فایل X را بساز و محتواش را نشان بده»: CREATE + SHOW
+        # in one sentence — no spoken content (محتواش refers to the file's
+        # own content, not a text to write). The file is created empty,
+        # then its content (empty) is shown back honestly.
+        if _m_tf_path and not _tf_content and "بساز" in command and (
+                "محتواش" in command or "محتویاتش" in command) and (
+                "نشان بده" in command or "نشون بده" in command):
+            from pathlib import Path as _P3
+
+            _fp = _P3(_m_tf_path.group(1))
+            _fp.parent.mkdir(parents=True, exist_ok=True)
+            _was_there = _fp.exists()
+            if not _was_there:
+                _fp.write_text("", encoding="utf-8")
+            _shown = _fp.read_text(encoding="utf-8", errors="replace")[:400]
+            _made = "" if _was_there else "ساخته شد (خالی — متنش را نگفتی). "
+            return {
+                "ok": True, "command": command, "route": ["textfile"],
+                "result": {"operation": "write", "path": str(_fp),
+                           "created": not _was_there,
+                           "empty": _fp.stat().st_size == 0},
+                "agent_report": (
+                    f"فایل «{str(_fp)}» {_made}"
+                    f"محتوای فعلی: «{_shown}»"
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
         # R63 P2 — content present, path MISSING: the honest refusal with
         # the exact shape that works (never a silent fallthrough).
         if _tf_content and _m_bare is None and _m_tf_path is None:
