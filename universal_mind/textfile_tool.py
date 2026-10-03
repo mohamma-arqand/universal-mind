@@ -458,7 +458,10 @@ class TextFileToolConnector:
             return ConnectorResult(ok=True, output={"operation": "mkdir", **{
                 k: v for k, v in out.items() if k not in ("ok", "error")}})
         if operation == "list":
-            folder = str(params.get("path", "")).strip()
+            # R74 P5 — the folder rides from «پوشه X» (folder key) or a bare
+            # path; a PATTERN («فایلهای txt») filters by suffix.
+            folder = str(params.get("folder") or params.get("path") or "").strip()
+            pattern = str(params.get("pattern", "") or "").strip()
             if not folder:
                 return ConnectorResult(
                     ok=False, output=None,
@@ -467,6 +470,11 @@ class TextFileToolConnector:
             out = self._tool.list_texts(folder)
             if not out.get("ok"):
                 return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            files = list(out.get("files", []))
+            if pattern and pattern != "*":
+                files = [f for f in files
+                         if f.lower().endswith(pattern.lower().lstrip("."))]
+                out = {**out, "files": files, "count": len(files)}
             return ConnectorResult(ok=True, output={
                 k: v for k, v in out.items() if k not in ("ok", "error")
             })

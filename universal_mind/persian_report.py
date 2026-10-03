@@ -51,6 +51,7 @@ _CAP_FA: dict[str, str] = {
     "textfile": "پروندهٔ متنی",
     "textsummarize": "خلاصه‌سازی متن",
     "html-report": "گزارش HTML",
+    "convert": "تبدیل قالب",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -213,6 +214,10 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                     "report": "گزارش HTML"}
         _fa = _VIEW_FA.get(str(result.get("mode", "report")), "گزارش HTML")
         return f"{_fa} ساخته شد ({_fa_num(round(_size_kb, 1))} کیلوبایت) — در «{_p}»"
+    if cap == "convert" and isinstance(result, dict) and result.get("path"):
+        _c_kb = result.get("bytes", 0) / 1024
+        return (f"تبدیل انجام شد: «{result.get('src', '')}» → «{result.get('path', '')}» "
+                f"({_fa_num(result.get('rows', 0))} ردیف، {_fa_num(round(_c_kb, 1))} کیلوبایت)")
     if cap == "compute" and isinstance(result, (int, float)):
         return f"محاسبه انجام شد: نتیجه {_fa_num(result)}."
     # R59 P2 — the conversion's own Persian sentence is already built by the

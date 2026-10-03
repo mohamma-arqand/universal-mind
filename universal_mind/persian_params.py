@@ -301,6 +301,17 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if text:
             params["title"] = with_resolved_date(text, command)
         return params
+    if capability == "convert":
+        # R74 P2 — the FORMAT target rides from the sentence: csv/اکسل/json.
+        _tgt = ""
+        if "csv" in command.lower():
+            _tgt = "csv"
+        elif "اکسل" in command or "excel" in command.lower() or "xlsx" in command.lower():
+            _tgt = "xlsx"
+        elif "json" in command.lower():
+            _tgt = "json"
+        return {"operation": "convert", "path": path, "target": _tgt}
+
     if capability == "html-report":
         # R73 P1/P4 — the VIEW is named by the sentence: dashboard /
         # timeline / table / card / overview — each a REAL HTML view of
@@ -409,10 +420,21 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if "کپی" in command and path:
             import re as _re_cp
 
-            m_cp = _re_cp.search(r"به\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            m_cp = _re_cp.search(
+                r"به\s+(?:پوشه\s+)?(?:مسیر\s+)?([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
             if m_cp:
+                dst = m_cp.group(1)
+                # R74 P1 — «به پوشه Y»: the destination is the FOLDER; the
+                # copy lands INSIDE it under the source's own name (a real
+                # copy, never a silent read). Path() decides folder vs file.
+                from pathlib import Path as _P74
+
+                d = _P74(dst)
+                if d.suffix == "" or d.is_dir():
+                    d.mkdir(parents=True, exist_ok=True)
+                    dst = str(d / _P74(path).name)
                 return {"operation": "copy", "path": path,
-                        "dst": m_cp.group(1),
+                        "dst": dst,
                         "overwrite_ok": "روی همان فایل" in command}
         if ("حجم" in command or "چقدر است" in command) and path and "پوشه" not in command:
             return {"operation": "size", "path": path}
@@ -448,6 +470,17 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # replace answering with a word count).
         if "کلمه" in command and "چند" in command and "عوض" not in command and path:
             return {"operation": "wordcount", "path": path}
+        if "فهرست" in command and "پوشه" in command and ("فایلهای" in command or "فایل های" in command):
+            import re as _re_ls
+
+            m_ls = _re_ls.search(r"پوشه\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_ls:
+                _ext = ""
+                m_ext = _re_ls.search(r"فایلهای?\s+([a-zA-Z0-9]+)", command)
+                if m_ext:
+                    _ext = "." + m_ext.group(1).lower()
+                return {"operation": "list", "folder": m_ls.group(1),
+                        "pattern": _ext or "*"}
         if ("چند" in command or "چقدر" in command) and "پوشه" in command:
             m_fd = None
             import re as _re_fd
@@ -461,13 +494,35 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             m_mk = _re_mk.search(r"پوشه\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
             if m_mk:
                 return {"operation": "mkdir", "folder": m_mk.group(1)}
+            # R74 P4 — «پوشه به نام X در Y بساز» / «یک پوشه در Y بساز»: the
+            # NAME rides from «به نام X», the PARENT from the path; a real
+            # folder path is JOINED, never a bare read of the parent.
+            m_named = _re_mk.search(r"به\s+نام\s+([^،!؟?\s]+)\s+در\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_named:
+                from pathlib import Path as _P74k
+
+                parent = _P74k(m_named.group(2).rstrip("/\\"))
+                return {"operation": "mkdir", "folder": str(parent / m_named.group(1))}
+            m_in = _re_mk.search(r"پوشه\s+(?:ای\s+)?(?:در|داخل)\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_in:
+                # «پوشه در Y بساز» with a NAME before it («به نام X» already
+                # handled): fall back to Y + the word after «پوشه … در».
+                return {"operation": "mkdir", "folder": m_in.group(1)}
         # R65 P6 — MOVE: «فایل X را به Y جابجا کن» — both paths ride from
         # the sentence; the destination-after-«به» is the SECOND path.
         if "جابجا" in command and path:
-            m_move = _re.search(r"به\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            m_move = _re.search(
+                r"به\s+(?:پوشه\s+)?(?:مسیر\s+)?([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
             if m_move:
+                dst = m_move.group(1)
+                from pathlib import Path as _P74m
+
+                d = _P74m(dst)
+                if d.suffix == "" or d.is_dir():
+                    d.mkdir(parents=True, exist_ok=True)
+                    dst = str(d / _P74m(path).name)
                 return {"operation": "move", "path": path,
-                        "dst": m_move.group(1),
+                        "dst": dst,
                         "overwrite_ok": "روی همان فایل" in command}
         if "عوض" in command and "با" in command and path:
             m_pair = _re.search(r"(?:کلمه|واژه|عبارت)\s+(.+?)\s+را\s+با\s+(.+?)\s+(?:عوض|جایگزین)", command)
@@ -558,6 +613,23 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "read_text"}  # OPEN: the flow picks the chain's pdf
 
     if capability == "zip":
+        # R74 P3 — «فایل X را زیپ کن» = PACK that file; a bare zip path
+        # (no file mentioned) still lists. A FOLDER ask packs the folder's
+        # real files. The verb «زیپ/فشرده کن» decides, never the noun alone.
+        _cmd_low = command.lower()
+        if "زیپ" in command or "فشرده" in command or "آرشیو" in command or "zip" in _cmd_low:
+            import re as _re_zip
+
+            _m_dir = _re_zip.search(
+                r"پوشه\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if _m_dir:
+                from pathlib import Path as _P74z
+                from universal_mind.zip_helper import pack_folder as _pf
+
+                return _pf(_P74z(_m_dir.group(1)))
+            if path:
+                return {"operation": "pack", "files": [path]}
+            return {"operation": "pack"}  # the flow packs the chain's files
         if path:
             return {"operation": "list", "path": path}
         return {"operation": "pack"}  # OPEN: the flow packs the chain's files

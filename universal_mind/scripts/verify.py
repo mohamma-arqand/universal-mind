@@ -193,6 +193,7 @@ PROBES = [
     "probe_r71_sweep.py",
     "probe_r72_perf.py",
     "probe_r73_visual.py",
+    "probe_r74_files.py",
 ]
 
 

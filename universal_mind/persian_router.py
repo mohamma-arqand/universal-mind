@@ -72,6 +72,21 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("مدیان", "data"),
     ("میانه", "data"),
     ("توان", "data"),
+    # R74 P2 — «به X تبدیل کن» with a FILE source and a FORMAT target is a
+    # FORMAT CONVERSION, never a stats run. The convert words precede the
+    # generic «تبدیل»→data so the file-conversion sentence owns its verb.
+    ("را به csv تبدیل", "convert"),
+    ("را به CSV تبدیل", "convert"),
+    ("به اکسل تبدیل", "convert"),
+    ("به Excel تبدیل", "convert"),
+    ("به excel تبدیل", "convert"),
+    ("را به اکسل تبدیل", "convert"),
+    ("به json تبدیل", "convert"),
+    ("به JSON تبدیل", "convert"),
+    ("خروجی json", "convert"),
+    ("خروجی JSON", "convert"),
+    ("خروجی csv", "convert"),
+    ("خروجی CSV", "convert"),
     ("تبدیل", "data"),
     ("نرمال", "data"),
     ("ماتریس", "data"),
@@ -146,9 +161,9 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("رسانه", "media"),
     ("فیلم", "media"),
     ("تبدیل ویدیو", "media"),
-    # archive (gzip)
-    ("فشرده", "archive"),
-    ("زیپ کن", "archive"),
+    # archive (gzip) — single-FILE compression sentences
+    ("فشرده کن", "archive"),
+    ("gzip کن", "archive"),
     ("تحلیل کن", "data"),
     ("تحلیل بده", "data"),
     ("آنالیز", "data"),
@@ -206,8 +221,12 @@ _VOCAB: tuple[tuple[str, str], ...] = (
 
     # zip (stdlib) — the world's archive format
     ("زیپش کن", "zip"),
+    ("زیپ کن", "zip"),
+    ("زیپ کن", "zip"),
     ("در زیپ", "zip"),
     ("بستهبندی کن", "zip"),
+    ("آرشیو کن", "zip"),
+    ("zip کن", "zip"),
     # csv (stdlib) — the universal interchange
     ("در سیاسوی", "csv"),
     ("سیاسویش کن", "csv"),
@@ -2092,6 +2111,38 @@ def route_and_run(
     # pdf + html-report, handing a PDF for an HTML ask).
     if "html-report" in caps and "pdf" in caps:
         caps.remove("pdf")
+    # R74 P2 — the same law for CONVERSION: «به اکسل تبدیل کن» routes both
+    # excel + convert; excel then CRASHED openpyxl on the .txt source. The
+    # converter owns the sentence; the raw excel suite steps aside (a
+    # source it cannot read is the converter's NAMED refusal, never a crash).
+    if "convert" in caps and "excel" in caps:
+        caps.remove("excel")
+    # R74 P3 — ONE ARCHIVE VERB: «فایل X را زیپ کن» matched BOTH «زیپ کن»→archive
+    # (single-file gzip) and the zip suite; archive swallowed the ask and the
+    # real .zip never happened. When the zip suite is in the chain, archive
+    # steps aside - .zip is the world's format; gzip keeps its own sentences.
+    if "zip" in caps and "archive" in caps:
+        caps.remove("archive")
+    # R74 P3 — «پوشه X را زیپ کن» matched textfile too (the path word); the
+    # textfile read of a FOLDER fails first and buries the real zip. The zip
+    # suite owns a zip sentence; textfile steps aside.
+    if "zip" in caps and "textfile" in caps:
+        caps.remove("textfile")
+    # …and a FILE conversion is not a STATS run: the bare «تبدیل»→data word
+    # pulled a mean of the file's text into the same chain. The converter
+    # owns the sentence; data steps aside.
+    if "convert" in caps and "data" in caps and "pdf" not in caps:
+        caps.remove("data")
+    # R74 P4 — A FOLDER ASK IS NOT A DOCUMENT: «پوشه … بساز» matched pdf via
+    # the bare «ساز/بساز» word and BUILT A PDF (33.9KB!) while also making
+    # the real folder. The folder sentence owns the ask; pdf steps aside.
+    if "textfile" in caps and "pdf" in caps and "پوشه" in command:
+        caps.remove("pdf")
+    # R74 P5 — «حجم پوشه X» is a folderstats question, not a compute run:
+    # compute failed first («این سوال محاسبه‌ای نیست») and buried the real
+    # answer. The folder question owns the ask; compute steps aside.
+    if "textfile" in caps and "compute" in caps and "پوشه" in command:
+        caps.remove("compute")
     reg = registry if registry is not None else _Registry()
     for cap in caps:
         reg.register(
