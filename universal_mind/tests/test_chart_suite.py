@@ -34,8 +34,11 @@ def test_connector_dispatches_operations() -> None:
     conn = ChartSuiteConnector()
     line = conn.connect({}, {"operation": "line", "series": {"s": [1, 2, 3]}})
     assert line.ok is True and line.output["bytes"] > 0
-    bar = conn.connect({}, {"operation": "bar"})
+    bar = conn.connect({}, {"operation": "bar", "values": [2.0, 5.0]})
     assert bar.ok is True
+    # R66 P2 — a bar without values is a NAMED refusal (no [3,7,5] default)
+    bar_empty = conn.connect({}, {"operation": "bar"})
+    assert bar_empty.ok is False and "بدون داده" in str(bar_empty.error)
 
 
 def test_unknown_operation_fails_clean() -> None:

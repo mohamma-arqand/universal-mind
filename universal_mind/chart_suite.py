@@ -88,8 +88,13 @@ class ChartSuite:
         return self._save(fig, self._out_path("line.png"))
 
     def bar(self, categories: list[str] | None = None, values: list[float] | None = None, title: str = "Bar chart") -> dict[str, Any]:
-        cats = categories or ["x", "y", "z"]
-        vals = values or [3, 7, 5]
+        # R66 P2 — same law as line (R63 P3): a bar chart without data is a
+        # NAMED refusal, never a silent default series («نمودارش کن» drew
+        # [3,7,5] and said «✅ اجرا انجام شد» — fabricated bars).
+        if not values:
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        cats = categories or [f"ردیف {i + 1}" for i in range(len(values))]
+        vals = values
         if _has_persian(title, *cats):
             _apply_persian_font()
         fig, ax = plt.subplots()
@@ -98,8 +103,11 @@ class ChartSuite:
         return self._save(fig, self._out_path("bar.png"))
 
     def pie(self, values: list[float] | None = None, labels: list[str] | None = None, title: str = "Pie chart") -> dict[str, Any]:
-        vals = values or [40, 35, 25]
-        labs = labels or ["a", "b", "c"]
+        # R66 P2 — the no-data law covers every chart kind
+        if not values:
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        vals = values
+        labs = labels or [f"قطعه {i + 1}" for i in range(len(vals))]
         if _has_persian(title, *labs):
             _apply_persian_font()
         fig, ax = plt.subplots()
@@ -108,15 +116,21 @@ class ChartSuite:
         return self._save(fig, self._out_path("pie.png"))
 
     def histogram(self, data: list[float] | None = None, bins: int = 10, title: str = "Histogram") -> dict[str, Any]:
-        values = data or [1, 2, 2, 3, 3, 3, 4, 4, 5]
+        # R66 P2 — the no-data law covers every chart kind
+        if not data:
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        values = data
         fig, ax = plt.subplots()
         ax.hist(values, bins=bins)
         ax.set_title(title)
         return self._save(fig, self._out_path("hist.png"))
 
     def scatter(self, xs: list[float] | None = None, ys: list[float] | None = None, title: str = "Scatter") -> dict[str, Any]:
-        x = xs or [1, 2, 3, 4, 5]
-        y = ys or [2, 4, 1, 8, 7]
+        # R66 P2 — the no-data law covers every chart kind
+        if not xs or not ys:
+            return {"ok": False, "error": "داده‌ای برای رسم ندادید — نمودار بدون داده نمی‌کشم."}
+        x = xs
+        y = ys
         fig, ax = plt.subplots()
         ax.scatter(x, y)
         ax.set_title(title)

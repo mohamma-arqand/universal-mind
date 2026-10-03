@@ -58,14 +58,23 @@ class TestTheABContest:
         assert "برنده شد" in contest["reasoning"]
         assert set(contest["excellences"]) == {"line", "bar"}
 
-    def test_the_default_series_rides_the_contest(self) -> None:
-        """No named series → the REAL default series draws both variants."""
+    def test_no_data_no_contest_theater(self) -> None:
+        """R66 P2 — no data → both variants refuse honestly; no fabricated bars.
+
+        The old expectation (the DEFAULT series rides the contest) was the
+        «پیش‌فرضی که جواب می‌دهد» law's last consumer: a contest the operator
+        did not feed is theater.
+        """
         from universal_mind.ab_contest import run_ab
 
         ab = run_ab("نمودارش کن", {"operation": "line"}, self._runner())
-        assert ab["ok"] is True
-        # the shipped chart exists and the contest was real (both ran)
-        assert (ab["result"]["chart"] or {}).get("path")
+        contest = ab["ab_contest"]
+        # the run is honestly red and NOTHING ships
+        assert ab["ok"] is False
+        assert (ab["result"].get("chart") or {}).get("path") is None
+        # both variants ran and both refused — the contest is over real
+        # failures, not fabricated bars
+        assert set(contest["excellences"]) == {"line", "bar"}
 
     def test_a_failed_variant_is_a_data_point(self) -> None:
         from universal_mind.ab_contest import run_ab
