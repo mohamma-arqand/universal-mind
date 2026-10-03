@@ -712,6 +712,10 @@ def route_and_run(
         or any(w in command for w in ("یادم باشه", "یادم باشی", "یادم بشه", "یادم بشی",
                                       "یادم بادی", "یادم باش", "یادت باشه", "یادت نره",
                                       "یادت باشد"))
+        # R64 P9 — the correction sentence speaks of the reminder by
+        # POSITION («نه منظورم دیشب بود»), not by name.
+        or (("منظورم" in command or command.strip().startswith("نه")) and
+            any(w in command for w in ("بود", "بشه", "باشه")))
     ):
         from universal_mind.scheduler import (
             delete_schedule,
@@ -850,6 +854,66 @@ def route_and_run(
         # R53 wave-2 — ONE-SHOT FIRST: «یادم بنداز فردا ساعت ۸ ...» carries a
         # moment, not an interval. A bare «فردا/امشب/ساعت H» never parses as
         # repeating — the old answer was «نشناختم» for the most human reminder.
+        # R64 P9 — THE CORRECTION: «نه منظورم دیشب بود» / «منظورم فردا بود».
+        # The operator re-times the LAST reminder; a correction that
+        # changes nothing says so, and the edit is NAMED (old → new).
+        if (command.strip().startswith("نه") or "منظورم" in command) and any(
+                w in command for w in ("بود", "بشه", "باشه")):
+            import re as _re_corr
+
+            m_corr = _re_corr.search(
+                r"منظورم\s+(.+?)\s+(?:بود|بشه|باشه)", _body) \
+                or _re_corr.search(r"منظورم\s+(.+)$", _body)
+            if m_corr:
+                from universal_mind.scheduler import parse_one_shot as _pos_corr
+
+                from universal_mind.database_suite import DatabaseSuite as _DB_corr
+
+                _when_words = m_corr.group(1).strip()
+                _new_spec = _pos_corr(f"یادآور {_when_words}")
+                if _new_spec is None:
+                    # a PAST correction («دیشب بود») cannot be a reminder:
+                    # the honest refusal names what was tried.
+                    return {
+                        "ok": False, "command": command, "route": ["scheduler"],
+                        "result": {"correction": {"refused": _when_words}},
+                        "agent_report": (
+                            f"«{_when_words}» زمانِ گذشته است — یادآور را به گذشته "
+                            "نمی‌توان منتقل کرد. زمانِ آینده بگو، مثلاً: "
+                            "«منظورم فردا ساعت ۹ بود»."),
+                        "_registry": registry or ToolRegistry(),
+                    }
+                _rows_corr = _DB_corr.shared_persistent().query(
+                    "SELECT id, command, run_at FROM schedules "
+                    "WHERE active = 1 ORDER BY id DESC LIMIT 1").get("rows", [])
+                if _rows_corr and _new_spec is not None:
+                    _old = _rows_corr[0]
+                    _old_run = str(_old.get("run_at") or "")
+                    _new_run = _new_spec["run_at"]
+                    if _old_run[:16] == str(_new_run)[:16]:
+                        return {
+                            "ok": True, "command": command, "route": ["scheduler"],
+                            "result": {"correction": {"unchanged": True}},
+                            "agent_report": (
+                                f"«{_old['command'][:40]}» همین‌طور {_when_words} است — "
+                                "چیزی عوض نشد."),
+                            "_registry": registry or ToolRegistry(),
+                        }
+                    _esc_id = int(_old["id"])
+                    _DB_corr.shared_persistent().execute(
+                        f"UPDATE schedules SET run_at = '{_new_run}' WHERE id = {_esc_id}")
+                    _fa_d = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+                    return {
+                        "ok": True, "command": command, "route": ["scheduler"],
+                        "result": {"correction": {"id": _esc_id,
+                                                  "old": _old_run, "new": str(_new_run)}},
+                        "agent_report": (
+                            f"زمان «{_old['command'][:40]}» را عوض کردم: "
+                            f"«{_old_run[:16].translate(_fa_d)}» → "
+                            f"«{str(_new_run)[:16].translate(_fa_d)}»."),
+                        "_registry": registry or ToolRegistry(),
+                    }
+
         _shot = parse_one_shot(_body)
         if _shot is not None and "هر" not in _body.split("ساعت")[0][:40]:
             _res = register_one_shot(_body)
