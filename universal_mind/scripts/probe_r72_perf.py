@@ -47,10 +47,12 @@ def main() -> int:
     check(1, f"cold status works and pays the real gather ({cold_ms:.0f}ms)",
           cold.get("ok") is True and cold_ms > 300)
     _warm_ms = []
+    warm = None
     for _ in range(3):  # R74 seal lesson: a timing gate measures a MEDIAN,
         t0 = time.perf_counter()  # never one loaded run
         w = route_and_run("وضعیت سیستم را بگو")
         _warm_ms.append((time.perf_counter() - t0) * 1000)
+        warm = w
         if w.get("ok") is not True:
             break
     _warm_ms.sort()
