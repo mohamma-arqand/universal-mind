@@ -295,6 +295,44 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         return _reflex_answer(
             c, f"امروز {today_fa} است؛ فردا {tomorrow_fa}.")
 
+    # R66 P5 — THE NAMED DAY'S DATE: «شنبه چندم است؟» / «پنجشنبه هفته بعد
+    # چندمه؟» — the operator names a weekday and asks for its DATE. The
+    # answer comes from the real clock: the NEXT occurrence of that day
+    # («هفته بعد» skips a full week further), rendered in Persian digits.
+    import re as _re_day
+
+    _m_day = _re_day.search(
+        r"(شنبه|یکشنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|چهار شنبه|پنجشنبه|پنج شنبه|جمعه)"
+        r"\s*(هفته بعد|هفته‌ی بعد|هفتهٔ بعد)?\s*(چندم|چندمه|چندم است|چندمه؟|چندم؟)", c)
+    if _m_day is not None:
+        from datetime import date as _date, timedelta as _timedelta
+
+        _DAYS2 = {"شنبه": 5, "یکشنبه": 6, "دوشنبه": 0, "سه‌شنبه": 1, "سه شنبه": 1,
+                  "چهارشنبه": 2, "چهار شنبه": 2, "پنجشنبه": 3, "پنج شنبه": 3, "جمعه": 4}
+        _want = _DAYS2[_m_day.group(1)]
+        _today = _date.today()
+        _delta = (_want - _today.weekday()) % 7
+        if _delta == 0:
+            _delta = 7  # «شنبه» on a Saturday means the NEXT one
+        if _m_day.group(2):  # «هفته بعد» — one full week further
+            _delta += 7
+        _target = _today + _timedelta(days=_delta)
+        _fa_d = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        _months = ("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+                   "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+        try:
+            from jdatetime import date as _jdate
+
+            _j = _jdate.fromgregorian(date=_target)
+            _date_fa = (f"{str(_j.day).translate(_fa_d)} {_months[_j.month - 1]} "
+                        f"({str(_j.year).translate(_fa_d)})")
+        except ImportError:  # honest fallback: the Gregorian date, named
+            _date_fa = (f"{str(_target.day).translate(_fa_d)}/"
+                        f"{str(_target.month).translate(_fa_d)} میلادی")
+        _rel = "هفته بعد" if _m_day.group(2) else ""
+        return _reflex_answer(
+            c, f"{_m_day.group(1)}{_rel and ' ' + _rel or ''} {_date_fa} است.")
+
     # R63 P6 — ENV VAR VIEW: «متغیر محیطی TEMP را نشان بده». The
     # operator's own environment, one named variable at a time. Secret-
     # looking names are masked (never printed), missing ones named.
