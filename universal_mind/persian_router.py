@@ -48,6 +48,9 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("آمار", "data"),
     ("مرتب کن", "data"),      # R69 P4 — «مرتب کن: ۵ و ۲ و ۹»
     ("عدد اول", "data"),      # R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول؟»
+    ("بزرگتر از", "data"),    # R71 P1 — «۵ بزرگتر از ۳ است؟» (comparison,
+                              # with the numbers IN the sentence)
+    ("کوچکتر از", "data"),    # R71 P1
     ("اعداد اول", "data"),    # R70 P6
     ("ترتیب نزولی", "data"),  # R69 P4
     ("بزرگترین", "data"),     # R69 P5 — the extremes are a DATA question,
@@ -337,11 +340,24 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("را با عوض کن", "textfile"),
     ("را با جایگزین کن", "textfile"),
     ("عوض کن", "textfile"),
+    ("برعکس کن", "textsummarize"),  # R71 P2 — «این جمله را برعکس کن: X» is a
+                                    # TEXT transform (never image processing;
+                                    # the flip word must not steal it)
     ("جابجا کن", "textfile"),  # R65 P6
     ("نام فایل", "textfile"),     # R67 P2 — «نام فایل X را عوض کن به Y»
     ("کپی کن", "textfile"),       # R67 P3 — «فایل X را به Y کپی کن»
     ("حجم فایل", "textfile"),     # R67 P4
     ("چند کلمه", "textfile"),    # R70 P2 — «در فایل X چند کلمه هست؟»
+    ("خط سوم فایل", "textfile"), # R71 P5 — «خط N فایل X را نشان بده»
+    ("خط اول فایل", "textfile"),  # R71 P5
+    ("آخرین خط فایل", "textfile"), # R71 P5 — «آخرین خط فایل X را بگو»
+    ("خط دوم فایل", "textfile"),  # R71 P5
+    ("خط چهارم فایل", "textfile"), # R71 P5
+    ("خط پنجم فایل", "textfile"),  # R71 P5
+    ("خط نهم فایل", "textfile"),   # R71 P5 — range refusals route too
+    ("خط ششم فایل", "textfile"), ("خط هفتم فایل", "textfile"),
+    ("خط هشتم فایل", "textfile"), ("خط دهم فایل", "textfile"),
+    ("چند بار آمده", "textfile"), # R71 P6 — «کلمه X در فایل Y چند بار؟»
     ("حجمش چقدر", "textfile"),
     ("در پوشه", "filesearch"),     # R67 P5 — «در پوشه X چند فایل هست؟»
     ("پوشه", "textfile"),          # R67 P6 — «پوشه X را بساز» (bare پوشه word,
@@ -553,6 +569,15 @@ def route(command: str) -> PersianRoute:
         matched.pop("compute", None)
         matched.setdefault("sysstatus", ["باتری"])
 
+    # R71 P5 — A LINE READ IS textfile ALONE: «آخرین خط فایل X را بگو» —
+    # the «بگو» word pulls speech into the chain; the line answer is a
+    # text read (the vitals-style irrelevant step law).
+    if "textfile" in matched and any(
+            w in lowered for w in ("خط سوم فایل", "خط اول فایل",
+                                   "آخرین خط فایل", "خط دوم فایل",
+                                   "خط چهارم فایل", "خط پنجم فایل")):
+        matched.pop("speech", None)
+
     # R70 P1 — A UNIT CONVERSION OWNS ITS SENTENCE: «۵ کیلوگرم چند پوند
     # است؟» chained unitconvert <- sysstatus (the «است» word? no — the
     # status vocab row) and the run carried an irrelevant vitals step.
@@ -563,10 +588,12 @@ def route(command: str) -> PersianRoute:
     # R69 P4/P5 — SORT/EXTREMES OWN THEIR QUESTION: «بزرگترین از ۵ و ۹ و ۲؟»
     # pulled llm (the «چیست» knowledge word) and refused honestly — but it
     # is a DATA question with the numbers IN the sentence. The sort/extreme
-    # intents own it; llm and compute step aside.
+    # intents own it; llm and compute step aside. R71 P1 extends the same
+    # law to the COMPARISON («۵ بزرگتر از ۳ است؟») and its question word.
     if "data" in matched and any(
             w in lowered for w in ("مرتب", "ترتیب", "بزرگترین", "بزرگ ترین",
-                                   "کوچکترین", "کوچک ترین")):
+                                   "کوچکترین", "کوچک ترین",
+                                   "بزرگتر از", "کوچکتر از", "کوچک تر از", "بزرگ تر از")):
         matched.pop("llm", None)
         matched.pop("compute", None)
 
@@ -728,6 +755,54 @@ def route_and_run(
     # not necessarily D:/…; and the content connector now includes the
     # spoken «داخلش بنویس» shape. Without this the sentence fell to the
     # reflexive history block and the file was never created.
+    # R71 P3 — «متن یادآوری X را عوض کن به Y»: EDITING the reminder's TEXT.
+    # The sweep caught it falling to the file move (dst empty — «مقصد ''
+    # از قبل هست»). The reminder is found by name; its command row is
+    # updated; both old and new are named.
+    if forced_route is None and "یادآور" in command and "عوض" in command \
+            and "به" in command:
+        import re as _re71
+
+        # BOTH spoken shapes: «متن یادآور: X را عوض کن» and the bare
+        # «متن یادآور X را عوض کن» (no colon — the sweep sentence itself).
+        _m_old = _re71.search(
+            r"یادآور(?:ی)?\s*:?\s*([^،:]+?)\s+را عوض کن", command)
+        _m_new = _re71.search(r"به\s+([^،.!?]+?)\s*$", command)
+        _old_txt = (_m_old.group(1) if _m_old else "").strip()
+        _new_txt = (_m_new.group(1) if _m_new else "").strip()
+        if _old_txt and _new_txt:
+            from universal_mind.scheduler import list_schedules
+
+            _rows71 = list_schedules()
+            _hit71 = next((s for s in _rows71 if _old_txt in s.command), None)
+            if _hit71 is None:
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"not_found": _old_txt},
+                    "agent_report": (
+                        f"یادآوری با متنِ «{_old_txt}» پیدا نکردم — "
+                        "«یادآورهای من» فهرستشان را نشان می‌دهد."
+                    ),
+                    "_registry": registry or ToolRegistry(),
+                }
+            _safe_new71 = _new_txt.replace("'", "''")
+            from universal_mind.database_suite import DatabaseSuite as _DS71
+
+            _DS71.shared_persistent().execute(
+                f"UPDATE schedules SET command = '{_safe_new71}' "
+                f"WHERE id = {_hit71.schedule_id}")
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"id": _hit71.schedule_id, "old": _hit71.command,
+                           "new": _new_txt},
+                "agent_report": (
+                    f"متنِ یادآوری شمارهٔ "
+                    f"{str(_hit71.schedule_id).translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹'))} عوض شد: "
+                    f"«{str(_hit71.command)[:40]}» → «{_new_txt}»."
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
+
     if forced_route is None and "فایل" in command and ("بنویس" in command or "بساز" in command) \
             and "متن بنویس" not in command:
         import re as _re_tf
@@ -856,6 +931,20 @@ def route_and_run(
             "agent_report": render_fa(_attempts),
             "_registry": registry or ToolRegistry(),
         }
+
+    # R71 P2 — «این جمله را برعکس کن: X»: a REAL text transform — the
+    # sweep caught the flip word routing to image processing (a PNG was
+    # inspected!). The text after the colon rides the answer.
+    if forced_route is None and ("برعکس کن" in command or "بر عکس کن" in command) \
+            and ":" in command:
+        _rev_txt = command.split(":", 1)[1].strip().strip("،.")
+        if _rev_txt:
+            return {
+                "ok": True, "command": command, "route": ["textsummarize"],
+                "result": {"operation": "reverse", "chars": len(_rev_txt)},
+                "agent_report": f"وارونه شد: «{_rev_txt[::-1]}».",
+                "_registry": registry or ToolRegistry(),
+            }
 
     # R45-2 — THE DAILY REMINDER: «یادآور کن ... هر روز ساعت ۸ و نیم ...» is
     # a SCHEDULE, not an instant toast. Any «یادآور» carrying a recurring

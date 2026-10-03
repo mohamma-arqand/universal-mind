@@ -96,6 +96,16 @@ class DataSuite:
         return {"ok": True, "value": val, "largest": largest,
                 "count": int(arr.size), "error": ""}
 
+    def compare(self, a: float, b: float) -> dict[str, Any]:
+        """R71 P1 — «۵ بزرگتر از ۳ است؟»: the REAL comparison, named."""
+        if a > b:
+            rel = "greater"
+        elif a < b:
+            rel = "less"
+        else:
+            rel = "equal"
+        return {"ok": True, "a": a, "b": b, "relation": rel, "error": ""}
+
     def primes_between(self, low: float, high: float) -> dict[str, Any]:
         """R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول هست؟»: the REAL primes in the
         range, by trial division (a sieve is overkill for spoken ranges)."""
@@ -317,6 +327,9 @@ class DataSuiteConnector:
                 float(params.get("a", 0)), float(params.get("b", 0)),
                 str(params.get("scalar", "multiply")),
             ),
+            # R71 P1 — the comparison
+            "compare": lambda: suite.compare(
+                float(params.get("a", 0)), float(params.get("b", 0))),
             # R69 P4/P5 — the sort and the extremes
             "primes": lambda: suite.primes_between(
                 float(params.get("low", 0)), float(params.get("high", 0))),

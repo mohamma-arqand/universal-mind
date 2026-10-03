@@ -295,6 +295,31 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
         return _reflex_answer(
             c, f"امروز {today_fa} است؛ فردا {tomorrow_fa}.")
 
+    # R71 P4 — «۲۰ روز دیگر چندمه؟»: the date N DAYS FROM NOW (the sweep
+    # caught it unrecognized — the delta reader only knew hours/minutes).
+    import re as _re_r71
+
+    _m_r71 = _re_r71.search(r"(\d+)\s*روز\s*(?:دیگر|بعد)", c)
+    if _m_r71 is not None:
+        from datetime import date as _date_r71, timedelta as _td_r71
+
+        _n_days = int(_m_r71.group(1))
+        _tgt_r71 = _date_r71.today() + _td_r71(days=_n_days)
+        _fa_r71 = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+        try:
+            from jdatetime import date as _jdate_r71
+
+            _j = _jdate_r71.fromgregorian(date=_tgt_r71)
+            _months_r71 = ("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+                           "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+            _txt_r71 = (f"{_n_days} روز دیگر "
+                        f"{str(_j.day).translate(_fa_r71)} {_months_r71[_j.month - 1]} "
+                        f"({str(_j.year).translate(_fa_r71)}) است.")
+        except ImportError:
+            _txt_r71 = (f"{_n_days} روز دیگر "
+                        f"{_tgt_r71.strftime('%Y/%m/%d')} میلادی است.")
+        return _reflex_answer(c, _txt_r71)
+
     # R66 P5 — THE NAMED DAY'S DATE: «شنبه چندم است؟» / «پنجشنبه هفته بعد
     # چندمه؟» — the operator names a weekday and asks for its DATE. The
     # answer comes from the real clock: the NEXT occurrence of that day

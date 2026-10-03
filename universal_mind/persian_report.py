@@ -117,6 +117,13 @@ def _sentence_data(result: dict[str, Any]) -> str:
         if op == "sqrt":
             return f"جذر گرفته شد: نتیجه {_fa_num(round(val, 4))}."
         return f"محاسبه انجام شد: نتیجه {_fa_num(round(val, 4))}."
+    # R71 P1 — «۵ بزرگتر از ۳ است؟»: the real comparison, in words.
+    if result.get("relation"):
+        rel_fa = {"greater": "بزرگتر است از", "less": "کوچکتر است از",
+                  "equal": "مساوی است با"}.get(str(result["relation"]), "")
+        return (f"{_fa_num(result.get('a', 0))} {rel_fa} "
+                f"{_fa_num(result.get('b', 0))} — "
+                + ("درست است." if str(result["relation"]) != "equal" else "درست است."))
     # R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول؟»: the real primes.
     if "primes" in result:
         vals = "، ".join(_fa_num(v) for v in result["primes"])
@@ -223,6 +230,18 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
             if count > 10:
                 lines.append(f"  … و {_fa_num(count - 10)} مورد دیگر")
             return "\n".join(lines)
+        # R71 P5 — «خط N فایل X»: the real line, numbered.
+        if result.get("operation") == "readline":
+            return (f"خط {_fa_num(result.get('lineno', 0))} از "
+                    f"{_fa_num(result.get('total', 0))}: «{result.get('line', '')}».")
+        # R71 P6 — «کلمه X در فایل Y چند بار؟»: the real frequency.
+        if result.get("operation") == "countword":
+            n_cw = result.get("count", 0)
+            if n_cw:
+                return (f"کلمه «{result.get('needle', '')}» {_fa_num(n_cw)} بار "
+                        f"در «{result.get('path', '')}» آمده است.")
+            return (f"کلمه «{result.get('needle', '')}» در "
+                    f"«{result.get('path', '')}» نیامده است.")
         # R70 P2 — «در فایل X چند کلمه هست؟»: the real counts.
         if result.get("operation") == "wordcount":
             return (f"فایل «{result.get('path', '')}»: "

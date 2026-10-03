@@ -232,6 +232,12 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                 "a": a_val, "b": b_val,
                 "scalar": _matched_scalar,
             }
+        # R71 P1 — «۵ بزرگتر از ۳ است؟»: the comparison. Two numbers in
+        # the sentence + a comparison word = a DATA question (never llm).
+        if numbers and len(numbers) >= 2 and any(
+                w in command for w in ("بزرگتر", "بزرگ تر", "کوچکتر", "کوچک تر",
+                                      "مساوی", "برابر است")):
+            return {"operation": "compare", "a": numbers[0], "b": numbers[1]}
         # R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول هست؟»: a real range question.
         if "اول" in command and numbers_between and len(numbers_between) >= 2:
             return {"operation": "primes",
@@ -387,6 +393,32 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                         "overwrite_ok": "روی همان فایل" in command}
         if ("حجم" in command or "چقدر است" in command) and path and "پوشه" not in command:
             return {"operation": "size", "path": path}
+        # R71 P5 — «خط N فایل X را نشان بده» / «آخرین خط فایل X را بگو».
+        _ORD = {"اول": 1, "دوم": 2, "سوم": 3, "چهارم": 4, "پنجم": 5,
+                "ششم": 6, "هفتم": 7, "هشتم": 8, "نهم": 9, "دهم": 10}
+        if "خط" in command and path and "نشان" in command or ("خط" in command and "بگو" in command and path):
+            import re as _re_ln
+
+            if "آخرین" in command or "اخرین" in command or "آخر" in command:
+                return {"operation": "readline", "path": path, "last": True}
+            _m_ord = _re_ln.search(
+                r"خط\s+(اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم)", command)
+            _m_num = _re_ln.search(r"خط\s+([۰-۹0-9]+)", command)
+            if _m_ord:
+                return {"operation": "readline", "path": path,
+                        "lineno": _ORD[_m_ord.group(1)]}
+            if _m_num:
+                return {"operation": "readline", "path": path,
+                        "lineno": int(_m_num.group(1).translate(
+                            str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")))}
+        # R71 P6 — «کلمه X در فایل Y چند بار آمده؟»: the frequency.
+        if "چند بار" in command and "کلمه" in command and path:
+            import re as _re_cw
+
+            _m_cw = _re_cw.search(r"کلمه\s+([^،:]+?)\s+در فایل", command)
+            if _m_cw:
+                return {"operation": "countword", "path": path,
+                        "needle": _m_cw.group(1).strip()}
         # R70 P2 — «در فایل X چند کلمه هست؟»: the word count. THE «چند» IS
         # THE MARKER: «کلمه A را با B عوض کن» is a REPLACE (R64-P7) — the
         # bare «کلمه» word must never steal it (the seal run caught the

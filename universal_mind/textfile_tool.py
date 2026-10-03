@@ -221,6 +221,48 @@ class TextFileTool:
         return {"ok": True, "src": str(s), "dst": str(d),
                 "bytes": d.stat().st_size, "error": ""}
 
+    def read_line(self, path: str, lineno: int, *, last: bool = False) -> dict[str, Any]:
+        """R71 P5 — «خط سوم فایل X را نشان بده» / «آخرین خط فایل X را بگو»:
+        the REAL line, numbered."""
+        s = Path(path)
+        if not s.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده."}
+        try:
+            lines = s.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError as exc:
+            return {"ok": False, "error": f"خواندن نشد: {exc}", "kind": "io"}
+        if not lines:
+            return {"ok": False, "kind": "empty",
+                    "error": f"فایل «{path}» خالی است."}
+        if last:
+            idx = len(lines) - 1
+        else:
+            if lineno < 1 or lineno > len(lines):
+                return {"ok": False, "kind": "range",
+                        "error": (f"خط {lineno} در فایل «{path}» نیست — "
+                                  f"۱ تا {len(lines)} خط دارد.")}
+            idx = lineno - 1
+        return {"ok": True, "path": str(s), "lineno": idx + 1,
+                "total": len(lines), "line": lines[idx], "error": ""}
+
+    def count_word(self, path: str, needle: str) -> dict[str, Any]:
+        """R71 P6 — «کلمه X در فایل Y چند بار آمده؟»: the REAL frequency."""
+        s = Path(path)
+        if not s.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده."}
+        if not needle.strip():
+            return {"ok": False, "kind": "noneedle",
+                    "error": "کدام کلمه؟ — مثلا: «کلمه سلام در فایل X چند بار آمده؟»"}
+        try:
+            text = s.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return {"ok": False, "error": f"خواندن نشد: {exc}", "kind": "io"}
+        n = text.count(needle.strip())
+        return {"ok": True, "path": str(s), "needle": needle.strip(),
+                "count": n, "error": ""}
+
     def word_count(self, path: str) -> dict[str, Any]:
         """R70 P2 — «در فایل X چند کلمه هست؟»: the REAL word/line/char
         count of the file's content."""
@@ -373,6 +415,23 @@ class TextFileToolConnector:
             if not out.get("ok"):
                 return ConnectorResult(ok=False, output=None, error=str(out["error"]))
             return ConnectorResult(ok=True, output={"operation": "copy", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
+        if operation == "readline":
+            out = self._tool.read_line(
+                str(params.get("path", "")).strip(),
+                int(params.get("lineno", 0)),
+                last=bool(params.get("last", False)))
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "readline", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
+        if operation == "countword":
+            out = self._tool.count_word(
+                str(params.get("path", "")).strip(),
+                str(params.get("needle", "")))
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "countword", **{
                 k: v for k, v in out.items() if k not in ("ok", "error")}})
         if operation == "wordcount":
             out = self._tool.word_count(str(params.get("path", "")).strip())
