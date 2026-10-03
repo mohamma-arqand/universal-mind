@@ -292,3 +292,10 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-03 19:08] run started (lock acquired)
 - [2026-10-03 19:08] run started (lock acquired)
 - [2026-10-03 19:08] run started (lock acquired)
+- [2026-10-03 19:38] run started (lock acquired)
+- [2026-10-03 19:38] run started (lock acquired)
+- [2026-10-03 19:38] run started (lock acquired)
+- [2026-10-03 20:16] run started (lock acquired)
+- [2026-10-03 20:16] run started (lock acquired)
+- [2026-10-03 20:16] run started (lock acquired)
+- [2026-10-04 04:00] ★ R71 SEALED — verify: 6/6 GREEN، exit=0. مهر سه‌ران: ران-۱ probe_r69 قرمز — «بزرگترین» شامل «بزرگتر» است (زیررشته، هفتمین گاز؛ extremes پیش از compare) (f41c462)؛ ران-۲ یک flaky پورتِ HTTP تستِ r47 (ران کاملِ suite بعدها ۲۶۲۴/۰ سبز)؛ ران-۳: READY. ۵ کامیت: 9a4dcc-style 4a8cb77(P1-P6) 8d97a11(P7-probe) f41c462(zir-rashte).
