@@ -203,6 +203,23 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             res = close_by_name(m_w.group(1))
             return _reflex_answer(c, close_fa(res), ok=bool(res.get("ok")))
 
+    # R63 P6 — ENV VAR VIEW: «متغیر محیطی TEMP را نشان بده». The
+    # operator's own environment, one named variable at a time. Secret-
+    # looking names are masked (never printed), missing ones named.
+    if "متغیر" in c and "محیط" in c and any(w in c for w in ("نشان", "بگو", "چیست", "چیه", "value")):
+        import re as _re_env
+
+        m_env = _re_env.search(r"متغیر\s*محیطی\s+([A-Za-z_][A-Za-z0-9_]*)", c)
+        if m_env:
+            from universal_mind.system_status_tool import SystemStatusTool
+
+            res = SystemStatusTool().env_var(m_env.group(1))
+            if res.get("ok"):
+                answer = f"متغیر محیطی {res['name']} = {res['value']}"
+            else:
+                answer = str(res.get("error"))
+            return _reflex_answer(c, answer, ok=bool(res.get("ok")))
+
     # R59 P3+P4 — MACHINE VIEWS: «چه برنامه‌هایی الان باز است؟» and
     # «پروسه‌های پرمصرف را نشان بده» — two measured dead sentences. Both are
     # READ-ONLY PowerShell views of the real machine (the same CIM path the

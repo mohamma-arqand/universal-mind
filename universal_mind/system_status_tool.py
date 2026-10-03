@@ -109,7 +109,37 @@ class SystemStatusTool:
             out["notes"] = [f"سیگنال {k} خوانده نشد" for k in missing]
         else:
             out["notes"] = []
+        # R63 P6 — ENV VARS: «متغیر محیطی TEMP را نشان بده». The operator's
+        # own environment is data they already own; reading one named var
+        # is a view. Secret-looking values are MASKED by name.
         return out
+
+    _SECRET_MARKERS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD",
+                       "CREDENTIAL", "APIKEY", "API_KEY", "AUTH")
+
+    def env_var(self, name: str) -> dict[str, Any]:
+        """One REAL environment variable — masked when it looks secret."""
+        name = name.strip()
+        if not name:
+            return {"ok": False,
+                    "error": "نامِ متغیر را نگفتی — مثلاً: متغیر محیطی TEMP را نشان بده"}
+        try:
+            import os
+
+            value = os.environ.get(name, "")
+        except Exception:  # noqa: BLE001 — the lens never breaks
+            value = ""
+        if not value:
+            return {"ok": False,
+                    "error": f"متغیر «{name}» در محیطِ این پروسه تعریف نشده است."}
+        upper = name.upper()
+        masked = any(m in upper for m in self._SECRET_MARKERS)
+        return {
+            "ok": True,
+            "name": name,
+            "value": "(مخفی — به نظر راز می‌رسد)" if masked else value,
+            "masked": masked,
+        }
 
 
 class SystemStatusToolConnector:
@@ -122,6 +152,12 @@ class SystemStatusToolConnector:
         from universal_mind.connectors import ConnectorResult
 
         operation = params.get("operation", "status") or "status"
+        if operation == "env_var":
+            result = self._tool.env_var(str(params.get("name", "")))
+            if result.get("ok") is not True:
+                return ConnectorResult(ok=False, output=None,
+                                       error=result.get("error", "failed"))
+            return ConnectorResult(ok=True, output=result)
         if operation != "status":
             return ConnectorResult(ok=False, output=None, error=f"عملیات ناشناخته: {operation!r}")
         result = self._tool.status()
