@@ -187,6 +187,22 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             )
         return _reflex_answer(c, f"آخرین چیزی که یاد داشتم: «{rows[0]['fact']}».")
 
+    # R63 P4 — WINDOW ACTIONS: «پنجره‌های کروم را ببند». A measured dead
+    # sentence: the platform could LIST windows but not act on them.
+    # The close is GRACEFUL (CloseMainWindow — the app may save), every
+    # closed window is NAMED, and a name matching nothing refuses with
+    # the real open list (never a guessed process).
+    if "ببند" in c and "پنجره" in c:
+        import re as _re_w
+
+        m_w = _re_w.search(r"پنجره‌?های\s+(.+?)\s+را\s+ببند", c) \
+            or _re_w.search(r"پنجره\s+(.+?)\s+را\s+ببند", c)
+        if m_w:
+            from universal_mind.window_actions import close_by_name, close_fa
+
+            res = close_by_name(m_w.group(1))
+            return _reflex_answer(c, close_fa(res), ok=bool(res.get("ok")))
+
     # R59 P3+P4 — MACHINE VIEWS: «چه برنامه‌هایی الان باز است؟» and
     # «پروسه‌های پرمصرف را نشان بده» — two measured dead sentences. Both are
     # READ-ONLY PowerShell views of the real machine (the same CIM path the
@@ -922,16 +938,17 @@ def state_fa(state: str) -> str:
     return {"done": "✅ تمام", "stopped": "⏸ متوقف", "active": "▶ فعال"}.get(state, state)
 
 
-def _reflex_answer(command: str, answer: str) -> dict[str, Any]:
+def _reflex_answer(command: str, answer: str, *, ok: bool = True) -> dict[str, Any]:
     return {
-        "ok": True,
+        "ok": ok,
         "command": command,
         "route": ["reflexive"],
         "matched_words": ["پرسش"],
         "unknown": [],
         "extracted_params": {},
         "result": {"reflexive": {"answer": answer}},
-        "errors": {}, "durations_ms": {}, "flows": [], "judgment": {},
+        "errors": {} if ok else {"reflexive": answer[:80]},
+        "durations_ms": {}, "flows": [], "judgment": {},
         "agent_report": answer,
     }
 
