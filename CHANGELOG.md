@@ -4,6 +4,16 @@ All notable changes to this project. The waves (R##) are the project's own
 release rhythm; each wave is measured live, fixed with pinned tests, and
 sealed only behind `python scripts/verify.py` printing READY.
 
+## R72 — ارتقای عملکرد (2026-10-۰۴)
+
+جاروی ۱۶ فرمان با پروفایل شناسایی شد. دو نقطهٔ داغِ مرتبه-بزرگ:
+
+- **P1 کشِ vitals**: «وضعیت سیستم» ۱۷۲۶ms بود — ۱۶ زیرپروسهٔ PowerShell در هر ران (قفل جهانی). کشِ TTL-۲s → **۴۰ms گرم (۹۷x)**. رفرش صریح پولِ واقعی (۱۵۲۰ms) را میپردازد و نامیده میشود؛ سوالِ شنیدن TTL را دور میزند.
+- **P2 importهای سنگین تنبل**: «جمع ۲ و ۵» ۲۹۶۹ms — ۹۰٪ سربارِ import (sklearn تنها ۱.۶s، در هر ران!). حالا import درونِ متدها → **۱۳۲ms (۲۰x)**؛ ai_suite import ۱۳۲۹→۳۶۴ms؛ روشهای ML همچنان مدل واقعی تربیت میکنند (تست پین).
+- **P3 probe_r72_perf**: ۱۲ گواه + **گیت زمانی** (cold>300، warm<300، ≥۴x، import<700، compute<400، fast median<250) — رگرسیونِ عملکرد حالا گیت را میشکند.
+
+مهر دومرانه: ران-۱ ماسکرِ راز در بازنویسیِ کش گم شد (کش ≠ از دست دادنِ دفاع)؛ ران-۲ گیشِ تایمینگ flaky شد (میانهٔ ۳-ران). overall=pass، ۲۶۲۹ تست/۰ شکست.
+
 ## R71 — جاروی مقایسه/ویرایش/خط-به-خط (2026-10-۰۴)
 
 جاروی ۱۵ فرمان: ۷ کلاس — دو **جوابِ غلطِ زنده**:

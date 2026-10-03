@@ -304,3 +304,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-03 21:18] run started (lock acquired)
 - [2026-10-03 21:18] run started (lock acquired)
 - [2026-10-03 21:18] run started (lock acquired)
+- [2026-10-03 21:36] run started (lock acquired)
+- [2026-10-03 21:36] run started (lock acquired)
+- [2026-10-03 21:36] run started (lock acquired)
+- [2026-10-04 06:20] ★ R72 SEALED — verify: 6/6 GREEN، exit=0. مهر دومرانه: ران-۱ ماسکرِ راز (_SECRET_MARKERS) در بازنویسیِ کش حذف شد — «کش هرگز توجیهِ از دست دادنِ یک دفاع نیست» (7598e8b)؛ ران-۲ گیشِ تایمینگِ flaky — گیش اکنون میانهٔ ۳-ران با آستانهٔ سخاوتمندانه ۲۵۰ms است (399d243). روندِ بهبود: sysstatus ۱۷۲۶→۴۰ms (۹۷x)، compute ۲۹۶۹→۱۳۲ms (۲۰x)، ai_suite import ۱۳۲۹→۳۶۴ms. ۵ کامیت: 28d9130 7598e8b 399d243.

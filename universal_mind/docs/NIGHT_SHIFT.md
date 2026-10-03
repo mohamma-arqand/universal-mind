@@ -1,4 +1,4 @@
-# شیفت شب — NIGHT SHIFT (R72) — ارتقای عمیق
+# شیفت شب — NIGHT SHIFT (R72) — ارتقای عمیق — ✅ مهر شد
 
 > **وضعیت R71**: ✅ مهر شد (ae97720؛ verify READY ۶/۶، overall=pass، ۲۶۲۴ تست/۰ شکست، pin f41c462).
 
