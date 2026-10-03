@@ -955,6 +955,41 @@ def route_and_run(
                 "_registry": registry or ToolRegistry(),
             }
 
+        # R67 P1 — «یادآوری N را غیرفعال/فعال کن»: the TOGGLE. Pausing a
+        # reminder is NOT deleting it — the row survives, active flips. Both
+        # shapes answer with the row named (id + text), and an unknown id is
+        # the same honest refusal as the delete.
+        _tgl_id = _re.search(r"یادآور[^۰-۹0-9]*([۰-۹0-9]+)", _body)
+        if _tgl_id is not None and ("غیرفعال" in _body or "فعال کن" in _body) \
+                and "حذف" not in _body:
+            _tid = int(_tgl_id.group(1).translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")))
+            _want_on = "فعال" in _body and "غیرفعال" not in _body
+            rows = list_schedules()
+            _row = next((s for s in rows if s.schedule_id == _tid), None)
+            if _row is None:
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"not_found": _tid},
+                    "agent_report": (
+                        f"یادآوری شمارهٔ {_tgl_id.group(1)} پیدا نکردم — "
+                        "«یادآورهای من» شماره‌ها را نشان می‌دهد."
+                    ),
+                    "_registry": registry or ToolRegistry(),
+                }
+            from universal_mind.scheduler import toggle_schedule
+
+            _t = toggle_schedule(_tid, _want_on)
+            _state = "فعال" if _want_on else "غیرفعال (متوقف — برای حذف: «حذف کن — تأیید کن»)"
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"id": _tid, "active": _want_on},
+                "agent_report": (
+                    f"یادآوری شمارهٔ {_tgl_id.group(1)} («{str(_row.command)[:40]}») "
+                    f"حالا {_state} است."
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
+
         # R61-S4 — «یادآوری ۶۳ را حذف کن»: deletion BY ID, the operator's most
         # literal form (the list shows rows; the row's number is what they hold).
         _del_id = _re.search(r"یادآور[^۰-۹0-9]*([۰-۹0-9]+)\s*را حذف", _body)

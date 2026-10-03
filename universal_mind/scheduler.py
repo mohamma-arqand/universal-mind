@@ -257,6 +257,20 @@ def register_one_shot(command: str, now: datetime | None = None) -> dict[str, An
             "reminder": body, "error": ""}
 
 
+def toggle_schedule(schedule_id: int, active: bool) -> dict[str, Any]:
+    """Arm/disarm a schedule BY ID — the row SURVIVES (a paused reminder is
+    not a deleted one; the operator's history stays theirs)."""
+    db = _store()
+    _ensure_table(db)
+    try:
+        db.execute(
+            f"UPDATE schedules SET active = {1 if active else 0} "
+            f"WHERE id = {int(schedule_id)}")
+    except Exception as exc:  # noqa: BLE001 — the toggle reports, never crashes
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "id": int(schedule_id), "active": active, "error": ""}
+
+
 def delete_schedule(schedule_id: int) -> dict[str, Any]:
     """Remove a schedule/reminder BY ID (the operator's explicit intent)."""
     db = _store()
