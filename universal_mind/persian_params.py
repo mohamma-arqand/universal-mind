@@ -412,9 +412,25 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             # honest refusal. A name the book does not know still refuses,
             # but now the refusal can name the remedy with the operator's
             # own word («مخاطبی به نام «مدیر» ندارم»).
+            # R64 P8 — THE NAME STOPS AT ITS OWN VERB: «به زهرا ایمیل بزن»
+            # extracted «زهرا ایمیل بزن» (the R61 fix covered the موضوع
+            # shape; the bare-verb shape still ate its own tail). The name
+            # is cut at the first action word of the channel.
             m = _re.search(r"به\s+«?([^»\n،]+?)»?\s*(?:با موضوع|در مورد|که|$)", command)
             if m:
                 spoken_name = m.group(1).strip()
+                # R64 P8 — cut the tail at the channel's action words
+                _STOP = ("ایمیل", "نامه", "میل", "زنگ", "پیام", "مسیج",
+                         "بزن", "بزنم", "کن", "کنم", "بفرست", "بفرستم", "ارسال")
+                for _s in _STOP:
+                    _idx = spoken_name.find(" " + _s)
+                    _idx2 = spoken_name.startswith(_s)
+                    if _idx2:
+                        spoken_name = ""
+                        break
+                    if _idx != -1:
+                        spoken_name = spoken_name[:_idx].strip()
+                        break
                 if spoken_name:
                     try:
                         from universal_mind.contacts import resolve
