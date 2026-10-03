@@ -614,6 +614,28 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             return _reflex_answer(
                 c, f"تا ساعت بعدی {_fa_num(_mins)} دقیقه مانده.")
 
+        # R67 P7 — «چند دقیقه تا ساعت ۲۰ مانده؟»: the NAMED hour. The
+        # answer is the real distance on the 24h clock (a past hour today
+        # means TOMORROW's occurrence — time only moves forward).
+        import re as _re_hm
+
+        _m_named = _re_hm.search(r"تا\s+ساعت\s+([۰-۹0-9]{1,2})", c)
+        if _m_named is not None and "بعد" not in c:
+            _want = int(_m_named.group(1).translate(
+                str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")))
+            if 0 <= _want <= 23:
+                _tgt = _now.replace(hour=_want, minute=0, second=0, microsecond=0)
+                if _tgt <= _now:
+                    _tgt += timedelta(days=1)  # today's slot passed → tomorrow
+                _mins2 = int((_tgt - _now).total_seconds() // 60)
+                _h2, _m2 = divmod(_mins2, 60)
+                if _h2 > 0:
+                    _txt2 = (f"تا ساعت {_fa_num(_want)}، {_fa_num(_h2)} ساعت "
+                             f"و {_fa_num(_m2)} دقیقه مانده")
+                else:
+                    _txt2 = f"تا ساعت {_fa_num(_want)}، {_fa_num(_mins2)} دقیقه مانده"
+                return _reflex_answer(c, _txt2 + ".")
+
     # R60 Q3 — «شنبه چند روز دیگه است؟» / «جمعه چند روز دیگه؟» — the REAL
     # weekday distance on the operator's calendar (Saturday starts the
     # Persian week). days_ahead computed from datetime.now().

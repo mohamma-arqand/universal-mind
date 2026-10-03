@@ -1232,6 +1232,46 @@ def route_and_run(
                 ),
                 "_registry": registry or ToolRegistry(),
             }
+        # R67 P8 — «مخاطب X را حذف کن»: THE DELETE LAW — the bare ask
+        # names the contact and asks for «تأیید کن»; only the confirmation
+        # removes the row (a contact book entry is operator data).
+        if "مخاطب" in command and "حذف" in command:
+            import re as _re_cd
+
+            _m_cd = _re_cd.search(
+                r"مخاطب\s+(?:ای\s+)?(?:با\s+نام\s+)?([^،!?؟«»]+?)\s+(?:را|رو)\s+حذف", command)
+            _name_cd = (_m_cd.group(1).strip() if _m_cd else "").strip(chr(171)+chr(187)+chr(34)+chr(39)+" ")
+            if _name_cd:
+                from universal_mind.contacts import forget, resolve
+
+                _known_addr = resolve(_name_cd)  # resolve returns the ADDRESS
+                if "تأیید" not in command:
+                    _shown_cd = _name_cd
+                    return {
+                        "ok": False, "command": command, "route": ["contacts"],
+                        "result": {"pending_delete": _name_cd},
+                        "agent_report": (
+                            f"مخاطب «{_shown_cd}»"
+                            + (f" (آدرس: {_known_addr})" if _known_addr else "")
+                            + " حذف میشود — برای حذفِ واقعی صریح بگو "
+                            f"«مخاطب {_name_cd} را حذف کن — تأیید کن». بدون تأیید، هیچی پاک نمی‌کنم."
+                        ),
+                        "_registry": registry or ToolRegistry(),
+                    }
+                _res_cd = forget(_name_cd)
+                if _res_cd.get("ok"):
+                    return {
+                        "ok": True, "command": command, "route": ["contacts"],
+                        "result": {"removed": _res_cd.get("removed")},
+                        "agent_report": f"مخاطب «{_res_cd.get('removed')}» حذف شد.",
+                        "_registry": registry or ToolRegistry(),
+                    }
+                return {
+                    "ok": False, "command": command, "route": ["contacts"],
+                    "result": _res_cd,
+                    "agent_report": str(_res_cd.get("error", "حذف نشد")),
+                    "_registry": registry or ToolRegistry(),
+                }
         _c = command.strip()
         if _c in ("مخاطبین من", "مخاطبهای من", "دفترچه مخاطبین", "لیست مخاطبین"):
             from universal_mind.contacts import list_contacts
