@@ -1132,6 +1132,16 @@ def route_and_run(
                 # The command charts/crafts its own subject — remember WHICH
                 # prior run it is derived from (surface at the return below).
                 _ANAPHORA_SUBJECT["command"] = ctx["command"]
+                # R63 — «نمودارش را بکش» speaks of the PRIOR run's numbers:
+                # the honesty law refuses a dataless chart, so the anaphora
+                # must CARRY the prior run's data forward (the sweep's probe
+                # caught the chart drawing nothing after «میانگین ۱ و ۲»).
+                _prior_cmd = str(ctx.get("command") or "")
+                from universal_mind.persian_params import extract_numbers
+
+                _nums = extract_numbers(_prior_cmd)
+                if "chart" in own and _nums:
+                    _ANAPHORA_SUBJECT["chart_data"] = _nums
 
     # OPERATOR PREFERENCES — «همیشه نمودار میله‌ای دوست دارم» is stored,
     # acknowledged, and shapes every FUTURE chart. The system gets personal.
@@ -1534,6 +1544,15 @@ def route_and_run(
         cap: {**planned_params.get(cap, {}), **extracted.get(cap, {})}
         for cap in caps
     }
+    # R63 — THE ANAPHORA'S DATA RIDES: «نمودارش را بکش» after «میانگین ۱ و ۲»
+    # charts THE PRIOR RUN'S numbers (the honesty law refuses a dataless
+    # chart; the anaphora carries the data forward, it never invents it).
+    _an_data = _ANAPHORA_SUBJECT.get("chart_data")
+    if _an_data and "chart" in capability_params:
+        _an_cp = capability_params["chart"]
+        if not _an_cp.get("series") and not _an_cp.get("values"):
+            _an_cp.setdefault("operation", "line")
+            _an_cp["series"] = {"داده": list(_an_data)}
     # R44-7 — THE PARAMETER A/B: a genuinely ambiguous chart kind («نمودارش کن»,
     # no named kind) runs as a REAL contest — the two best-fitting variants on
     # the same series, ARETĒ judges both, the winner ships with the ruling

@@ -99,7 +99,8 @@ class TestRealRunJudged:
     def test_a_real_persian_run_is_judged(self) -> None:
         from universal_mind.persian_router import route_and_run
 
-        payload = route_and_run("نمودار خطی بساز و گزارشش کن")
+        # R63: real data in the sentence — the silent default series is gone.
+        payload = route_and_run("نمودار خطی از ۲ و ۷ بساز و گزارشش کن")
         verdict = judge_run(payload)
         assert verdict["scores"]["wisdom"] == 1.0
         assert verdict["excellence"] >= 0.9

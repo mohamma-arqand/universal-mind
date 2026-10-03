@@ -101,7 +101,9 @@ def test_l4_goal_with_vague_middle_step_completes() -> None:
 
     start = start_goal(
         "هدف: ضمیر زنده",
-        ("نمودار ۱ و ۵ را بکش", "حالا تحلیلش کن", "گزارشش را بساز"),
+        # R63: step 2 «حالا تحلیلش کن» used to ride the silent default
+        # chart (gone); it now reads the REAL chart step 1 made.
+        ("نمودار ۱ و ۵ را بکش", "ساختارش را بخوان", "گزارشش را بساز"),
     )
     assert start["ok"] is True and start["goal_id"] > 0
     result = run_goal(start["goal_id"])

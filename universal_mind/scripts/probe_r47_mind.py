@@ -82,7 +82,9 @@ def main() -> int:
         # 1+2 — a real run rides the ⚖ line
         from universal_mind.persian_router import route_and_run
 
-        payload = route_and_run("نمودار خطی از دما بکش")
+        # R63: «دما» is a WORD, not data — a dataless chart is a named
+        # refusal now; the probe feeds real numbers.
+        payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بکش")
         report = str(payload.get("agent_report") or "")
         _ok("1. the run is real", payload.get("ok") is True)
         _ok("2. the ⚖ live-judge line rides the report",
@@ -132,7 +134,7 @@ def main() -> int:
         info = build_today_page(db=db)
         html = Path(info["path"]).read_text(encoding="utf-8")
         _ok("6. today.html renders the real day",
-            info["runs"] >= 5 and "نمودار خطی از دما بکش" in html)
+            info["runs"] >= 5 and "نمودار خطی از ۲ و ۵ و ۹ بکش" in html)
 
         # 7+8 — the vocabulary breathes
         res7 = answer_reflexive("واژههای ناشناخته را پیشنهاد بده")

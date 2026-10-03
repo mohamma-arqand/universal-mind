@@ -31,6 +31,8 @@ _CAP_WORDS = {
     "ایمیل": "email", "نامه": "email",
     "گفتار": "tts", "صدا": "tts",
     "بایگانی": "archive", "زیپ": "archive",
+    "خلاصه": "textsummarize", "خلاصهسازی": "textsummarize",
+    "summary": "textsummarize", "summarize": "textsummarize",
 }
 
 
@@ -103,13 +105,12 @@ def _is_real_capability(cap: str) -> bool:
         from universal_mind.real_tool_registry import real_tool_registry
 
         reg = real_tool_registry()
-        for attr in ("tools", "_tools", "registry"):
-            table = getattr(reg, attr, None)
-            if isinstance(table, dict):
-                return cap in table
-        names = getattr(reg, "names", None)
+        caps = getattr(reg, "_by_capability", None)
+        if isinstance(caps, dict):
+            return cap in caps
+        names = getattr(reg, "capabilities", None)
         if callable(names):
-            return cap in names()
+            return cap in list(names())
     except Exception:  # noqa: BLE001 — the lens never breaks the run
         return False
     return False

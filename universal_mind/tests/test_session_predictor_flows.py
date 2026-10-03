@@ -126,8 +126,11 @@ class TestNewFlows:
         syn = orchestrate(
             real_tool_registry(), ["excel", "chart"],
             connector_factory=real_connector_factory, flow=True,
-            command="اکسل بساز و نمودار بکش",
+            command="اکسل بساز و نمودار ۳ و ۸ بکش",
             capability_params={"excel": {"operation": "write_table",
-                                        "headers": ["x", "y"], "rows": [[1, 2]]}},
+                                        "headers": ["x", "y"], "rows": [[1, 2]]},
+                               # R63: real data for the chart — no silent series.
+                               "chart": {"operation": "line",
+                                         "series": {"داده": [3, 8]}}},
         )
         assert syn.ok is True  # ran fine; no flow claimed (nothing to read yet)
