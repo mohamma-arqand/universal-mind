@@ -232,3 +232,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-03 11:13] run started (lock acquired)
 - [2026-10-03 11:13] run started (lock acquired)
 - [2026-10-03 11:13] run started (lock acquired)
+- [2026-10-03 11:29] run started (lock acquired)
+- [2026-10-03 11:29] run started (lock acquired)
+- [2026-10-03 11:29] run started (lock acquired)
+- [2026-10-03 14:10] ★ R65 SEALED — verify: 6/6 GREEN، exit=0. مهر دو ران: ران-۱ یک تست قرمز — انتظارِ روتینگِ R59 برای «به توان» هنوز compute بود؛ به قانونِ مالکیتِ P7 مهاجرت کرد (توان/جذر/ضرب → data تنها، 8814cd2). ران-۲: READY. ۸ کامیت: a0a7de8(P1+P2) 095e128(P3) b24968d(P4+P5) 791db4e(P6) 92b6bd8(P7+P8) 0c62c70(P9-probe) e06cfb0+c423bbc(style/F821) 8814cd2(migration).
