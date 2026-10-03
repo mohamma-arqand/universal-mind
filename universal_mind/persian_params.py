@@ -617,7 +617,14 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # (no file mentioned) still lists. A FOLDER ask packs the folder's
         # real files. The verb «زیپ/فشرده کن» decides, never the noun alone.
         _cmd_low = command.lower()
-        if "زیپ" in command or "فشرده" in command or "آرشیو" in command or "zip" in _cmd_low:
+        # R74 — the PACK VERB decides, not the noun: «ببین/نمایش/لیست/محتوا»
+        # with a zip path is a VIEW (list); only a pack verb (زیپ/فشرده/
+        # آرشیو/zip کن) packs. The word «zip» alone (a path mention) lists.
+        _view_zip = any(w in command for w in ("ببین", "نمایش", "لیست", "محتوا"))
+        _has_zip_verb = ("زیپ" in command or "فشرده" in command
+                         or "آرشیو" in command or "zip" in _cmd_low)
+        if _has_zip_verb and not (_view_zip and "zip" in _cmd_low and "زیپ" not in command
+                                  and "آرشیو" not in command):
             import re as _re_zip
 
             _m_dir = _re_zip.search(

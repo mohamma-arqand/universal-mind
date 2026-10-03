@@ -22,6 +22,8 @@ class TestParamsBranches:
         assert isinstance(p, dict)
 
     def test_zip_with_a_path_lists(self) -> None:
+        # R74 — «ببین» is a VIEW verb, not a pack verb: a zip path with no
+        # zip verb LISTS. («فایل X را ZIP کن» packs — that is the new law.)
         p = extract_params("فایل C:/x/a.zip را ببین", "zip")
         assert p.get("operation") == "list"
         assert "a.zip" in str(p.get("path"))

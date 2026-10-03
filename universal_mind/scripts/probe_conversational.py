@@ -54,7 +54,8 @@ def check_navigation_holes() -> bool:
 
     checks = [
         ("دادههای فروش را تحلیل کن", "data"),
-        ("فایلها را زیپ کن", "archive"),
+        ("فایلها را زیپ کن", "zip"),  # R74 — زیپ means a real .zip (the
+        # world's format), never the single-file gzip the old pin expected.
         ("زمان بگیر که فردا صبح ۸ یادم بندی", "notify"),
     ]
     ok = True

@@ -52,7 +52,10 @@ class TestNavigationHolesClosed:
     def test_zip_colloquial(self) -> None:
         from universal_mind.persian_router import route_and_run
 
-        assert "archive" in route_and_run("فایلها را زیپ کن")["route"]
+        # R74 — «زیپ کن» is a .zip ask (the world's format), never the
+        # single-file gzip: the old pin expected archive (gz) — the live
+        # sweep showed the real .zip never happened.
+        assert "zip" in route_and_run("فایلها را زیپ کن")["route"]
 
     def test_reminder_colloquial(self) -> None:
         from universal_mind.persian_router import route_and_run
