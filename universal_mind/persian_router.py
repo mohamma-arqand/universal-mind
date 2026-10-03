@@ -610,26 +610,69 @@ def route_and_run(
     # carry it (measured: the glued keyword never matched and clipboard stole
     # the sentence — the file was never created). Re-enter with forced_route,
     # the platform's own mechanism for explicit intent.
+    # R63 P2 — the path can be a bare FILENAME (no drive letter): «فایل
+    # گزارش.md بساز و داخلش بنویس …» names a file in the WORKING AREA,
+    # not necessarily D:/…; and the content connector now includes the
+    # spoken «داخلش بنویس» shape. Without this the sentence fell to the
+    # reflexive history block and the file was never created.
     if forced_route is None and "فایل" in command and ("بنویس" in command or "بساز" in command) \
             and "متن بنویس" not in command:
         import re as _re_tf
 
         _m_tf_path = _re_tf.search(r"([A-Za-z]:[/\\](?:[^،!?؟\s]+))", command)
         _m_content = _re_tf.search(
-            r"(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?)\s*(.+)$", command)
-        if _m_tf_path and _m_content and _m_content.group(1).strip():
+            r"(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?|داخلش\s+بنویس[:：]?)\s*(.+?)\s*(?:را)?\s*بنویس\s*$"
+            r"|(?:با محتوای|با محتوی|محتوای|محتوی|بنویس[:：]?|داخلش\s+بنویس[:：]?)\s*(.+)$", command)
+        _tf_content = ""
+        if _m_content is not None:
+            _tf_content = (_m_content.group(1) or _m_content.group(2) or "").strip()
+        if _m_tf_path and _tf_content:
             return route_and_run(
                 command,
                 registry,
                 params={"textfile": {
                     "operation": "write",
                     "path": _m_tf_path.group(1),
-                    "content": _m_content.group(1).strip().rstrip("،."),
+                    "content": _tf_content.rstrip("،."),
                 }},
                 forced_route=["textfile"],
                 provenance="operator",
                 _retry_of=_retry_of,
             )
+        # R63 P2 — bare filename, real content, no drive letter: the file
+        # lands in the platform's working area (documents root), honestly
+        # named in the report. «فایل گزارش.md بساز و داخلش بنویس X»
+        _m_bare = _re_tf.search(
+            r"فایل\s+([\w\u0600-\u06FF\-]+\.[A-Za-z0-9]{2,4})", command)
+        if _m_bare and _tf_content:
+            from pathlib import Path as _P2
+
+            _doc_root = _P2.home() / "Documents" / "universal_mind"
+            _doc_root.mkdir(parents=True, exist_ok=True)
+            return route_and_run(
+                command,
+                registry,
+                params={"textfile": {
+                    "operation": "write",
+                    "path": str(_doc_root / _m_bare.group(1)),
+                    "content": _tf_content.rstrip("،."),
+                }},
+                forced_route=["textfile"],
+                provenance="operator",
+                _retry_of=_retry_of,
+            )
+        # R63 P2 — content present, path MISSING: the honest refusal with
+        # the exact shape that works (never a silent fallthrough).
+        if _tf_content and _m_bare is None and _m_tf_path is None:
+            return {
+                "ok": False, "command": command, "route": ["textfile"],
+                "result": {"error": "نامِ فایل را نگفتی"},
+                "agent_report": (
+                    "نامِ فایل را نگفتی — مثلاً: «فایل گزارش.md بساز و داخلش بنویس امروز هوا خوب بود» "
+                    "یا «فایل متنی D:/یادداشت.txt را با محتوای سلام بنویس»."
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
 
     # R57 N2 — «تزریق‌ها را نشان بده»: the injection ledger read back from the
     # real store. A defense the operator cannot inspect is a claim; this makes
