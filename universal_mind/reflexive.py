@@ -379,6 +379,33 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     # N10-3 (R57): «چند فرمان اجرا کردی؟» — the same question in the other
     # spoken shape, measured live in the night's 14-command sweep.
     if "چند تا" in c or "چندتا" in c or "چند فرمان" in c or "چند تا فرمان" in c:
+        # R64 P1 — THE QUESTION NAMES ITS OWN SUBJECT: a count of
+        # REMINDERS is not a count of RUNS (the sweep caught «چند تا
+        # یادآور دارم؟» answered with «۴۵۴۱۶ اجرا ثبت شده» — a real
+        # number about the wrong thing is a lie). Each noun counts its
+        # own table; an unknown noun asks for one.
+        if "یادآور" in c or "یادآوری" in c or "قرار" in c or "reminder" in c.lower():
+            rows = _query(db, "SELECT COUNT(*) AS n FROM schedules WHERE active = 1")
+            n = int(rows[0]["n"]) if rows else 0
+            if n == 0:
+                return _reflex_answer(c, "هیچ یادآوری نداری — «یادم باشه …» یا «یادآور کن …» یکی میسازد.")
+            return _reflex_answer(
+                c, f"{_fa_num(n)} یادآور داری — «یادآورهای من» فهرستشان را نشان میدهد.")
+        if "واژه" in c or "کلمه" in c and "یاد" in c:
+            rows = _query(db, "SELECT COUNT(*) AS n FROM learned_vocab")
+            n = int(rows[0]["n"]) if rows else 0
+            if n == 0:
+                return _reflex_answer(c, "هنوز هیچ واژهای از تو یاد نگرفتهام — «واژهی X یعنی Y» یکی میآموزد.")
+            rows2 = _query(db, "SELECT word, capability FROM learned_vocab ORDER BY id DESC LIMIT 5")
+            names = "، ".join(f"«{r['word']}»" for r in rows2) if rows2 else ""
+            more = f" (تازه‌ها: {names})" if names else ""
+            return _reflex_answer(c, f"{_fa_num(n)} واژه از تو یاد گرفتهام{more}.")
+        if "فایل" in c or "پرونده" in c or "فایلی" in c:
+            rows = _query(db, "SELECT COUNT(*) AS n FROM run_history WHERE route LIKE '%textfile%' AND succeeded = 1")
+            n = int(rows[0]["n"]) if rows else 0
+            if n == 0:
+                return _reflex_answer(c, "هنوز هیچ فایلی نساختهام — «فایل X را بساز و داخلش بنویس Y» یکی میسازد.")
+            return _reflex_answer(c, f"تا حالا {_fa_num(n)} بار فایل نوشتهام — «آخرین کارهایی که کردی» مسیرهایشان را نشان میدهد.")
         if "هدف" in c:
             rows = _query(db, "SELECT state, COUNT(*) AS n FROM goals WHERE state != 'archived' GROUP BY state")
             if not rows:
@@ -623,16 +650,26 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     # written file, a spoken word — each unwinds differently). The honest
     # answer names WHAT the last run did (from the real history) and
     # teaches the exact per-effect remedy; never a fake "باطل شد".
-    if c.strip() in ("لغو کن", "لغو کن.", "برگرد عقب", "برگرد عقب.", "آخرین کار را پاک کن",
-                     "کنسل کن", "undo", "برگردون") or c.startswith("لغو"):
+    # R64 P2 — the spoken PREFIXES carry the same intent: «اشتباه شد،
+    # لغو کن» / «نه، لغو کن» / «برگرد عقب دیگه» (the sweep caught the
+    # bare-form-only gate refusing them).
+    _c_stripped = c.strip().rstrip(".،؛!")
+    _cancel_bare = _c_stripped in (
+        "لغو کن", "برگرد عقب", "آخرین کار را پاک کن", "کنسل کن", "undo", "برگردون")
+    _cancel_prefix = any(
+        _c_stripped.endswith(w) for w in
+        ("لغو کن", "لغو", "کنسل کن", "کنسل", "برگرد عقب", "برگردون", "undo"))
+    if _cancel_bare or _cancel_prefix or c.startswith("لغو"):
         db = DatabaseSuite.shared_persistent()
         q = db.query(
             "SELECT id, command, route, succeeded FROM run_history "
             "ORDER BY id DESC LIMIT 5"
         )
         rows = q.get("rows", []) if q.get("ok") else []
-        last = next((r for r in rows if str(r["command"]).strip() not in
-                     ("لغو کن", "لغو کن.", "برگرد عقب", "آخرین کار را پاک کن")), None)
+        _CANCEL_SHAPES = ("لغو کن", "لغو کن.", "برگرد عقب", "آخرین کار را پاک کن",
+                          "کنسل کن", "برگردون", "undo")
+        last = next((r for r in rows if str(r["command"]).strip().rstrip(".،؛!")
+                     not in _CANCEL_SHAPES), None)
         if last is None:
             return _reflex_answer(c, "کاری که بتوانم لغو کنم پیدا نکردم — هنوز چیزی اجرا نکردهام.")
         cmd_fa = str(last["command"])[:40]
@@ -685,7 +722,7 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
 
     # «راهنما / چیکار میتونی بکنی؟ / چی بلدی؟ / قابلیتهات» — the list, counted.
     if (
-        c in ("راهنما", "help")
+        c in ("راهنما", "help", "کمک", "کمک!", "کمم")
         or "چیکار میتونی" in c
         or "چی کار میتونی" in c
         or "چه کار میتونی" in c

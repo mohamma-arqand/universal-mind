@@ -49,6 +49,12 @@ class DataSuite:
         word-matching routed it here, the operation does the REAL math.
         """
         try:
+            if op == "subtract":
+                # R64 P3 — «۵ منهای ۹» = −۴: subtraction was MISSING from
+                # the scalar table, so the sentence fell to compute's
+                # honest default (+) or to a MEAN — both lies (live:
+                # «۵ منهای ۹ را حساب کن» answered «میانگین ۷»).
+                return {"ok": True, "result": a - b, "error": ""}
             if op == "multiply":
                 return {"ok": True, "result": a * b, "error": ""}
             if op == "divide":

@@ -336,6 +336,10 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("جمع کن", "compute"),
     ("جمع بزن", "compute"),
     ("چنده؟", "compute"),
+    ("چند می‌شود", "compute"),  # R64 P3: «۵ منهای ۹ چند می‌شود؟» — the question
+    ("چند میشود", "compute"),   # shape of arithmetic must reach the engine
+    ("چند است؟", "compute"),
+    ("چند میشه", "compute"),
     ("چند است؟", "compute"),
     # notify (Windows toast)
     ("اطلاع بده", "notify"),

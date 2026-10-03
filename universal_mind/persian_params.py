@@ -146,6 +146,7 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         # جذر/درصد/توان and gets the RESULT, not the stats of the pair.
         _matched_scalar = next(
             (op for w, op in (
+                ("منهای", "subtract"), ("منها", "subtract"), ("تفریق", "subtract"),
                 ("ضرب", "multiply"), ("تقسیم", "divide"), ("جذر", "sqrt"),
                 ("درصد", "percent"), ("توان", "power"),
             ) if w in command),
