@@ -37,7 +37,24 @@ class SystemStatusTool:
     name = "sysstatus"
     capability = "system_status"
 
-    def status(self) -> dict[str, Any]:
+    # R72 — VITALS CACHE: the machine's vitals change on the order of
+    # seconds; a short TTL makes a re-ask cheap (the sweep profiled 16
+    # subprocesses per status - a global lock). Any LISTENING question
+    # (drive-specific, refresh) bypasses the cache.
+    _VITALS_TTL = 2.0  # seconds
+    _vitals_cache: dict[str, Any] = {"at": 0.0, "data": None}
+
+    @classmethod
+    def _cached_vitals(cls) -> dict[str, Any]:
+        import time as _t
+
+        now = _t.monotonic()
+        hit = cls._vitals_cache
+        if hit["data"] is None or (now - hit["at"]) > cls._VITALS_TTL:
+            return {}
+        return hit["data"]
+
+    def _gather_vitals(self) -> dict[str, Any]:
         """Gather uptime, RAM, disks, battery. Every field measured or named."""
         out: dict[str, Any] = {"ok": True, "error": ""}
 
@@ -114,9 +131,18 @@ class SystemStatusTool:
         # is a view. Secret-looking values are MASKED by name.
         return out
 
-    _SECRET_MARKERS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD",
-                       "CREDENTIAL", "APIKEY", "API_KEY", "AUTH")
+    def status(self, *, refresh: bool = False) -> dict[str, Any]:
+        """R72 — the vitals with a 2s TTL cache; refresh=True bypasses."""
+        import time as _t
 
+        if not refresh:
+            hit = SystemStatusTool._vitals_cache
+            now = _t.monotonic()
+            if hit["data"] is not None and (now - hit["at"]) <= SystemStatusTool._VITALS_TTL:
+                return dict(hit["data"])
+        data = self._gather_vitals()
+        SystemStatusTool._vitals_cache = {"at": _t.monotonic(), "data": dict(data)}
+        return data
     def env_var(self, name: str) -> dict[str, Any]:
         """One REAL environment variable — masked when it looks secret."""
         name = name.strip()

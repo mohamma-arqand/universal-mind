@@ -18,12 +18,34 @@ from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
-from sklearn.cluster import KMeans
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+
+# R72 — LAZY HEAVY IMPORTS: sklearn costs 1.6s at import time and was paid
+# on EVERY router run (the sweep profiled 2.97s for «جمع ۲ و ۵» - 90% of it
+# import overhead, not routing). The estimators are imported INSIDE the
+# methods that use them; a run that never touches ML never pays for it.
+
+
+def _sk(name: str):
+    """Import one sklearn symbol lazily (never at module import)."""
+    import sklearn
+
+    return getattr(sklearn, name) if hasattr(sklearn, name) else _from_sklearn(name)
+
+
+def _from_sklearn(name: str):  # pragma: no cover - fallback chain
+    import importlib
+
+    maps = {
+        "KMeans": ("sklearn.cluster", "KMeans"),
+        "RandomForestClassifier": ("sklearn.ensemble", "RandomForestClassifier"),
+        "LinearRegression": ("sklearn.linear_model", "LinearRegression"),
+        "LogisticRegression": ("sklearn.linear_model", "LogisticRegression"),
+        "accuracy_score": ("sklearn.metrics", "accuracy_score"),
+        "train_test_split": ("sklearn.model_selection", "train_test_split"),
+        "StandardScaler": ("sklearn.preprocessing", "StandardScaler"),
+    }
+    mod, attr = maps[name]
+    return getattr(importlib.import_module(mod), attr)
 
 from universal_mind.connectors import ConnectorResult
 
@@ -50,7 +72,7 @@ class AISuite:
         y = self._array(ys)
         if X.shape[0] != y.shape[0] or X.shape[0] < 2:
             return {"ok": False, "error": "need >= 2 samples, X rows == y length"}
-        model = LinearRegression()
+        model = _sk('LinearRegression')()
         model.fit(X, y)  # a genuine fit (least squares over the data)
         return {
             "ok": True,
@@ -65,7 +87,7 @@ class AISuite:
         X = self._array(data)
         if X.shape[0] < clusters:
             return {"ok": False, "error": f"need >= {clusters} points for {clusters} clusters"}
-        model = KMeans(n_clusters=clusters, n_init=10, random_state=0)
+        model = _sk('KMeans')(n_clusters=clusters, n_init=10, random_state=0)
         labels = model.fit_predict(X)  # a genuine fit
         return {
             "ok": True,
@@ -83,13 +105,13 @@ class AISuite:
             return {"ok": False, "error": "classification needs >= 2 classes"}
         if X.shape[0] < 4:
             return {"ok": False, "error": "need >= 4 samples for a train/test split"}
-        X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.25, random_state=0, stratify=y)
-        scaler = StandardScaler().fit(X_tr)  # a real preprocessing fit
-        model = LogisticRegression(max_iter=500).fit(scaler.transform(X_tr), y_tr)
+        X_tr, X_te, y_tr, y_te = _sk('train_test_split')(X, y, test_size=0.25, random_state=0, stratify=y)
+        scaler = _sk('StandardScaler')().fit(X_tr)  # a real preprocessing fit
+        model = _sk('LogisticRegression')(max_iter=500).fit(scaler.transform(X_tr), y_tr)
         predictions = model.predict(scaler.transform(X_te))
         return {
             "ok": True,
-            "accuracy": float(accuracy_score(y_te, predictions)),
+            "accuracy": float(_sk('accuracy_score')(y_te, predictions)),
             "test_samples": len(y_te),
             "classes": [int(c) for c in model.classes_],
             "error": "",
@@ -101,12 +123,12 @@ class AISuite:
         y = np.asarray(ys)
         if len(set(y.tolist())) < 2 or X.shape[0] < 4:
             return {"ok": False, "error": "need >= 2 classes and >= 4 samples"}
-        model = RandomForestClassifier(n_estimators=50, random_state=0).fit(X, y)
+        model = _sk('RandomForestClassifier')(n_estimators=50, random_state=0).fit(X, y)
         return {
             "ok": True,
             "n_estimators": 50,
             "importances": [float(v) for v in model.feature_importances_],
-            "accuracy": float(accuracy_score(y, model.predict(X))),
+            "accuracy": float(_sk('accuracy_score')(y, model.predict(X))),
             "error": "",
         }
 
