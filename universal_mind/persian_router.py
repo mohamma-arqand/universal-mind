@@ -88,6 +88,19 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("دایره", "chart"),
     ("هیستوگرام", "chart"),
     ("پراکنده", "chart"),
+    # R73 P1 — html-report: when the sentence names HTML the report
+    # is HTML, never a PDF («گزارش HTML بساز» used to hand a PDF!).
+    ("گزارش اچ تی ام ال", "html-report"),
+    ("گزارش html", "html-report"),
+    ("گزارش اچ‌تی‌ام‌ال", "html-report"),
+    ("اچ تی ام ال", "html-report"),
+    ("اچ‌تی‌ام‌ال", "html-report"),
+    ("html", "html-report"),
+    ("داشبورد", "html-report"),  # the real-usage dashboard, built as HTML
+    ("تایم‌لاین", "html-report"),  # R73 P4 — the timeline view, built as HTML
+    ("تایم لاین", "html-report"),
+    ("کارت وضعیت", "html-report"),  # R73 P4 — the status card, built as HTML
+    ("نمای کلی", "html-report"),  # R73 P4 — the overview, built as HTML
     # pdf (reportlab)
     ("پی دی اف", "pdf"),
     ("پی‌دی‌اف", "pdf"),
@@ -1010,7 +1023,12 @@ def route_and_run(
         # R65 P3 — LONGEST FIRST: «فردا» is a substring of «پس‌فردا»; the
         # wrong order matched the wrong day (live: پس‌فردا listed فردا).
         _LIST_TIME = ("پس‌فردا", "پسفردا", "این هفته", "امروز", "هفته", "دیروز", "فردا")
-        if ("یادآورهای" in _body or "یادآوریهای" in _body) and (
+        # R73 P3 — «جدول از یادآورهای من بساز» is a BUILD ask (an HTML
+        # table), never the plain list: a build verb + جدول closes the
+        # listing gate so the view gate can take it.
+        if "بساز" in _body and "جدول" in _body:
+            _body = _body  # fall through: not handled here
+        elif ("یادآورهای" in _body or "یادآوریهای" in _body) and (
             "من" in _body or "لیست" in _body or "فهرست" in _body or "چی" in _body
             or any(t in _body for t in _LIST_TIME)
         ):
@@ -1494,6 +1512,32 @@ def route_and_run(
                 "agent_report": _msg,
                 "_registry": registry or ToolRegistry(),
             }
+
+    # R73 P4 — THE BUILD-A-VIEW GATE: a sentence that names a VISUAL VIEW
+    # (تایم‌لاین/جدول/کارت/نمای کلی) AND a build verb (بساز/بکش) is a BUILD
+    # ask, not a reflexive/list question. It must run BEFORE the reflexive
+    # class (which swallowed «تایم‌لاین کارهای امروز بساز») and before the
+    # reminder-list gate (which swallowed «جدول از یادآورهای من بساز»).
+    _VIEW_WORDS = ("تایم‌لاین", "تایم لاین", "کارت وضعیت", "نمای کلی",
+                   "داشبورد", "جدول")
+    if forced_route is None and any(v in command for v in _VIEW_WORDS) \
+            and ("بساز" in command or "بکش" in command):
+        _mode = None
+        if "تایم" in command and "لاین" in command:
+            _mode = "timeline"
+        elif "جدول" in command:
+            _mode = "table"
+        elif "کارت" in command:
+            _mode = "card"
+        elif "نمای کلی" in command:
+            _mode = "overview"
+        elif "داشبورد" in command:
+            _mode = "dashboard"
+        if _mode:
+            return route_and_run(
+                command, forced_route=["html-report"],
+                params={"html-report": {"mode": _mode}},
+            )
 
     # THE REFLEXIVE CLASS — self-questions answered from the REAL store
     # (never a capability run, never a guess). The marker is a question
@@ -2043,6 +2087,11 @@ def route_and_run(
     # A forced route (contested execution) runs its OWN candidate chain; the
     # vocabulary route is still computed so matched_words stays honest.
     caps = list(forced_route) if forced_route else list(route_result.capabilities)
+    # R73 P1 — THE FORMAT IS THE OPERATOR'S WORD: a sentence that names
+    # HTML never also builds a PDF («گزارش HTML بساز» used to run BOTH:
+    # pdf + html-report, handing a PDF for an HTML ask).
+    if "html-report" in caps and "pdf" in caps:
+        caps.remove("pdf")
     reg = registry if registry is not None else _Registry()
     for cap in caps:
         reg.register(

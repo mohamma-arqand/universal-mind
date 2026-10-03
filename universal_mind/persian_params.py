@@ -301,6 +301,25 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if text:
             params["title"] = with_resolved_date(text, command)
         return params
+    if capability == "html-report":
+        # R73 P1/P4 — the VIEW is named by the sentence: dashboard /
+        # timeline / table / card / overview — each a REAL HTML view of
+        # MEASURED data (run history, schedules, vitals).
+        if "داشبورد" in command:
+            return {"mode": "dashboard"}
+        if "تایم" in command and "لاین" in command:
+            return {"mode": "timeline"}
+        if "جدول" in command:
+            return {"mode": "table"}
+        if "کارت" in command:
+            return {"mode": "card"}
+        if "نمای کلی" in command:
+            return {"mode": "overview"}
+        # A WEEKLY ask sets the window the report reads.
+        if "هفتگی" in command:
+            return {"mode": "report", "window": "week"}
+        return {"mode": "report"}
+
     if capability == "pdf":
         # Operation words: the sentence can name a SPECIFIC document kind.
         _PDF_OP_WORDS: tuple[tuple[str, str], ...] = (

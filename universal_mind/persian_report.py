@@ -50,6 +50,7 @@ _CAP_FA: dict[str, str] = {
     "unitconvert": "تبدیل واحد",
     "textfile": "پروندهٔ متنی",
     "textsummarize": "خلاصه‌سازی متن",
+    "html-report": "گزارش HTML",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -200,6 +201,18 @@ def _sentence_vision(result: dict[str, Any]) -> str:
 def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> str | None:
     """One fluent Persian sentence for one capability's real result (or None)."""
     name = _CAP_FA.get(cap, cap)
+    # R73 P1 — the HTML report NAMES its real file: path + size, never a
+    # bare «انجام شد».
+    if cap == "html-report" and isinstance(result, dict) and result.get("path"):
+        from pathlib import Path as _P
+
+        _p = _P(str(result["path"]))
+        _kb = _p.stat().st_size / 1024 if _p.exists() else 0.0
+        _VIEW_FA = {"dashboard": "داشبورد HTML", "timeline": "تایم‌لاین HTML",
+                    "table": "جدول HTML", "card": "کارت وضعیت HTML",
+                    "report": "گزارش HTML"}
+        _fa = _VIEW_FA.get(str(result.get("mode", "report")), "گزارش HTML")
+        return f"{_fa} ساخته شد ({_fa_num(round(_kb, 1))} کیلوبایت) — در «{_p}»"
     if cap == "compute" and isinstance(result, (int, float)):
         return f"محاسبه انجام شد: نتیجه {_fa_num(result)}."
     # R59 P2 — the conversion's own Persian sentence is already built by the

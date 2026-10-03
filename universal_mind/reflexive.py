@@ -87,6 +87,16 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     db = _store()
     c = command.strip()
 
+    # R73 P4 — A BUILD VERB IS NOT A SELF-QUESTION: «تایم‌لاین کارهای
+    # امروز بساز» contains «امروز»+«کار» (a reflexive shape) but the
+    # sentence asks to BUILD a visual view — that belongs to the router,
+    # never to the reflexive class. The build verbs close the gate.
+    if any(v in c for v in ("بساز", "بکش", "بنویس", "رسم کن")) and any(
+        w in c for w in ("تایم‌لاین", "تایم لاین", "کارت وضعیت", "نمای کلی",
+                         "داشبورد", "جدول")
+    ):
+        return None
+
     # R58 M3 — RECALL THE NAMED MEMORY BY ASKING: «جلسه شنبه چه ساعتی است؟»
     # The sweep measured that «یادت باشد جلسه شنبه ساعت ۱۰ است» SAVES a
     # named_memory row, but asking the question back got «نشناختم». A
