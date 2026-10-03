@@ -265,6 +265,36 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
                 "را دقیق جواب می‌دارم.",
                 ok=False)
 
+    # R65 P4 — THE CONTACT BOOK VIEW: «مخاطبهام را نشان بده» — the real
+    # names the operator taught, never a fabrication.
+    if "مخاطب" in c and any(w in c for w in ("نشان", "لیست", "فهرست", "چی", "چه", "کیه", "ها")):
+        from universal_mind.contacts import list_contacts
+
+        book = list_contacts()
+        if not book:
+            return _reflex_answer(
+                c, "دفتر مخاطبینم خالی است — «آدرس ایمیل X را یادت باشد someone@example.com» یکی میسازد.")
+        lines = [f"{_fa_num(len(book))} مخاطب دارم:"]
+        for i, ct in enumerate(book[:10], 1):
+            lines.append(f"  {_fa_num(i)}. {ct['name']} — {ct['address']}")
+        if len(book) > 10:
+            lines.append(f"  … و {_fa_num(len(book) - 10)} مورد دیگر")
+        return _reflex_answer(c, "\n".join(lines))
+
+    # R65 P5 — THE WEEKDAY FROM THE REAL CLOCK: «امروز چندشنبه است؟»
+    if ("چندشنبه" in c or "چه روزی" in c) and ("امروز" in c or "امروزم" in c):
+        from datetime import datetime
+
+        # Python: Monday=0 … Sunday=6. The Persian week runs
+        # شنبه(=Sat) یکشنبه(Sun) دوشنبه(Mon) … — index from Saturday:
+        # Sat(py=5)->0, Sun(6)->1, Mon(0)->2, …  =>  (py + 2) % 7
+        _DAYS = ("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
+        _py = datetime.now().weekday()
+        today_fa = _DAYS[(_py + 2) % 7]
+        tomorrow_fa = _DAYS[(_py + 3) % 7]
+        return _reflex_answer(
+            c, f"امروز {today_fa} است؛ فردا {tomorrow_fa}.")
+
     # R63 P6 — ENV VAR VIEW: «متغیر محیطی TEMP را نشان بده». The
     # operator's own environment, one named variable at a time. Secret-
     # looking names are masked (never printed), missing ones named.
