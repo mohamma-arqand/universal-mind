@@ -37,7 +37,10 @@ class TestTheBareChartAskConfesses:
     def test_nemudarash_kon_confesses(self) -> None:
         from universal_mind.persian_router import route_and_run
 
-        p = route_and_run("نمودارش کن")
+        # The NON-ANAPHORIC shape: «نمودارش کن» (possessive) legitimately
+        # re-enters the last chart-bearing run from conversation memory —
+        # the bare noun+verb carries no subject and no data.
+        p = route_and_run("نمودار بکش")
         assert p["ok"] is False
         assert "بدون داده" in p["agent_report"]
         assert "✅ اجرا انجام شد" not in p["agent_report"]

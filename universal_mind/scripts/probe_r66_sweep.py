@@ -67,15 +67,14 @@ def main() -> int:
           r2.get("ok") is True and "حذف شد" in r2.get("agent_report", "")
           and not alive2)
 
-    # 3-4 — the chart no-data law on every kind. The BARE ask runs with a
-    # CLEAN anaphora store: in the verify run the full test suite has
-    # already drawn data-carrying charts, and «نمودارش کن» would
-    # legitimately redraw THAT series. The probe clears the subject store
-    # (an honest fresh-process measurement, named here).
-    from universal_mind.persian_router import _ANAPHORA_SUBJECT
-
-    _ANAPHORA_SUBJECT.clear()
-    r3 = route_and_run("نمودارش کن")
+    # 3-4 — the chart no-data law on every kind. The bare ask uses the
+    # NON-ANAPHORIC shape («نمودار بکش»): «نمودارش کن» is a possessive —
+    # it legitimately re-enters the LAST chart-bearing run from
+    # conversation memory (in the verify sequence the earlier probes and
+    # tests have already drawn real charts), and that is the anaphora
+    # law working as designed, not a dataless chart. The bare noun +
+    # verb carries no subject and no data → the named refusal.
+    r3 = route_and_run("نمودار بکش")
     check(3, "a bare chart ask without data is a named refusal",
           r3.get("ok") is False and "بدون داده" in r3.get("agent_report", ""))
 

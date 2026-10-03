@@ -46,7 +46,7 @@ class TestTheContestStaysHonest:
             made.append(params)
             return {"ok": True, "route": ["chart"]}
 
-        out = run_ab("نمودارش کن", {"operation": "line"}, variant)
+        out = run_ab("نمودار بکش", {"operation": "line"}, variant)
         # no variant ever received a fabricated series
         assert all(not p.get("series") and not p.get("values") for p in made)
         assert out["ok"] is True  # the contest itself still completes
@@ -83,7 +83,7 @@ class TestTheRouterAnswers:
     def test_the_all_failed_headline_confesses(self) -> None:
         from universal_mind.persian_router import route_and_run
 
-        p = route_and_run("نمودارش کن")
+        p = route_and_run("نمودار بکش")
         assert p["ok"] is False
         rep = p["agent_report"]
         # honest either way: the direct refusal, or the all-failed chain
