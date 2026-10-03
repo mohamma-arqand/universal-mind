@@ -232,6 +232,11 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                 "a": a_val, "b": b_val,
                 "scalar": _matched_scalar,
             }
+        # R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول هست؟»: a real range question.
+        if "اول" in command and numbers_between and len(numbers_between) >= 2:
+            return {"operation": "primes",
+                     "low": min(numbers_between[:2]),
+                     "high": max(numbers_between[:2])}
         # R69 P4 — «مرتب کن: ۵ و ۲ و ۹» / «ترتیب نزولی ۵ و ۲ و ۹»
         if "مرتب" in command or "ترتیب" in command:
             desc = ("نزولی" in command or "بزرگ به کوچک" in command
@@ -382,6 +387,9 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                         "overwrite_ok": "روی همان فایل" in command}
         if ("حجم" in command or "چقدر است" in command) and path and "پوشه" not in command:
             return {"operation": "size", "path": path}
+        # R70 P2 — «در فایل X چند کلمه هست؟»: the word count.
+        if "کلمه" in command and path:
+            return {"operation": "wordcount", "path": path}
         if ("چند" in command or "چقدر" in command) and "پوشه" in command:
             m_fd = None
             import re as _re_fd

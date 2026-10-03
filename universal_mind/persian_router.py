@@ -47,6 +47,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("انحراف", "data"),
     ("آمار", "data"),
     ("مرتب کن", "data"),      # R69 P4 — «مرتب کن: ۵ و ۲ و ۹»
+    ("عدد اول", "data"),      # R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول؟»
+    ("اعداد اول", "data"),    # R70 P6
     ("ترتیب نزولی", "data"),  # R69 P4
     ("بزرگترین", "data"),     # R69 P5 — the extremes are a DATA question,
     ("بزرگ ترین", "data"),    # never llm knowledge
@@ -339,6 +341,7 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("نام فایل", "textfile"),     # R67 P2 — «نام فایل X را عوض کن به Y»
     ("کپی کن", "textfile"),       # R67 P3 — «فایل X را به Y کپی کن»
     ("حجم فایل", "textfile"),     # R67 P4
+    ("چند کلمه", "textfile"),    # R70 P2 — «در فایل X چند کلمه هست؟»
     ("حجمش چقدر", "textfile"),
     ("در پوشه", "filesearch"),     # R67 P5 — «در پوشه X چند فایل هست؟»
     ("پوشه", "textfile"),          # R67 P6 — «پوشه X را بساز» (bare پوشه word,
@@ -549,6 +552,13 @@ def route(command: str) -> PersianRoute:
         matched.pop("data", None)
         matched.pop("compute", None)
         matched.setdefault("sysstatus", ["باتری"])
+
+    # R70 P1 — A UNIT CONVERSION OWNS ITS SENTENCE: «۵ کیلوگرم چند پوند
+    # است؟» chained unitconvert <- sysstatus (the «است» word? no — the
+    # status vocab row) and the run carried an irrelevant vitals step.
+    # A conversion sentence is ONE question; sysstatus steps aside.
+    if "unitconvert" in matched:
+        matched.pop("sysstatus", None)
 
     # R69 P4/P5 — SORT/EXTREMES OWN THEIR QUESTION: «بزرگترین از ۵ و ۹ و ۲؟»
     # pulled llm (the «چیست» knowledge word) and refused honestly — but it

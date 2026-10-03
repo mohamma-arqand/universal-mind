@@ -446,7 +446,13 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     # «چند تا اجرا موفق داشتی؟» — the run counts, real.
     # N10-3 (R57): «چند فرمان اجرا کردی؟» — the same question in the other
     # spoken shape, measured live in the night's 14-command sweep.
-    if "چند تا" in c or "چندتا" in c or "چند فرمان" in c or "چند تا فرمان" in c:
+    # R70 P3 — «فردا چند تا قرار دارم؟» is a DAY-SCOPED count (the block
+    # below would answer the blanket total). Let it fall through to the
+    # day-scoped answer.
+    if (("فردا" in c or "پس‌فردا" in c or "پس فردا" in c or "امشب" in c)
+            and "قرار" in c and ("چند" in c or "چقدر" in c)):
+        pass  # handled by the day-scoped block below
+    elif "چند تا" in c or "چندتا" in c or "چند فرمان" in c or "چند تا فرمان" in c:
         # R64 P1 — THE QUESTION NAMES ITS OWN SUBJECT: a count of
         # REMINDERS is not a count of RUNS (the sweep caught «چند تا
         # یادآور دارم؟» answered with «۴۵۴۱۶ اجرا ثبت شده» — a real
@@ -502,6 +508,106 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             c,
             f"{_fa_num(n)} اجرا ثبت شده؛ {_fa_num(okc)} موفق ({_fa_num(round(100 * okc / n) if n else 0)}٪).",
         )
+
+    # R70 P3 — «فردا چند تا قرار دارم؟»: the count of TOMORROW'S (or the
+    # named day's) one-shots — not the blanket reminder count (the sweep
+    # caught «فردا چند تا قرار دارم؟» answering with the TOTAL).
+    # THE SUBSTRING LAW, SIXTH BITE: «پس‌فردا» CONTAINS «فردا» — the
+    # longer word is tested FIRST or «پس‌فردا چند قرار» answers farda's
+    # day (a live witness: the empty پس‌فردa answer listed farda's row).
+    _day_words = None
+    if "پس‌فردا" in c or "پس فردا" in c:
+        _day_words = "پس‌فردا"
+    elif "فردا" in c:
+        _day_words = "فردا"
+    elif "امشب" in c:
+        _day_words = "امشب"
+    if ("قرار" in c or "کار" in c and "دارم" in c) and "چند" in c and _day_words:
+        from datetime import datetime as _dt70, timedelta as _td70
+
+        _today70 = _dt70.now().date()
+        _offset70 = {"فردا": 1, "پس‌فردا": 2, "امشب": 0}[_day_words]
+        _target70 = _today70 + _td70(days=_offset70)
+        _rows70 = _query(
+            db,
+            "SELECT command, run_at FROM schedules "
+            "WHERE run_at != '' AND active = 1 ORDER BY run_at")
+        _hits70 = []
+        for r in _rows70:
+            try:
+                _fire70 = _dt70.fromisoformat(str(r["run_at"])).date()
+            except ValueError:
+                continue
+            if _fire70 == _target70:
+                _hits70.append(str(r["command"])[:40])
+        if not _hits70:
+            return _reflex_answer(
+                c, f"{_day_words} هیچ قرارِ ثبت‌شده‌ای نداری — «یادم باشه {_day_words} ساعت …» یکی میسازد.")
+        _fa_n70 = _fa_num(len(_hits70))
+        _list70 = "؛ ".join(f"«{h}»" for h in _hits70[:5])
+        return _reflex_answer(
+            c, f"{_day_words} {_fa_n70} قرار داری: {_list70}.")
+
+    # R70 P4 — «برنامه این هفته‌ام را نشان بده»: the WEEK'S real
+    # appointments (one-shots within 7 days + the recurring ones, each
+    # with its fire time), derived — never cached.
+    if "برنامه" in c and ("هفته" in c or "این هفته" in c) and any(
+            w in c for w in ("نشان", "بگو", "چی", "لیست")):
+        from datetime import datetime as _dt71, timedelta as _td71
+
+        _now71 = _dt71.now()
+        _end71 = _now71 + _td71(days=7)
+        _lines71 = []
+        _rows71 = _query(
+            db, "SELECT command, run_at, every_minutes, hour_of_day, active "
+                "FROM schedules WHERE active = 1 ORDER BY run_at, id")
+        for r in _rows71:
+            _cmd71 = str(r["command"])[:40]
+            if r["run_at"]:
+                try:
+                    _f71 = _dt71.fromisoformat(str(r["run_at"]))
+                except ValueError:
+                    continue
+                if _now71 <= _f71 <= _end71:
+                    _lines71.append(f"• {_f71.strftime('%m-%d %H:%M')} — «{_cmd71}»")
+            elif r["every_minutes"]:
+                _lines71.append(
+                    f"• هر {str(r['every_minutes']).translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹'))} دقیقه — «{_cmd71}»")
+            elif r["hour_of_day"] and int(r["hour_of_day"]) >= 0:
+                _h71 = str(r["hour_of_day"]).translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+                _lines71.append(f"• هر روز ساعت {_h71}:۰۰ — «{_cmd71}»")
+        if not _lines71:
+            return _reflex_answer(
+                c, "هفتهٔ پیش رو هیچ برنامهٔ ثبت‌شده‌ای نداری — «یادم باشه …» یکی میسازد.")
+        return _reflex_answer(c, "برنامهٔ این هفته:\n" + "\n".join(_lines71[:12]))
+
+    # R70 P5 — «چه کارهای ناتمامی دارم؟»: the honest UNFINISHED list —
+    # goals still active/stopped (never archived) plus one-shots still
+    # ahead, each named with its state; empty is said plainly.
+    if ("ناتمام" in c or "نیمه‌کاره" in c or "نیمه کاره" in c) and any(
+            w in c for w in ("چی", "چه", "دارم", "داری", "نشان", "لیست")):
+        # R70 P5 — UNFINISHED means active/stopped only: a DONE goal is
+        # finished (the first draft listed done rows under «ناتمام» — a
+        # live wrong answer about the operator's own state).
+        _rows72 = _query(
+            db, "SELECT goal, state FROM goals "
+                "WHERE state IN ('active', 'stopped') "
+                "ORDER BY id DESC LIMIT 10")
+        _pend72 = _query(
+            db, "SELECT command, run_at FROM schedules "
+                "WHERE run_at != '' AND active = 1 ORDER BY run_at LIMIT 5")
+        _out72 = []
+        for r in _rows72:
+            _st72 = {"active": "▶ در جریان", "stopped": "⏸ متوقف"}.get(
+                str(r["state"]), str(r["state"]))
+            _out72.append(f"• هدف «{str(r['goal'])[:50]}» — {_st72}")
+
+        for r in _pend72:
+            _due73 = str(r["run_at"])[:16]
+            _out72.append(f"• قرار «{str(r['command'])[:40]}» — سرِ {_due73}")
+        if not _out72:
+            return _reflex_answer(c, "هیچ کارِ ناتمامی نداری — همه بسته شده‌اند.")
+        return _reflex_answer(c, "کارهای ناتمام:\n" + "\n".join(_out72[:10]))
 
     # R68 P3 — «وضعیت کلی من چطور است؟»: the DAY REVIEW. The operator
     # asks about THEMSELVES (today's real activity), not the goal board —

@@ -117,6 +117,14 @@ def _sentence_data(result: dict[str, Any]) -> str:
         if op == "sqrt":
             return f"جذر گرفته شد: نتیجه {_fa_num(round(val, 4))}."
         return f"محاسبه انجام شد: نتیجه {_fa_num(round(val, 4))}."
+    # R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول؟»: the real primes.
+    if "primes" in result:
+        vals = "، ".join(_fa_num(v) for v in result["primes"])
+        if result.get("count"):
+            return (f"بین {_fa_num(result.get('low', 0))} و {_fa_num(result.get('high', 0))}، "
+                    f"{_fa_num(result['count'])} عدد اول هست: {vals}.")
+        return (f"بین {_fa_num(result.get('low', 0))} و {_fa_num(result.get('high', 0))} "
+                f"هیچ عدد اولی نیست.")
     # R69 P4 — «مرتب کن: ۵ و ۲ و ۹»: the sorted series, Persian.
     if "sorted" in result:
         vals = "، ".join(_fa_num(v) for v in result["sorted"])
@@ -215,6 +223,12 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
             if count > 10:
                 lines.append(f"  … و {_fa_num(count - 10)} مورد دیگر")
             return "\n".join(lines)
+        # R70 P2 — «در فایل X چند کلمه هست؟»: the real counts.
+        if result.get("operation") == "wordcount":
+            return (f"فایل «{result.get('path', '')}»: "
+                    f"{_fa_num(result.get('words', 0))} کلمه، "
+                    f"{_fa_num(result.get('lines', 0))} سطر "
+                    f"({_fa_num(result.get('chars', 0))} نویسه).")
         # R67 P4 — «حجم فایل X چقدر است؟»: the real size, human-readable.
         if result.get("operation") == "size" or ("bytes" in result and "human" in result):
             return (f"فایل «{result.get('path', '')}» {result.get('human', '')} است "

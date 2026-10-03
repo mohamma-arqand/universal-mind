@@ -221,6 +221,25 @@ class TextFileTool:
         return {"ok": True, "src": str(s), "dst": str(d),
                 "bytes": d.stat().st_size, "error": ""}
 
+    def word_count(self, path: str) -> dict[str, Any]:
+        """R70 P2 — «در فایل X چند کلمه هست؟»: the REAL word/line/char
+        count of the file's content."""
+        s = Path(path)
+        if not s.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده."}
+        if not s.is_file():
+            return {"ok": False, "kind": "notfile",
+                    "error": f"«{path}» فایل نیست."}
+        try:
+            text = s.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return {"ok": False, "error": f"خواندن نشد: {exc}", "kind": "io"}
+        words = [w for w in text.split() if w.strip()]
+        lines = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
+        return {"ok": True, "path": str(s), "words": len(words),
+                "lines": lines, "chars": len(text), "error": ""}
+
     def file_size(self, path: str) -> dict[str, Any]:
         """R67 P4 — «حجم فایل X چقدر است؟»: the REAL size, human-readable."""
         s = Path(path)
@@ -354,6 +373,12 @@ class TextFileToolConnector:
             if not out.get("ok"):
                 return ConnectorResult(ok=False, output=None, error=str(out["error"]))
             return ConnectorResult(ok=True, output={"operation": "copy", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
+        if operation == "wordcount":
+            out = self._tool.word_count(str(params.get("path", "")).strip())
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "wordcount", **{
                 k: v for k, v in out.items() if k not in ("ok", "error")}})
         if operation == "size":
             out = self._tool.file_size(str(params.get("path", "")).strip())

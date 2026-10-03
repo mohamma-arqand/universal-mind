@@ -96,6 +96,21 @@ class DataSuite:
         return {"ok": True, "value": val, "largest": largest,
                 "count": int(arr.size), "error": ""}
 
+    def primes_between(self, low: float, high: float) -> dict[str, Any]:
+        """R70 P6 — «بین ۱۰ و ۲۰ چند عدد اول هست؟»: the REAL primes in the
+        range, by trial division (a sieve is overkill for spoken ranges)."""
+        import math
+
+        lo, hi = int(low), int(high)
+        if lo > hi:
+            lo, hi = hi, lo
+        found = []
+        for n in range(max(2, lo), hi + 1):
+            if all(n % d for d in range(2, int(math.isqrt(n)) + 1)):
+                found.append(n)
+        return {"ok": True, "primes": found, "count": len(found),
+                "low": lo, "high": hi, "error": ""}
+
     def stats(self, data: Sequence[float]) -> dict[str, Any]:
         """Real descriptive statistics over a series: mean, std, min, max, median."""
         arr = self._array(data)
@@ -303,6 +318,8 @@ class DataSuiteConnector:
                 str(params.get("scalar", "multiply")),
             ),
             # R69 P4/P5 — the sort and the extremes
+            "primes": lambda: suite.primes_between(
+                float(params.get("low", 0)), float(params.get("high", 0))),
             "sort": lambda: suite.sort_values(
                 data, descending=bool(params.get("descending", False))),
             "extremes": lambda: suite.extremes(
