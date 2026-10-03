@@ -46,6 +46,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("میانگین ", "data"),
     ("انحراف", "data"),
     ("آمار", "data"),
+    ("سیستم", "sysstatus"),  # R68 P1 — «آمار کل سیستم» is the MACHINE's
+                             # vitals, not the extracted_data table's stats
     ("محاسبه", "data"),
     ("همبستگی", "data"),
     ("معادله", "data"),
@@ -507,6 +509,14 @@ def route(command: str) -> PersianRoute:
     if "filesearch" in matched and "پوشه" in lowered and "بساز" not in lowered \
             and "چند" not in lowered and "چقدر" not in lowered:
         matched.pop("textfile", None)
+
+    # R68 P1 — SYSTEM STATS ARE THE MACHINE'S VITALS: «آمار کل سیستم را
+    # نشان بده» pulled data:stats and averaged the extracted_data table's
+    # EXPERIMENTAL rows as if they were the system's stats (a live wrong
+    # answer). When the sentence names the machine (سیستم/دستگاه/…),
+    # sysstatus owns it alone.
+    if "sysstatus" in matched and "آمار" in lowered:
+        matched.pop("data", None)
 
     # R65 P7 — THE SCALAR-OP INTENT OWNS ITS QUESTION: «جذر ۱۶ چنده؟» —
     # «چنده؟» pulls compute into the chain, but جذر belongs to the data

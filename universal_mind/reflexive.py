@@ -474,6 +474,20 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             if n == 0:
                 return _reflex_answer(c, "هنوز هیچ فایلی نساختهام — «فایل X را بساز و داخلش بنویس Y» یکی میسازد.")
             return _reflex_answer(c, f"تا حالا {_fa_num(n)} بار فایل نوشتهام — «آخرین کارهایی که کردی» مسیرهایشان را نشان میدهد.")
+        # R68 P2 — A CONTACT COUNT COUNTS THE CONTACT BOOK (the sweep caught
+        # «چند تا مخاطب داری؟» answered with «۴۷۶۰۳ اجرا ثبت شده» — the run
+        # count about the wrong noun; the same R64-P1 law, contact edition).
+        if "مخاطب" in c or "مخاطبین" in c:
+            rows = _query(db, "SELECT COUNT(*) AS n FROM contacts")
+            n = int(rows[0]["n"]) if rows else 0
+            if n == 0:
+                return _reflex_answer(
+                    c, "هنوز مخاطبی نداری — «آدرس ایمیل X را یادت باشد: a@b.com» یکی میسازد.")
+            rows2 = _query(db, "SELECT name FROM contacts ORDER BY id DESC LIMIT 5")
+            names = "، ".join(f"«{r['name']}»" for r in rows2) if rows2 else ""
+            more = f" ({names})" if names else ""
+            return _reflex_answer(
+                c, f"{_fa_num(n)} مخاطب داری{more} — «مخاطبهام را نشان بده» فهرستشان را نشان میدهد.")
         if "هدف" in c:
             rows = _query(db, "SELECT state, COUNT(*) AS n FROM goals WHERE state != 'archived' GROUP BY state")
             if not rows:
