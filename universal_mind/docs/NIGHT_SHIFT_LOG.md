@@ -283,3 +283,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-03 17:54] run started (lock acquired)
 - [2026-10-03 17:54] run started (lock acquired)
 - [2026-10-03 17:54] run started (lock acquired)
+- [2026-10-03 18:11] run started (lock acquired)
+- [2026-10-03 18:11] run started (lock acquired)
+- [2026-10-03 18:11] run started (lock acquired)
+- [2026-10-04 00:40] ★ R70 SEALED — verify: 6/6 GREEN، exit=0. مهر سه‌ران: ران-۱ تستهای replace قرمز — واژهٔ لختِ «کلمه» جملهٔ «کلمه A را با B عوض کن» را می‌دزدید؛ نشانگرِ «چند» لازم شد (71cfdfe). ران-۲ probe_r53 قرمز — run_due همهٔ ردیفهای سررسید را شلیک میکند و شمارِ probe باید به seedِ خودش گره بخورد (1cdd86b؛ درسِ R66 به probe قدیمی رسید). ران-۳: READY. ۶ کامیت: 87d3608 051361e c576ffb 71cfdfe 1cdd86b.
