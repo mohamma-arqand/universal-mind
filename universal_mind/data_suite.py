@@ -77,6 +77,25 @@ class DataSuite:
     def _array(data: Any) -> np.ndarray:
         return np.asarray(data, dtype=float)
 
+    def sort_values(self, data: Sequence[float], descending: bool = False) -> dict[str, Any]:
+        """R69 P4 — «مرتب کن: ۵ و ۲ و ۹» — the REAL sort, ascending by
+        default («نزولی/از بزرگ به کوچک» flips it)."""
+        arr = self._array(data)
+        out = sorted(arr.tolist())
+        if descending:
+            out = out[::-1]
+        return {"ok": True, "sorted": out, "descending": descending,
+                "count": len(out), "error": ""}
+
+    def extremes(self, data: Sequence[float], largest: bool = True) -> dict[str, Any]:
+        """R69 P5 — «بزرگترین از ۵ و ۹ و ۲؟» — the REAL extreme, named."""
+        arr = self._array(data)
+        if arr.size == 0:
+            return {"ok": False, "error": "عددی در جمله نبود — «بزرگترین از ۳ و ۷؟» شکل درست است.", "kind": "nodata"}
+        val = float(arr.max() if largest else arr.min())
+        return {"ok": True, "value": val, "largest": largest,
+                "count": int(arr.size), "error": ""}
+
     def stats(self, data: Sequence[float]) -> dict[str, Any]:
         """Real descriptive statistics over a series: mean, std, min, max, median."""
         arr = self._array(data)
@@ -283,6 +302,11 @@ class DataSuiteConnector:
                 float(params.get("a", 0)), float(params.get("b", 0)),
                 str(params.get("scalar", "multiply")),
             ),
+            # R69 P4/P5 — the sort and the extremes
+            "sort": lambda: suite.sort_values(
+                data, descending=bool(params.get("descending", False))),
+            "extremes": lambda: suite.extremes(
+                data, largest=bool(params.get("largest", True))),
             "solve": lambda: suite.solve(params.get("coefficients", []), params.get("constants", [])),
             "determinant": lambda: suite.determinant(params.get("matrix", [])),
             "eigenvalues": lambda: suite.eigenvalues(params.get("matrix", [])),

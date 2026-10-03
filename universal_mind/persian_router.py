@@ -46,6 +46,12 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("میانگین ", "data"),
     ("انحراف", "data"),
     ("آمار", "data"),
+    ("مرتب کن", "data"),      # R69 P4 — «مرتب کن: ۵ و ۲ و ۹»
+    ("ترتیب نزولی", "data"),  # R69 P4
+    ("بزرگترین", "data"),     # R69 P5 — the extremes are a DATA question,
+    ("بزرگ ترین", "data"),    # never llm knowledge
+    ("کوچکترین", "data"),
+    ("کوچک ترین", "data"),
     ("آمار کل سیستم", "sysstatus"),  # R68 P1 — the machine's vitals; the
                                      # compound is SPECIFIC so the bare
                                      # «سیستم» stays neutral (the r57
@@ -174,6 +180,10 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("زمان بگیر", "notify"),
     ("یادم بندی", "notify"),
     ("یادم بیاور", "notify"),
+    ("یادم بیار", "notify"),      # R69 P1 — the spoken shape (بیار, not
+                                   # بیاور); a reminder verb NEVER lets a
+                                   # document word («گزارش بده») steal the
+                                   # sentence into pdf.
     ("شبکه", "webfetch"),
 
     # zip (stdlib) — the world's archive format
@@ -522,6 +532,34 @@ def route(command: str) -> PersianRoute:
     if "sysstatus" in matched and "آمار" in lowered:
         matched.pop("data", None)
 
+    # R69 P1 — A REMINDER OWNS ITS SENTENCE: «یک ساعت دیگر یادم بیار گزارش
+    # بده» — the «گزارش بده» half pulled pdf and a 34KB document was made
+    # while the reminder never registered (a live wrong answer). When a
+    # reminder verb is present, notify/scheduler owns the sentence alone.
+    if "notify" in matched and any(
+            w in lowered for w in ("یادم بیار", "یادم بیاور", "یادآوری کن", "یادم باشه", "یادم بنداز")):
+        for _steal in ("pdf", "chart", "data", "compute", "textfile"):
+            matched.pop(_steal, None)
+
+    # R69 P3 — THE BATTERY IS A MACHINE VITAL: «چند درصد باتری مانده؟»
+    # pulled data:stats (the «چند» word) and averaged the extracted_data
+    # table's EXPERIMENTAL rows as a battery answer (a live wrong answer).
+    # A battery/disk/ram question belongs to sysstatus alone.
+    if any(w in lowered for w in ("باتری", "رم ", " رم", "دیسک", "حافظه رم")):
+        matched.pop("data", None)
+        matched.pop("compute", None)
+        matched.setdefault("sysstatus", ["باتری"])
+
+    # R69 P4/P5 — SORT/EXTREMES OWN THEIR QUESTION: «بزرگترین از ۵ و ۹ و ۲؟»
+    # pulled llm (the «چیست» knowledge word) and refused honestly — but it
+    # is a DATA question with the numbers IN the sentence. The sort/extreme
+    # intents own it; llm and compute step aside.
+    if "data" in matched and any(
+            w in lowered for w in ("مرتب", "ترتیب", "بزرگترین", "بزرگ ترین",
+                                   "کوچکترین", "کوچک ترین")):
+        matched.pop("llm", None)
+        matched.pop("compute", None)
+
     # R65 P7 — THE SCALAR-OP INTENT OWNS ITS QUESTION: «جذر ۱۶ چنده؟» —
     # «چنده؟» pulls compute into the chain, but جذر belongs to the data
     # suite's scalar_op ALONE (compute has no sqrt operator; its empty
@@ -815,6 +853,12 @@ def route_and_run(
     # next-due — a reminder without a registered time is only hope.
     if forced_route is None and (
         "یادآور" in command or "یادآوری" in command or "یادم بنداز" in command
+        or "یادم بیار" in command or "یادم بیاور" in command  # R69 P1
+        # R69 P2 — a time-delta + a bell/alarm verb is a one-shot reminder
+        # too: «بیست و پنج دقیقه دیگر زنگ بزن» carries the delta and the
+        # verb; without this arm it fell to «این فرمان را نشناختم».
+        or (("زنگ بزن" in command or "زنگ بزنم" in command or "هشدار بده" in command)
+            and ("دیگر" in command or "بعد" in command))
         or any(w in command for w in ("یادم باشه", "یادم باشی", "یادم بشه", "یادم بشی",
                                       "یادم بادی", "یادم باش", "یادت باشه", "یادت نره",
                                       "یادت باشد"))
@@ -1169,8 +1213,16 @@ def route_and_run(
                 import re as _re2
 
                 _hour_named = _re2.search(r"ساعت\s*[۰-۹0-9]", _body) is not None
+                # R69 P1 — a RELATIVE delta IS a named hour: «یک ساعت دیگر»
+                # names the moment (now+60min); the default-8 note would
+                # contradict the real computed time in the same report (a
+                # live witness: the row said 17:04 while the note claimed
+                # «no hour — defaulted to 8am»).
+                _relative_named = _re2.search(
+                    r"(?:نیم\s+ساعت|\d+\s*(?:ساعت|دقیقه)|[\u0600-\u06FF]+\s*(?:ساعت|دقیقه))"
+                    r"\s*(?:دیگر|بعد)", _body) is not None
                 _default_note = ""
-                if not _hour_named:
+                if not _hour_named and not _relative_named:
                     _default_note = (" (ساعتی در جمله نبود — پیش‌فرض ۸ صبح گرفتم؛ "
                                      "ساعت دیگری می‌خواهی بگو تا عوض کنم)")
                 # R62 T5 — EVERY RUN LEAVES ITS HISTORY ROW: a registered

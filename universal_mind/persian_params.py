@@ -37,10 +37,72 @@ def _normalize_digits(text: str) -> str:
 _NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
 
+_WORD_NUMS: dict[str, int] = {
+    "صفر": 0, "یک": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج": 5,
+    "شش": 6, "هفت": 7, "هشت": 8, "نه": 9, "ده": 10, "یازده": 11,
+    "دوازده": 12, "سیزده": 13, "چهارده": 14, "پانزده": 15, "شانزده": 16,
+    "هفده": 17, "هجده": 18, "نوزده": 19, "بیست": 20, "سی": 30,
+    "چهل": 40, "پنجاه": 50, "شصت": 60, "هفتاد": 70, "هشتاد": 80,
+    "نود": 90, "صد": 100, "هزار": 1000, "میلیون": 1000000,
+}
+
+
+def _spoken_numbers(normalized: str) -> list[float]:
+    """R69 P6 — Persian WORD numbers: «بیست و پنج» = 25. The tens-units
+    join (و) is real arithmetic; «هزار/میلیون» scale. Found LEFT-TO-RIGHT
+    so «بیست و پنج بعلاوه هفت» yields [25, 7]."""
+    out: list[float] = []
+    i = 0
+    while i < len(normalized):
+        best_w, best_v = "", None
+        # THE WORD-BOUNDARY LAW (the «چنده» caught «ده» inside it — a live
+        # witness: «بیست و پنج بعلاوه هفت چنده؟» read a phantom 10): a
+        # word number must start at a boundary (text start or a
+        # non-letter before it) AND end at one.
+        for w, v in _WORD_NUMS.items():
+            if normalized.startswith(w, i) and len(w) > len(best_w):
+                before_ok = i == 0 or not normalized[i - 1].isalpha()
+                after = i + len(w)
+                after_ok = after >= len(normalized) or not normalized[after].isalpha()
+                if before_ok and after_ok:
+                    best_w, best_v = w, v
+        if best_w is None or best_v is None:
+            i += 1
+            continue
+        total = best_v
+        j = i + len(best_w)
+        # join units: «و پنج»
+        while True:
+            m = re.match(r"\s*و\s*", normalized[j:])
+            if not m:
+                break
+            rest = normalized[j + m.end():]
+            uw, uv = "", None
+            for w, v in _WORD_NUMS.items():
+                if rest.startswith(w) and len(w) > len(uw) and v < total:
+                    uw, uv = w, v
+            if uw:
+                total += uv if uv is not None else 0
+                j += m.end() + len(uw)
+            else:
+                break
+        # scale: «هزار» / «میلیون»
+        m2 = re.match(r"\s*(هزار|میلیون)", normalized[j:])
+        if m2:
+            total *= _WORD_NUMS[m2.group(1)]
+            j += m2.end()
+        out.append(float(total))
+        i = j
+    return out
+
+
 def extract_numbers(command: str) -> list[float]:
-    """Every number in the command (Persian, Arabic, or Western digits) as floats."""
+    """Every number in the command (Persian, Arabic, or Western digits, or
+    Persian WORD numbers — «بیست و پنج بعلاوه هفت» gives [25, 7])."""
     normalized = _normalize_digits(command)
-    return [float(m) for m in _NUMBER_RE.findall(normalized)]
+    digit_n = [float(m) for m in _NUMBER_RE.findall(normalized)]
+    word_n = _spoken_numbers(normalized)
+    return digit_n + word_n if word_n else digit_n
 
 
 def extract_numbers_between(command: str) -> list[float]:
@@ -160,6 +222,22 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                 "a": a_val, "b": b_val,
                 "scalar": _matched_scalar,
             }
+        # R69 P4 — «مرتب کن: ۵ و ۲ و ۹» / «ترتیب نزولی ۵ و ۲ و ۹»
+        if "مرتب" in command or "ترتیب" in command:
+            desc = ("نزولی" in command or "بزرگ به کوچک" in command
+                    or "معکوس" in command)
+            if numbers:
+                return {"operation": "sort", "data": data, "descending": desc}
+            return {"operation": "sort", "descending": desc}
+        # R69 P5 — «بزرگترین از ۵ و ۹ و ۲؟» / «کوچکترین از …»
+        if ("بزرگترین" in command or "بزرگ ترین" in command
+                or "کوچکترین" in command or "کوچک ترین" in command
+                or "max" in command.lower() or "min" in command.lower()):
+            largest = "کوچک" not in command and "min" not in command.lower()
+            if numbers:
+                return {"operation": "extremes", "data": data,
+                        "largest": largest}
+            return {"operation": "extremes", "largest": largest}
         if numbers:
             return {"operation": "stats", "data": data}
         return {"operation": "stats"}

@@ -109,6 +109,57 @@ def _re_search_her(text: str) -> bool:
     return bool(re.search(r"\bهر\b", text) or re.search(r"هر (روز|دقیقه|ساعت|هفته|ماه|وقت)", text))
 
 
+_WORD_NUMS: dict[str, int] = {
+    "صفر": 0, "یک": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج": 5,
+    "شش": 6, "هفت": 7, "هشت": 8, "نه": 9, "ده": 10, "یازده": 11,
+    "دوازده": 12, "سیزده": 13, "چهارده": 14, "پانزده": 15, "شانزده": 16,
+    "هفده": 17, "هجده": 18, "نوزده": 19, "بیست": 20, "سی": 30,
+    "چهل": 40, "پنجاه": 50, "شصت": 60, "هفتاد": 70, "هشتاد": 80,
+    "نود": 90, "صد": 100,
+}
+
+
+def _spoken_number(text: str) -> int | None:
+    """A Persian WORD number — «بیست و پنج» = 25 (the tens + units joined
+    by و, longest-first so «بیست» is not read as two words)."""
+    best: tuple[int, str] | None = None
+    for w, v in sorted(_WORD_NUMS.items(), key=lambda kv: -len(kv[0])):
+        if w in text and (best is None or len(w) > len(best[1])):
+            best = (v, w)
+    if best is None:
+        return None
+    total, word = best
+    rest = text[text.find(word) + len(word):]
+    m = re.search(r"\s*و\s*(\S+)", rest)
+    if m and m.group(1) in _WORD_NUMS and _WORD_NUMS[m.group(1)] < total:
+        total += _WORD_NUMS[m.group(1)]
+    return total
+
+
+def _relative_delta(text: str) -> int | None:
+    """Minutes from NOW for «یک ساعت دیگر» / «نیم ساعت دیگر» /
+    «بیست و پنج دقیقه دیگر» / «۲۰ دقیقه بعد» — None when the sentence
+    carries no relative-delta shape."""
+    import re as _re
+
+    # نیم ساعت = 30 دقیقه
+    if _re.search(r"نیم\s+ساعت", text) and ("دیگر" in text or "بعد" in text):
+        return 30
+    m = _re.search(
+        r"(\d+(?:\.\d+)?)\s*(ساعت|دقیقه)\s*(?:دیگر|بعد)", text)
+    if m:
+        n = float(m.group(1))
+        return int(n * 60) if m.group(2) == "ساعت" else int(n)
+    # word-numbers: «بیست و پنج دقیقه دیگر» / «یک ساعت دیگر»
+    m2 = _re.search(
+        r"([\u0600-\u06FF]+(?:\s+و\s+[\u0600-\u06FF]+)?)\s*(ساعت|دقیقه)\s*(?:دیگر|بعد)", text)
+    if m2:
+        n = _spoken_number(m2.group(1))
+        if n is not None:
+            return n * 60 if m2.group(2) == "ساعت" else n
+    return None
+
+
 def parse_one_shot(command: str, now: datetime | None = None) -> dict[str, Any] | None:
     """Extract a ONE-SHOT moment from Persian, or None.
 
@@ -191,6 +242,17 @@ def parse_one_shot(command: str, now: datetime | None = None) -> dict[str, Any] 
             return {"run_at": _at(day, hour, minute).isoformat(), "day_offset": day}
         if _WD is not None and (hour > 23 or minute > 59):
             return {"run_at": _at(_WD, 8, 0).isoformat(), "day_offset": _WD}
+
+    # R69 P1 — THE RELATIVE DELTA: «یک ساعت دیگر …» / «نیم ساعت دیگر …» /
+    # «بیست و پنج دقیقه دیگر …» — a moment measured FROM NOW, not a wall
+    # clock. The word-numbers (بیست و پنج) and the halves (نیم/یک و نیم)
+    # ride real arithmetic; «دیگر» (or «بعد») marks the delta. The sweep
+    # caught «یک ساعت دیگر یادم بیار گزارش بده» falling to PDF because no
+    # one-shot moment was found.
+    _delta = _relative_delta(text)
+    if _delta is not None:
+        return {"run_at": (current + timedelta(minutes=_delta)).isoformat(),
+                "day_offset": 0, "relative_minutes": _delta}
 
     # bare day-words: صبح زود/فردا صبح → 08:00, ظهر → 12:00, امشب → 21:00
     if "پس فردا" in text or "پس‌فردا" in command:

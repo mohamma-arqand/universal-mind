@@ -117,6 +117,16 @@ def _sentence_data(result: dict[str, Any]) -> str:
         if op == "sqrt":
             return f"جذر گرفته شد: نتیجه {_fa_num(round(val, 4))}."
         return f"محاسبه انجام شد: نتیجه {_fa_num(round(val, 4))}."
+    # R69 P4 — «مرتب کن: ۵ و ۲ و ۹»: the sorted series, Persian.
+    if "sorted" in result:
+        vals = "، ".join(_fa_num(v) for v in result["sorted"])
+        order = "نزولی" if result.get("descending") else "صعودی"
+        return f"مرتب شد ({order}): {vals}."
+    # R69 P5 — «بزرگترین/کوچکترین از …»: the extreme, named.
+    if "value" in result and "largest" in result:
+        which = "بزرگترین" if result["largest"] else "کوچکترین"
+        return (f"{which} از {_fa_num(result.get('count', 0))} عدد: "
+                f"{_fa_num(result['value'])}.")
     mean = result.get("mean")
     if mean is None:
         return "تحلیل انجام شد."
