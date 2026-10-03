@@ -1,4 +1,6 @@
-# شیفت شب — NIGHT SHIFT (R63)
+# شیفت شب — NIGHT SHIFT (R63) — ✅ مهر شد
+
+> **وضعیت R63**: مهر (verify READY ۶/۶، overall=pass؛ receipt pin در CHANGELOG). داستان پنج‌رانِ مهر در لاگ.
 
 > **وضعیت R62**: ✅ مهر شد (08d8972؛ verify READY 6/6، overall=pass، ۲۴۴۵ تست/۰ شکست، receipt pin e2ed3f1).
 
