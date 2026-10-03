@@ -209,6 +209,11 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فایلهای بزرگ‌تر", "filesearch"),
     ("فایل های بزرگ", "filesearch"),
     ("پیدا کن در", "filesearch"),
+    # R65 P8 — the spoken folder names are FILE SEARCHES
+    ("دانلودها را نشان بده", "filesearch"),
+    ("دانلودها را نشان", "filesearch"),
+    ("دسکتاپ را نشان بده", "filesearch"),
+    ("پوشه دانلود", "filesearch"),
     ("جستجوی فایل", "filesearch"),
     ("فایلها را پیدا", "filesearch"),
     ("فایل های را پیدا", "filesearch"),
@@ -478,6 +483,14 @@ def route(command: str) -> PersianRoute:
     # suite's scalar_op ALONE (compute would sum the pair = ۵۲۰, a fabricated
     # answer). When the sentence names a percent, compute steps aside.
     if "data" in matched and "درصد" in lowered:
+        matched.pop("compute", None)
+
+    # R65 P7 — THE SCALAR-OP INTENT OWNS ITS QUESTION: «جذر ۱۶ چنده؟» —
+    # «چنده؟» pulls compute into the chain, but جذر belongs to the data
+    # suite's scalar_op ALONE (compute has no sqrt operator; its empty
+    # expression REFUSES and turns the whole run red — measured live).
+    if "data" in matched and any(
+            w in lowered for w in ("جذر", "توان", "ضرب", "تقسیم")):
         matched.pop("compute", None)
 
     # R60 Q6 — THE EMAIL-LISTING INTENT: «ایمیل‌هایم را نشان بده» — «نشان بده»

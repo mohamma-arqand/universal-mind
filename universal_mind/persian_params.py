@@ -526,6 +526,26 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         from universal_mind.file_search_tool import extract_search_params
 
         out = extract_search_params(command)
+        # R65 P8 — THE SPOKEN FOLDER NAMES resolve to the real user folders
+        # («دانلودها را نشان بده» searched a literal «دانلود» folder).
+        _FOLDER_FA = {
+            "دانلودها": "Downloads", "دانلودها را": "Downloads", "دانلود": "Downloads",
+            "پوشه دانلود": "Downloads", "دسکتاپ": "Desktop", "میز کار": "Desktop",
+            "اسناد": "Documents", "مدارک": "Documents", "تصاویر": "Pictures",
+            "عکسها": "Pictures", "عکس‌ها": "Pictures", "موسیقی": "Music", "فیلمها": "Videos",
+        }
+        for _fa, _en in _FOLDER_FA.items():
+            if _fa in command:
+                try:
+                    from pathlib import Path as _P
+
+                    _real = _P.home() / _en
+                    if _real.exists():
+                        out["folder"] = str(_real)
+                        out["top"] = out.get("top", 10)
+                except Exception:  # noqa: BLE001 — the lens never breaks
+                    pass
+                break
         # the rest of the sentence (minus trigger words) is a name filter
         # when the operator named a file type with their own words
         for trig in ("فایلهای بزرگ", "فایل های بزرگ", "پیدا کن در", "جستجوی فایل",
