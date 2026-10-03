@@ -1,4 +1,6 @@
-# شیفت شب — NIGHT SHIFT (R64)
+# شیفت شب — NIGHT SHIFT (R64) — ✅ مهر شد
+
+> **وضعیت R64**: مهر (verify READY ۶/۶، overall=pass). داستان دو‌ران در لاگ.
 
 > **وضعیت R63**: ✅ مهر شد (4d00322؛ verify READY ۶/۶، overall=pass، ۲۴۹۰ تست/۰ شکست، pin ccc81ad). داستان پنج‌ران در لاگ.
 
