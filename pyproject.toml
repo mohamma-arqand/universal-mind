@@ -24,6 +24,16 @@ universal-mind = "universal_mind.cli:main"
 [tool.setuptools.packages.find]
 include = ["universal_mind*"]
 
+# R74 seal run 3 — THE ROOTDIR ANCHOR: a foreign /d/workspaces/setup.cfg
+# (written by another process, legacy [pytest] section — hard-fail in
+# pytest 8) sat ABOVE our tree's search path because this pyproject had
+# no [tool:pytest] section to anchor pytest's rootdir. Anchoring here
+# makes our repo self-contained: the config search stops at OUR root.
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["universal_mind/tests"]
+addopts = "-p no:cacheprovider"
+
 [tool.ruff.lint]
 # Pin the lint surface against target-version auto-enablement. Declaring
 # `requires-python` makes ruff auto-selected pyupgrade/simplify preview rules
