@@ -307,6 +307,15 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("فایل رو بخون", "textfile"),
     ("فایلهای متنی", "textfile"),
     ("فایل‌های متنی", "textfile"),
+    # R64 P6/P7 — the file's OWN verbs: search inside, replace inside.
+    ("دنبال کلمه", "textfile"),
+    ("دنبال عبارت", "textfile"),
+    ("جستجو کن در فایل", "textfile"),
+    ("جست‌جو کن در فایل", "textfile"),
+    ("را با عوض کن", "textfile"),
+    ("را با جایگزین کن", "textfile"),
+    ("عوض کن", "textfile"),
+    ("جایگزین کن", "textfile"),
     # R59 P2 — UNIT CONVERSION: «۱۰ کیلومتر چند مایل است؟». The unit words
     # name the capability; the value and the unit pair come from the params
     # layer's parser. A unit word in a NON-question sentence (e.g. a title)

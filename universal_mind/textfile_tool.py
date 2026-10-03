@@ -103,6 +103,64 @@ class TextFileTool:
         return {"ok": True, "path": str(dst), "chars": len(content),
                 "bytes": len(content.encode("utf-8")), "error": ""}
 
+    def search(self, path: str, needle: str) -> dict[str, Any]:
+        """R64 P6 — «در فایل X دنبال کلمه Y بگرد»: real matches with line numbers."""
+        src = Path(path)
+        if _FORBIDDEN.search(str(src)):
+            return {"ok": False, "error": "این فایل به نظر راز می‌رسد — محتوایش را نمی‌خوانم.",
+                    "kind": "secret"}
+        if not src.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده."}
+        if not needle.strip():
+            return {"ok": False, "kind": "empty",
+                    "error": "دنبال چه بگردم؟ کلمه را بگو — مثلا: «در فایل X دنبال کلمه سلام بگرد»."}
+        try:
+            text = src.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return {"ok": False, "error": f"خواندن نشد: {exc}", "kind": "io"}
+        hits: list[dict[str, Any]] = []
+        for i, line in enumerate(text.splitlines(), 1):
+            if needle in line:
+                hits.append({"line": i, "text": line.strip()[:100]})
+        return {"ok": True, "path": str(src), "needle": needle,
+                "matches": hits[:50], "count": len(hits), "error": ""}
+
+    def replace(self, path: str, old: str, new: str, *, overwrite_ok: bool = False) -> dict[str, Any]:
+        """R64 P7 — «کلمه A را با B عوض کن»: real replacement, counted.
+
+        The DELETE-law spirit: a replace REWRITES the file, so it needs the
+        operator's explicit continue (overwrite_ok) when the file exists —
+        no silent rewrite. The count and a sample are always named.
+        """
+        src = Path(path)
+        if _FORBIDDEN.search(str(src)):
+            return {"ok": False, "error": "این فایل به نظر راز می‌رسد — دست نمی‌زنم.",
+                    "kind": "secret"}
+        if self._WRITE_FORBIDDEN.search(str(src)):
+            return {"ok": False, "error": self._write_refusal(str(src)), "kind": "protected"}
+        if not src.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده."}
+        if not old.strip():
+            return {"ok": False, "kind": "empty",
+                    "error": "چه چیزی را عوض کنم؟ کلمهٔ فعلی را بگو."}
+        if src.exists() and not overwrite_ok:
+            return {"ok": False, "kind": "exists",
+                    "error": ("عوض‌کردن، فایل را دوباره می‌نویسد — تأیید می‌خواهد. "
+                              "بگو «روی همان فایل بنویس و کلمه A را با B عوض کن» تا انجام شود.")}
+        try:
+            text = src.read_text(encoding="utf-8", errors="replace")
+            count = text.count(old)
+            if count == 0:
+                return {"ok": True, "path": str(src), "replaced": 0,
+                        "error": "", "note": "کلمه در فایل نبود — چیزی عوض نشد."}
+            new_text = text.replace(old, new)
+            src.write_text(new_text, encoding="utf-8")
+        except OSError as exc:
+            return {"ok": False, "error": f"نوشتن نشد: {exc}", "kind": "io"}
+        return {"ok": True, "path": str(src), "replaced": count, "error": ""}
+
     def list_texts(self, folder: str) -> dict[str, Any]:
         src = Path(folder)
         if not src.exists() or not src.is_dir():
@@ -151,6 +209,24 @@ class TextFileToolConnector:
             return ConnectorResult(ok=True, output={
                 k: v for k, v in out.items() if k not in ("ok", "error")
             })
+        if operation == "search":
+            path = str(params.get("path", "")).strip()
+            needle = str(params.get("needle", "")).strip()
+            out = self._tool.search(path, needle)
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")})
+        if operation == "replace":
+            path = str(params.get("path", "")).strip()
+            old = str(params.get("old", "")).strip()
+            new = str(params.get("new", "")).strip()
+            overwrite_ok = bool(params.get("overwrite_ok", False))
+            out = self._tool.replace(path, old, new, overwrite_ok=overwrite_ok)
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")})
         if operation == "list":
             folder = str(params.get("path", "")).strip()
             if not folder:

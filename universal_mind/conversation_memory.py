@@ -105,7 +105,14 @@ def refers_to_last(command: str) -> bool:
     routing has already concluded the command names NO capability — a real
     prior context implies continuation. Absence is still honest: no context,
     no reference.
+
+    R64 P7 — «روی همان فایل …» is NOT an anaphora: it is the explicit
+    OVERWRITE-CONFIRMATION phrase (the delete-law's «تأیید کن»). The
+    «همان» there binds to the file NAMED IN THE SAME SENTENCE, not to the
+    previous run — excluding it keeps the replace path reachable.
     """
+    if "روی همان فایل" in command:
+        return False
     return bool(_POSSESSIVE_ACTION_RE.search(command))
 
 

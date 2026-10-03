@@ -265,6 +265,23 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if any(w in command for w in ("فایلهای متنی", "فایل‌های متنی")) \
                 and "محتو" not in command and "بنویس" not in command:
             op = "list"
+        # R64 P6/P7 — SEARCH/REPLACE: «در فایل X دنبال کلمه Y بگرد» /
+        # «کلمه A را با B عوض کن». The needle/pair ride from the sentence;
+        # replace needs the operator's explicit continue to rewrite.
+        if any(w in command for w in ("دنبال", "بگرد", "جستجو", "جست‌جو")) and path:
+            m_needle = _re.search(
+                r"(?:دنبال|جست‌?جو)\s*(?:ی\s*)?(?:کن\s*)?(?:کلمه|واژه|عبارت)?\s*"
+                r"(.+?)\s*(?:بگرد|پیدا کن|کن)[؟?.،!\s]*$", command)
+            needle = (m_needle.group(1).strip() if m_needle else "").strip("،.\"'«»")
+            if needle:
+                return {"operation": "search", "path": path, "needle": needle}
+        if "عوض" in command and "با" in command and path:
+            m_pair = _re.search(r"(?:کلمه|واژه|عبارت)\s+(.+?)\s+را\s+با\s+(.+?)\s+(?:عوض|جایگزین)", command)
+            if m_pair:
+                return {"operation": "replace", "path": path,
+                        "old": m_pair.group(1).strip().strip("«»'\""),
+                        "new": m_pair.group(2).strip().strip("«»'\""),
+                        "overwrite_ok": "روی همان فایل" in command}
         if not path:
             return {}  # no path — the connector asks by name
         return {"operation": op, "path": path}

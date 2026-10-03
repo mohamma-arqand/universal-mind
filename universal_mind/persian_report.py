@@ -194,6 +194,26 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
     # R60 Q1+Q2 — the text-file view: the content with an honest truncation
     # note, or the written-file facts with Persian digits.
     if cap == "textfile" and isinstance(result, dict):
+        # R64 P6 — «دنبال کلمه Y بگرد»: the matches with their line numbers.
+        if "matches" in result:
+            hits = result.get("matches") or []
+            count = int(result.get("count", len(hits)))
+            if count == 0:
+                return f"در «{result.get('path', '')}» هیچ «{result.get('needle', '')}» پیدا نکردم."
+            lines = [f"{_fa_num(count)} مورد از «{result.get('needle', '')}» در «{result.get('path', '')}»:"]
+            lines += [f"  خط {_fa_num(h['line'])}: {h['text']}" for h in hits[:10]]
+            if count > 10:
+                lines.append(f"  … و {_fa_num(count - 10)} مورد دیگر")
+            return "\n".join(lines)
+        # R64 P7 — «کلمه A را با B عوض کن»: the real count.
+        if "replaced" in result:
+            n_rep = int(result.get("replaced", 0))
+            if n_rep == 0:
+                return (f"در «{result.get('path', '')}» چیزی عوض نشد — "
+                        f"«{params.get('old', '') if isinstance(params, dict) else ''}» پیدا نکردم.")
+            return (f"در «{result.get('path', '')}» {_fa_num(n_rep)} مورد عوض شد "
+                    f"(«{params.get('old', '') if isinstance(params, dict) else ''}» → "
+                    f"«{params.get('new', '') if isinstance(params, dict) else ''}»).")
         if "text" in result:
             note = " (ناقص خوانده شد — فایل بلندتر است)" if result.get("truncated") else ""
             head = str(result["text"])[:600]
