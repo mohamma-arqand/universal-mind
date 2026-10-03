@@ -203,6 +203,68 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             res = close_by_name(m_w.group(1))
             return _reflex_answer(c, close_fa(res), ok=bool(res.get("ok")))
 
+    # R63 P7 — TIME SINCE A REMEMBERED FACT: «چند ساعت از خواب من گذشته؟».
+    # The platform cannot SEE the operator's sleep — but a fact they
+    # TAUGHT it («یادت باشد که ساعت ۲۳ خوابیدم») has a timestamp, and the
+    # elapsed time SINCE that fact is real arithmetic on real data.
+    # Without a stored fact the answer is an honest refusal with the
+    # exact way to make it answerable — never a guess about their life.
+    if ("چند ساعت" in c or "چند وقت" in c) and "از" in c:
+        import re as _re_since
+
+        m_since = _re_since.search(
+            r"چند\s+(?:ساعت|وقت)\s+از\s+(.+?)\s+(?:گذشته|گذشته|مضی)", c) \
+            or _re_since.search(r"چند\s+(?:ساعت|وقت)\s+از\s+(.+?)[؟?]", c)
+        if m_since:
+            from datetime import datetime
+
+            topic = m_since.group(1).strip().rstrip("؟?").strip()
+            # «خواب من» -> «خواب»: the possessive is the operator's, not
+            # the fact's words; keep the meaningful head only.
+            topic = _re_since.sub(r"\s*من$", "", topic).strip() or topic
+            db = DatabaseSuite.shared_persistent()
+            q = db.query(
+                "SELECT fact, created_at FROM named_memory "
+                f"WHERE fact LIKE '%{topic.replace(chr(39), chr(39) * 2)}%' "
+                "ORDER BY id DESC LIMIT 1")
+            rows = q.get("rows", []) if q.get("ok") else []
+            if not rows:
+                # a one-shot REMINDER may carry the fact too (T1: a fact
+                # with a moment becomes a reminder); since T5 every
+                # scheduler run leaves its run_history row — THAT row's
+                # timestamp is the registration moment.
+                q2 = db.query(
+                    "SELECT command, created_at FROM run_history "
+                    f"WHERE command LIKE '%{topic.replace(chr(39), chr(39) * 2)}%' "
+                    "ORDER BY id DESC LIMIT 1")
+                rows = [
+                    {"fact": r["command"], "created_at": r["created_at"]}
+                    for r in (q2.get("rows", []) if q2.get("ok") else [])
+                ]
+            if rows:
+                fact, stamp = rows[0]["fact"], str(rows[0]["created_at"] or "")
+                try:
+                    when = datetime.strptime(stamp[:19], "%Y-%m-%d %H:%M:%S")
+                    delta = datetime.now() - when
+                    hours = delta.total_seconds() / 3600.0
+                    if hours < 1:
+                        amount = f"{int(delta.total_seconds() // 60)} دقیقه"
+                    else:
+                        amount = f"{hours:.1f} ساعت".replace(".", "٫")
+                    fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+                    return _reflex_answer(
+                        c, f"از «{fact}» {amount.translate(fa)} گذشته است "
+                           f"(ثبت: {stamp[:16]}).")
+                except ValueError:
+                    pass
+            return _reflex_answer(
+                c,
+                f"خوابِ تو را نمی‌بینم — چیزی دربارهٔ «{topic}» یادم نیست. "
+                "برای اینکه این پرسش جواب بگیرد، اول به من بگو: "
+                "«یادت باشد که ساعت ۲۳ خوابیدم» — بعد «چند ساعت از خواب من گذشته؟» "
+                "را دقیق جواب می‌دارم.",
+                ok=False)
+
     # R63 P6 — ENV VAR VIEW: «متغیر محیطی TEMP را نشان بده». The
     # operator's own environment, one named variable at a time. Secret-
     # looking names are masked (never printed), missing ones named.
