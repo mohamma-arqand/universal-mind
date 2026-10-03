@@ -275,6 +275,38 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             needle = (m_needle.group(1).strip() if m_needle else "").strip("،.\"'«»")
             if needle:
                 return {"operation": "search", "path": path, "needle": needle}
+        # R67 P2-P6 — rename/copy/size/folderstats/mkdir
+        if "نام" in command and "عوض" in command and path:
+            import re as _re_rn
+
+            m_rn = _re_rn.search(r"به\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_rn:
+                return {"operation": "rename", "path": path,
+                        "dst": m_rn.group(1),
+                        "overwrite_ok": "روی همان فایل" in command}
+        if "کپی" in command and path:
+            import re as _re_cp
+
+            m_cp = _re_cp.search(r"به\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_cp:
+                return {"operation": "copy", "path": path,
+                        "dst": m_cp.group(1),
+                        "overwrite_ok": "روی همان فایل" in command}
+        if ("حجم" in command or "چقدر است" in command) and path and "پوشه" not in command:
+            return {"operation": "size", "path": path}
+        if ("چند" in command or "چقدر" in command) and "پوشه" in command:
+            m_fd = None
+            import re as _re_fd
+
+            m_fd = _re_fd.search(r"پوشه\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_fd:
+                return {"operation": "folderstats", "folder": m_fd.group(1)}
+        if "بساز" in command and "پوشه" in command:
+            import re as _re_mk
+
+            m_mk = _re_mk.search(r"پوشه\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_mk:
+                return {"operation": "mkdir", "folder": m_mk.group(1)}
         # R65 P6 — MOVE: «فایل X را به Y جابجا کن» — both paths ride from
         # the sentence; the destination-after-«به» is the SECOND path.
         if "جابجا" in command and path:

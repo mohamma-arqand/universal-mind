@@ -205,6 +205,26 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
             if count > 10:
                 lines.append(f"  … و {_fa_num(count - 10)} مورد دیگر")
             return "\n".join(lines)
+        # R67 P4 — «حجم فایل X چقدر است؟»: the real size, human-readable.
+        if result.get("operation") == "size" or ("bytes" in result and "human" in result):
+            return (f"فایل «{result.get('path', '')}» {result.get('human', '')} است "
+                    f"({_fa_num(result.get('bytes', 0))} بایت).")
+        # R67 P5 — «در پوشه X چند فایل هست؟»: the real count.
+        if "folder" in result and "files" in result and "dirs" in result:
+            return (f"پوشه «{result.get('folder', '')}»: "
+                    f"{_fa_num(result.get('files', 0))} فایل و "
+                    f"{_fa_num(result.get('dirs', 0))} پوشه "
+                    f"({_fa_num(result.get('bytes', 0))} بایت).")
+        # R67 P6 — «پوشه X را بساز».
+        if result.get("operation") == "mkdir" and "folder" in result:
+            return f"پوشه «{result.get('folder', '')}» ساخته شد."
+        # R67 P2 — rename: both names.
+        if result.get("operation") == "rename" and "src" in result and "dst" in result:
+            return (f"نام عوض شد: «{result.get('src', '')}» → «{result.get('dst', '')}».")
+        # R67 P3 — copy: the source survives.
+        if result.get("operation") == "copy" and "src" in result and "dst" in result:
+            return (f"کپی شد: «{result.get('src', '')}» → «{result.get('dst', '')}» "
+                    f"({_fa_num(result.get('bytes', 0))} بایت) — فایل اولی سر جایش است.")
         # R65 P6 — «فایل X را به Y جابجا کن»: both paths named.
         if "dst" in result and "src" in result:
             return (f"جابجا شد: «{result.get('src', '')}» → «{result.get('dst', '')}» "

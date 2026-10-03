@@ -321,6 +321,13 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("را با جایگزین کن", "textfile"),
     ("عوض کن", "textfile"),
     ("جابجا کن", "textfile"),  # R65 P6
+    ("نام فایل", "textfile"),     # R67 P2 — «نام فایل X را عوض کن به Y»
+    ("کپی کن", "textfile"),       # R67 P3 — «فایل X را به Y کپی کن»
+    ("حجم فایل", "textfile"),     # R67 P4
+    ("حجمش چقدر", "textfile"),
+    ("در پوشه", "filesearch"),     # R67 P5 — «در پوشه X چند فایل هست؟»
+    ("پوشه", "textfile"),          # R67 P6 — «پوشه X را بساز» (bare پوشه word,
+                                   # the params layer disambiguates by verb)
     ("جابجایی کن", "textfile"),
     ("جایگزین کن", "textfile"),
     # R59 P2 — UNIT CONVERSION: «۱۰ کیلومتر چند مایل است؟». The unit words
@@ -484,6 +491,13 @@ def route(command: str) -> PersianRoute:
     # answer). When the sentence names a percent, compute steps aside.
     if "data" in matched and "درصد" in lowered:
         matched.pop("compute", None)
+
+    # R67 P3 — FILE COPY OWNS ITS VERB: «فایل X را به Y کپی کن» — the
+    # «کپی» word pulls clipboard into the chain, but with a REAL file path
+    # the copy is a FILE operation (the clipboard's «empty text» refusal
+    # turned the run red while textfile had the answer).
+    if "textfile" in matched and "کپی" in lowered:
+        matched.pop("clipboard", None)
 
     # R65 P7 — THE SCALAR-OP INTENT OWNS ITS QUESTION: «جذر ۱۶ چنده؟» —
     # «چنده؟» pulls compute into the chain, but جذر belongs to the data

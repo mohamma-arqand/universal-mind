@@ -186,6 +186,81 @@ class TextFileTool:
         return {"ok": True, "src": str(s), "dst": str(d),
                 "bytes": d.stat().st_size, "error": ""}
 
+    def rename(self, src: str, dst: str, *, overwrite_ok: bool = False) -> dict[str, Any]:
+        """R67 P2 — «نام فایل X را عوض کن به Y»: a REAL rename.
+
+        The delete law applies (a rename removes the old NAME): an
+        existing destination needs the operator's continue («روی همان
+        فایل»); the source must exist; both names are in the answer.
+        """
+        return self.move(src, dst, overwrite_ok=overwrite_ok)
+
+    def copy(self, src: str, dst: str, *, overwrite_ok: bool = False) -> dict[str, Any]:
+        """R67 P3 — «فایل X را به Y کپی کن»: a REAL copy — the source survives.
+
+        An existing destination needs the operator's continue (a copy
+        over a real file would destroy it); both paths are named.
+        """
+        s, d = Path(src), Path(dst)
+        if self._WRITE_FORBIDDEN.search(str(d)) or self._WRITE_FORBIDDEN.search(str(s)):
+            return {"ok": False, "error": self._write_refusal(str(d)), "kind": "protected"}
+        if not s.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{src}» پیدا نکردم — مسیر را دقیق بده."}
+        if d.exists() and not overwrite_ok:
+            return {"ok": False, "kind": "exists",
+                    "error": ("مقصد «{dst}» از قبل هست — کپی روی آن بنویس؟ "
+                              "بگو «روی همان فایل X را به Y کپی کن» تا انجام شود.").format(dst=dst)}
+        try:
+            d.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+
+            shutil.copy2(s, d)
+        except OSError as exc:
+            return {"ok": False, "error": f"کپی نشد: {exc}", "kind": "io"}
+        return {"ok": True, "src": str(s), "dst": str(d),
+                "bytes": d.stat().st_size, "error": ""}
+
+    def file_size(self, path: str) -> dict[str, Any]:
+        """R67 P4 — «حجم فایل X چقدر است؟»: the REAL size, human-readable."""
+        s = Path(path)
+        if not s.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{path}» پیدا نکردم — مسیر را دقیق بده."}
+        if not s.is_file():
+            return {"ok": False, "kind": "notfile",
+                    "error": f"«{path}» فایل نیست — حجم پوشه را جدا بپرس."}
+        n = s.stat().st_size
+        human = f"{n / 1024 / 1024:.1f} مگابایت" if n >= 1024 * 1024 else (
+            f"{n / 1024:.1f} کیلوبایت" if n >= 1024 else f"{n} بایت")
+        return {"ok": True, "path": str(s), "bytes": n, "human": human, "error": ""}
+
+    def folder_stats(self, folder: str) -> dict[str, Any]:
+        """R67 P5 — «در پوشه X چند فایل هست؟»: the REAL count + size."""
+        src = Path(folder)
+        if not src.exists() or not src.is_dir():
+            return {"ok": False, "kind": "missing",
+                    "error": f"پوشه‌ای در «{folder}» پیدا نکردم — مسیر را دقیق بده."}
+        files = [p for p in src.iterdir() if p.is_file()]
+        dirs = [p for p in src.iterdir() if p.is_dir()]
+        total = sum(p.stat().st_size for p in files)
+        return {"ok": True, "folder": str(src), "files": len(files),
+                "dirs": len(dirs), "bytes": total, "error": ""}
+
+    def mkdir(self, folder: str) -> dict[str, Any]:
+        """R67 P6 — «پوشه X را بساز»: a REAL folder, parents included."""
+        d = Path(folder)
+        if self._WRITE_FORBIDDEN.search(str(d)):
+            return {"ok": False, "error": self._write_refusal(str(d)), "kind": "protected"}
+        if d.exists():
+            return {"ok": False, "kind": "exists",
+                    "error": f"پوشه «{folder}» از قبل هست."}
+        try:
+            d.mkdir(parents=True, exist_ok=False)
+        except OSError as exc:
+            return {"ok": False, "error": f"ساخته نشد: {exc}", "kind": "io"}
+        return {"ok": True, "folder": str(d), "error": ""}
+
     def list_texts(self, folder: str) -> dict[str, Any]:
         src = Path(folder)
         if not src.exists() or not src.is_dir():
@@ -261,6 +336,43 @@ class TextFileToolConnector:
                 return ConnectorResult(ok=False, output=None, error=str(out["error"]))
             return ConnectorResult(ok=True, output={
                 k: v for k, v in out.items() if k not in ("ok", "error")})
+        # R67 P2-P6 — the new file operations ride the same connector
+        if operation == "rename":
+            out = self._tool.rename(
+                str(params.get("path", "")).strip(),
+                str(params.get("dst", "")).strip(),
+                overwrite_ok=bool(params.get("overwrite_ok", False)))
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "rename", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
+        if operation == "copy":
+            out = self._tool.copy(
+                str(params.get("path", "")).strip(),
+                str(params.get("dst", "")).strip(),
+                overwrite_ok=bool(params.get("overwrite_ok", False)))
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "copy", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
+        if operation == "size":
+            out = self._tool.file_size(str(params.get("path", "")).strip())
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "size", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
+        if operation == "folderstats":
+            out = self._tool.folder_stats(str(params.get("folder", params.get("path", ""))).strip())
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")})
+        if operation == "mkdir":
+            out = self._tool.mkdir(str(params.get("folder", params.get("path", ""))).strip())
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={"operation": "mkdir", **{
+                k: v for k, v in out.items() if k not in ("ok", "error")}})
         if operation == "list":
             folder = str(params.get("path", "")).strip()
             if not folder:
