@@ -387,8 +387,11 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
                         "overwrite_ok": "روی همان فایل" in command}
         if ("حجم" in command or "چقدر است" in command) and path and "پوشه" not in command:
             return {"operation": "size", "path": path}
-        # R70 P2 — «در فایل X چند کلمه هست؟»: the word count.
-        if "کلمه" in command and path:
+        # R70 P2 — «در فایل X چند کلمه هست؟»: the word count. THE «چند» IS
+        # THE MARKER: «کلمه A را با B عوض کن» is a REPLACE (R64-P7) — the
+        # bare «کلمه» word must never steal it (the seal run caught the
+        # replace answering with a word count).
+        if "کلمه" in command and "چند" in command and "عوض" not in command and path:
             return {"operation": "wordcount", "path": path}
         if ("چند" in command or "چقدر" in command) and "پوشه" in command:
             m_fd = None
