@@ -67,9 +67,14 @@ def main() -> int:
           r2.get("ok") is True and "حذف شد" in r2.get("agent_report", "")
           and not alive2)
 
-    # 3-4 — the chart no-data law on every kind. The BARE ask runs FIRST:
-    # a data-carrying chart earlier in the probe would arm the anaphora
-    # store and «نمودارش کن» would legitimately redraw THAT series.
+    # 3-4 — the chart no-data law on every kind. The BARE ask runs with a
+    # CLEAN anaphora store: in the verify run the full test suite has
+    # already drawn data-carrying charts, and «نمودارش کن» would
+    # legitimately redraw THAT series. The probe clears the subject store
+    # (an honest fresh-process measurement, named here).
+    from universal_mind.persian_router import _ANAPHORA_SUBJECT
+
+    _ANAPHORA_SUBJECT.clear()
     r3 = route_and_run("نمودارش کن")
     check(3, "a bare chart ask without data is a named refusal",
           r3.get("ok") is False and "بدون داده" in r3.get("agent_report", ""))

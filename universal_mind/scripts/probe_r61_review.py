@@ -106,10 +106,15 @@ def main() -> int:
     if m:
         sid = m.group(1).translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789"))
         before = {s.schedule_id for s in list_schedules()}
+        # R66-P1 migrated: the bare ask REFUSES (delete law); the
+        # confirmation removes exactly that row.
         r11 = report(f"یادآوری {sid} را حذف کن")
+        mid = {s.schedule_id for s in list_schedules()}
+        r11b = report(f"یادآوری {sid} را حذف کن — تأیید کن")
         after = {s.schedule_id for s in list_schedules()}
         check(11, "deletion by number removes exactly that row",
-              "حذف شد" in r11 and (before - after) == {int(sid)})
+              "تأیید" in r11 and mid == before
+              and "حذف شد" in r11b and (before - after) == {int(sid)})
     else:
         check(11, "deletion by number removes exactly that row", False)
     r12 = report("همه یادآوریها را حذف کن")

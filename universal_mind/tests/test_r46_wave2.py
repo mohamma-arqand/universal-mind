@@ -62,7 +62,10 @@ class TestSmartRetry:
         db = _fresh_db(monkeypatch, tmp_path)
         from universal_mind.persian_router import route_and_run
 
-        RunHistory().record("نمودار ستونی از هیچ چیز بکش", ["chart"], False,
+        # R66-P2 migrated: a dataless chart is a NAMED refusal now — a
+        # retry must ride a run that CAN succeed, so the seeded failure
+        # carries real data («ستونی» names bar; the numbers are real).
+        RunHistory().record("نمودار ستونی از ۳ و ۷ بکش", ["chart"], False,
                             outcome_class="heuristic")
         r = route_and_run("دوباره امتحان کن")
         assert r["ok"] is True
