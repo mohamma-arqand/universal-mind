@@ -875,11 +875,31 @@ def route_and_run(
                                      "«یادآورهای من» شماره‌ها را نشان می‌دهد."),
                     "_registry": registry or ToolRegistry(),
                 }
+            # R66 P1 — THE DELETE LAW COVERS THE SINGLE DELETE TOO (the
+            # live sweep caught «یادآوری ۶۸ را حذف کن» destroying the
+            # operator's REAL reminder with no confirmation — the S4 gate
+            # armed only the bulk shape). The single delete names WHAT
+            # will go and arms only on an explicit «تأیید کن».
+            _hit = next((s for s in rows if s.schedule_id == int(_id_fa)), None)
+            _hit_txt = str(_hit.command)[:40] if _hit else _del_id.group(1)
+            if "تأیید" not in _body:
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"pending_delete": int(_id_fa)},
+                    "agent_report": (
+                        f"یادآوری شمارهٔ {_del_id.group(1)} («{_hit_txt}») حذف می‌شود — "
+                        "برای حذفِ واقعی صریح بگو «یادآوری {_fa_id} را حذف کن — تأیید کن». "
+                        "بدون تأیید، هیچی پاک نمی‌کنم."
+                    ).format(_fa_id=_del_id.group(1).translate(_FA)),
+                    "_registry": registry or ToolRegistry(),
+                }
             delete_schedule(int(_id_fa))
             return {
                 "ok": True, "command": command, "route": ["scheduler"],
                 "result": {"deleted": int(_id_fa)},
-                "agent_report": f"یادآوری شمارهٔ {_del_id.group(1)} حذف شد.",
+                "agent_report": (
+                    f"یادآوری شمارهٔ {_del_id.group(1)} («{_hit_txt}») حذف شد."
+                ),
                 "_registry": registry or ToolRegistry(),
             }
 

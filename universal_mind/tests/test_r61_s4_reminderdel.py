@@ -54,9 +54,14 @@ class TestDeleteById:
                     break
         assert m, "probe reminder not numbered in listing"
         sid = m.group(1).translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789"))
+        # R66-P1 migrated: a single delete is armed only by «تأیید کن»
+        # (the delete law covers the single shape too).
         out = route_and_run(f"یادآوری {sid} را حذف کن")
+        assert out.get("ok") is False  # the bare ask refuses, row intact
+        assert any(s.schedule_id == int(sid.translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789"))) for s in _real_rows())
+        out = route_and_run(f"یادآوری {sid} را حذف کن — تأیید کن")
         assert out.get("ok") is True
-        assert f"شمارهٔ {sid}" in str(out.get("agent_report", "")).replace("۰", "۰") or "حذف شد" in out["agent_report"]
+        assert "حذف شد" in out["agent_report"]
         after = {s.schedule_id for s in _real_rows()}
         assert int(sid) not in after
         assert before - after == {int(sid)}  # NOTHING else was touched
