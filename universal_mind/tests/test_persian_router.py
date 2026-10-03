@@ -186,7 +186,7 @@ class TestVisionIntentDisambiguation:
     must not fire in the same sentence and pollute the route."""
 
     def test_analysis_phrase_does_not_route_image_production(self) -> None:
-        payload = route_and_run("نمودار خطی بساز و تحلیل تصویرش کن")
+        payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و تحلیل تصویرش کن")
         assert payload["route"] == ["chart", "vision"]  # no 'image' producer
         assert payload["ok"] is True
 
@@ -203,7 +203,7 @@ class TestPlannerIntegration:
     def test_backwards_words_get_the_right_order(self) -> None:
         """«گزارشش کن و نمودار بساز» — pdf said FIRST still runs AFTER chart,
         because the planner reorders by real needs, not sentence order."""
-        payload = route_and_run("گزارشش کن و نمودار خطی بساز")
+        payload = route_and_run("گزارشش کن و نمودار خطی از ۲ و ۵ و ۹ بساز")
         assert payload["route"] == ["chart", "pdf"]
         assert payload["ok"] is True
         # the synthesis really happened (the flow is recorded)
@@ -211,7 +211,7 @@ class TestPlannerIntegration:
 
     def test_explicit_operation_survives_the_planner(self) -> None:
         """«فاکتور بساز و نمودارش کن» keeps the invoice operation."""
-        payload = route_and_run("فاکتور بساز و نمودار خطی بساز")
+        payload = route_and_run("فاکتور بساز و نمودار خطی از ۲ و ۵ و ۹ بساز")
         assert payload["ok"] is True
         assert payload["extracted_params"]["pdf"]["operation"] == "invoice"
 

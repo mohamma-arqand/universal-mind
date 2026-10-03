@@ -77,7 +77,11 @@ class TestOcrFlow:
         syn = orchestrate(
             real_tool_registry(), ["chart", "ocr"],
             connector_factory=real_connector_factory, flow=True,
-            command="نمودار بساز و متنش را بخوان",
+            command="نمودار از ۲ و ۵ و ۹ بساز و متنش را بخوان",
+            # R63: the chart step carries the sentence's real numbers
+            # (the flow layer does not re-extract them).
+            capability_params={"chart": {"operation": "line",
+                                         "series": {"داده": [2, 5, 9]}}},
         )
         assert syn.ok is True
         assert any("→ متنخوان" in f for f in syn.output["flows"])

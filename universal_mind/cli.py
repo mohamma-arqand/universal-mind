@@ -630,7 +630,23 @@ def _cmd_run(args: argparse.Namespace) -> int:
             )
         )
 
-    syn = orchestrate(registry, capabilities, connector_factory=real_connector_factory)
+    # R63 — the --params the operator passed REACH the capabilities (the
+    # sweep's red test caught them parsed-then-dropped: the chart always
+    # drew the silent default, so the bug was invisible until the
+    # honesty law killed that default).
+    cap_params: dict[str, dict] = {}
+    for cap in capabilities:
+        if cap in params:
+            inner = params[cap]
+            if isinstance(inner, dict):
+                cap_params[cap] = dict(inner)
+    if not cap_params and params:
+        # a FLAT params object applies to the single/first capability
+        cap_params[capabilities[0]] = dict(params)
+
+    syn = orchestrate(registry, capabilities,
+                      connector_factory=real_connector_factory,
+                      capability_params=cap_params or None)
     output = {
         "ok": syn.ok,
         "capabilities": capabilities,

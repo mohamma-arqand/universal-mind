@@ -48,7 +48,7 @@ class TestPdfReadFlow:
         back through the real pypdf engine."""
         from universal_mind.persian_router import route_and_run
 
-        payload = route_and_run("نمودار خطی بساز و گزارشش کن و پی دی افش را بخوان")
+        payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و گزارشش کن و پی دی افش را بخوان")
         assert payload["route"] == ["chart", "pdf", "pdfreader"]
         assert payload["ok"] is True
         flows = payload["flows"]
