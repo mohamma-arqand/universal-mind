@@ -198,6 +198,9 @@ class TestDataflowSynthesis:
             _real_registry(), ["chart", "clipboard"],
             connector_factory=real_connector_factory, flow=True,
             command="نمودار بساز و در کلیپبورد بگذار",
+            # R64: real data for the chart — no silent series (R63 law).
+            capability_params={"chart": {"operation": "line",
+                                         "series": {"داده": [2, 5, 9]}}},
         )
         if syn.ok is True:
             assert any("→ clipboard" in f and "line.png" in f for f in syn.output["flows"])
