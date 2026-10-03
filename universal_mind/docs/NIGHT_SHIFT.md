@@ -1,4 +1,4 @@
-# شیفت شب — NIGHT SHIFT (R73)
+# شیفت شب — NIGHT SHIFT (R73) — ✅ مهر شد
 
 > **وضعیت R72**: ✅ مهر شد (53e79d9؛ verify READY ۶/۶، overall=pass، ۲۶۲۹ تست/۰ شکست، pin 399d243؛ sysstatus ۹۷x، compute ۲۰x).
 

@@ -314,3 +314,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-04 00:10] run started (lock acquired)
 - [2026-10-04 00:10] run started (lock acquired)
 - [2026-10-04 00:10] run started (lock acquired)
+- [2026-10-04 00:30] run started (lock acquired)
+- [2026-10-04 00:30] run started (lock acquired)
+- [2026-10-04 00:30] run started (lock acquired)
+- [2026-10-04 12:40] ★ R73 SEALED — verify: 6/6 GREEN، exit=0. مهر سه‌ران: ران-۱ سایهٔ متغیر (_kb محلی تابعِ سطح-ماژول را میپوشاند؛ ۳۱ تست سقوط — یک سایه، ۳۱ مصدوم؛ ddabdbf)؛ ران-۲ گیتِ وابسته-به-تاریخ در probe_r60 (یکشنبهها پاسخِ صادق «امروز است» بود ولی probe فقط «N روز مانده» را میپذیرفت — probe خودش هفته‌ای یکبار میشکست؛ ae105c4)؛ ران-۳ READY. قابلیت ۲۹م: html-report.
