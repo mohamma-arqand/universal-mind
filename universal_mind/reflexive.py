@@ -503,6 +503,108 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
             f"{_fa_num(n)} اجرا ثبت شده؛ {_fa_num(okc)} موفق ({_fa_num(round(100 * okc / n) if n else 0)}٪).",
         )
 
+    # R68 P3 — «وضعیت کلی من چطور است؟»: the DAY REVIEW. The operator
+    # asks about THEMSELVES (today's real activity), not the goal board —
+    # the sweep caught it answering with old scheduled goals. Real counts
+    # from run_history (today), the day's top routes, and the last command.
+    if ("وضعیت کلی" in c or "وضعیت روز" in c) and ("من" in c or "امروز" in c or "چطور" in c):
+        from datetime import datetime as _dt
+
+        _today = _dt.now().strftime("%Y-%m-%d")
+        tot = _query(db, f"SELECT COUNT(*) AS n FROM run_history WHERE date(created_at) = '{_today}'")
+        okc = _query(db, f"SELECT COUNT(*) AS n FROM run_history WHERE date(created_at) = '{_today}' AND succeeded = 1")
+        n_tot = int(tot[0]["n"]) if tot else 0
+        n_ok = int(okc[0]["n"]) if okc else 0
+        top = _query(
+            db,
+            f"SELECT route, COUNT(*) AS n FROM run_history "
+            f"WHERE date(created_at) = '{_today}' AND succeeded = 1 AND route != '' "
+            f"GROUP BY route ORDER BY n DESC LIMIT 3")
+        last = _query(
+            db, "SELECT command FROM run_history ORDER BY id DESC LIMIT 1")
+        _pct = round(100 * n_ok / n_tot) if n_tot else 0
+        if n_tot == 0:
+            return _reflex_answer(c, "امروز هنوز کاری برایت انجام ندادهام.")
+        _tops = "، ".join(f"{r['route']} ({_fa_num(r['n'])} بار)" for r in top) if top else ""
+        _last_cmd = str(last[0]["command"])[:40] if last else ""
+        return _reflex_answer(
+            c,
+            f"وضعیت امروز: {_fa_num(n_tot)} فرمان اجرا کردم؛ {_fa_num(n_ok)} موفق ({_fa_num(_pct)}٪)."
+            + (f" بیشتر در: {_tops}." if _tops else ".")
+            + (f" آخرین فرمان: «{_last_cmd}»." if _last_cmd else ""),
+        )
+
+    # R68 P4 — «چه مدت است روشن نیستم؟» / «آخرین بار کی بود؟»: the SINCE-
+    # LAST-ACTIVITY answer from the real clock (the gap between the last
+    # recorded run and now — an honest «من همیشه آمادهام» for an empty
+    # or just-now history).
+    if ("چه مدت" in c or "چقدر وقته" in c or "از کی" in c) and ("روشن" in c or "کار" in c or "بیدار" in c):
+        from datetime import datetime as _dt2
+
+        rows = _query(db, "SELECT created_at FROM run_history ORDER BY id DESC LIMIT 1")
+        if not rows:
+            return _reflex_answer(c, "هنوز چیزی ثبت نشده — الان شروع میکنم.")
+        _last_t = str(rows[0]["created_at"])
+        try:
+            _lt = _dt2.strptime(_last_t[:19], "%Y-%m-%d %H:%M:%S")
+            _gap = (_dt2.now() - _lt).total_seconds()
+        except ValueError:
+            return _reflex_answer(c, "زمان آخرین فعالیت را نخواندم — ولی الان بیدارم.")
+        if _gap < 60:
+            return _reflex_answer(c, f"همین حالا با هم کار میکنیم ({_fa_num(int(_gap))} ثانیه پیش).")
+        if _gap < 3600:
+            return _reflex_answer(c, f"{_fa_num(int(_gap // 60))} دقیقه از آخرین کارمان گذشته.")
+        if _gap < 86400:
+            _hh, _mm = divmod(int(_gap // 3600), 1), int((_gap % 3600) // 60)
+            return _reflex_answer(c, f"{_fa_num(int(_gap // 3600))} ساعت و {_fa_num(_mm)} دقیقه از آخرین کارمان گذشته.")
+        return _reflex_answer(c, f"{_fa_num(int(_gap // 86400))} روز از آخرین کارمان گذشته — دوباره بیدارم.")
+
+    # R68 P5 — «چه چیزهایی بلد نیستی؟»: THE HONEST CONFESSION. The
+    # capability registry is read live (what IS there), and the standing
+    # gaps are named plainly (llm knowledge needs a live model; live
+    # weather/web needs a network; anything unsaid is a «نمیدانم»).
+    if ("بلد نیستی" in c or "نمیتوانی" in c or "نمی‌توانی" in c) and "چی" in c:
+        _REG = (
+            "چیزهایی که نمیتوانم: (۱) پرسشهای دانشیِ عمومی — پاسخشان به یک "
+            "مدل زبانی زنده نیاز دارد و الان وصل نیستم؛ جواب حدسی نمیدهم. "
+            "(۲) هوای همین حالا و هر دادهی بیرونیِ زنده — منبع زنده ندارم؛ "
+            "صادقانه میگویم و راه درست را نشان میدهم. (۳) هر کاری که در "
+            "قابلیتهایم نیست، همان لحاظ «نمیدانم» میگیرد — نه جواب ساختگی."
+        )
+        return _reflex_answer(c, _REG)
+
+    # R68 P6 — «آخرین خطای من چه بود؟»: the LAST FAILED RUN, real from
+    # run_history — what failed and why it failed (the honest post-mortem).
+    if ("آخرین خطا" in c or "آخرین اشتباه" in c) and ("چی" in c or "چه" in c or "بود" in c):
+        rows = _query(
+            db, "SELECT command, route, created_at FROM run_history "
+                "WHERE succeeded = 0 ORDER BY id DESC LIMIT 1")
+        if not rows:
+            return _reflex_answer(c, "هیچ خطای ثبت‌شدهای ندارم — همهی رانها موفق بودهاند.")
+        r0 = rows[0]
+        return _reflex_answer(
+            c,
+            f"آخرین خطا: «{str(r0['command'])[:50]}» (مسیر {r0['route'] or 'نامشخص'}) "
+            f"در {str(r0['created_at'])[:19]} ناموفق بود. «چرا شکست خورد؟» علتش را میپرسم.",
+        )
+
+    # R68 P7 — «مصرف امروزم چطور بوده؟»: today's per-route consumption —
+    # the real count per capability for TODAY only (not the all-time wall).
+    if "مصرف" in c and ("امروز" in c or "امروزم" in c):
+        from datetime import datetime as _dt3
+
+        _today3 = _dt3.now().strftime("%Y-%m-%d")
+        rows = _query(
+            db,
+            f"SELECT route, COUNT(*) AS n FROM run_history "
+            f"WHERE date(created_at) = '{_today3}' AND succeeded = 1 AND route != '' "
+            f"GROUP BY route ORDER BY n DESC LIMIT 8")
+        if not rows:
+            return _reflex_answer(c, "امروز هنوز فرمانی اجرا نشده.")
+        _parts = "، ".join(f"{r['route']}: {_fa_num(r['n'])}" for r in rows)
+        _tot = sum(int(r["n"]) for r in rows)
+        return _reflex_answer(c, f"مصرف امروز ({_fa_num(_tot)} ران موفق): {_parts}.")
+
     # «موفقترین زنجیره/قابلیت کدومه؟» — the real ranking.
     if "کدام" in c or "کدوم" in c or "موفقترین" in c:
         rows = _query(
