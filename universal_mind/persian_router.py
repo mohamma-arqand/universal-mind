@@ -913,6 +913,48 @@ def route_and_run(
                 "_registry": registry or ToolRegistry(),
             }
 
+        # R66 P4 — «یادآوری شمارهٔ N را نشان بده»: the SINGLE-REMINDER VIEW.
+        # The listing shows everything; the operator naming ONE number gets
+        # that row alone (id, text, and the fire time) — and an unknown id is
+        # an honest refusal, never a wrong row.
+        _view_id = _re.search(r"یادآوری\s+شمارهٔ?\s+([۰-۹0-9]+)\s+را\s+نشان\s+بده", _body)
+        if _view_id is None:
+            _view_id = _re.search(r"یادآور\s+شمارهٔ?\s+([۰-۹0-9]+)\s+را\s+نشان\s+بده", _body)
+        if _view_id is not None and "حذف" not in _body:
+            _vid = int(_view_id.group(1).translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")))
+            rows = list_schedules()
+            _row = next((s for s in rows if s.schedule_id == _vid), None)
+            if _row is None:
+                return {
+                    "ok": False, "command": command, "route": ["scheduler"],
+                    "result": {"not_found": _vid},
+                    "agent_report": (
+                        f"یادآوری شمارهٔ {_view_id.group(1)} پیدا نکردم — "
+                        "«یادآورهای من» شماره‌ها را نشان می‌دهد."
+                    ),
+                    "_registry": registry or ToolRegistry(),
+                }
+            _fa_n = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+            _fire = ""
+            if _row.hour_of_day or _row.every_minutes:
+                _fire = (
+                    f"ساعت {str(_row.hour_of_day).translate(_fa_n)}:۰۰"
+                    if _row.hour_of_day
+                    else f"هر {str(_row.every_minutes).translate(_fa_n)} دقیقه"
+                )
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"id": _vid, "command": _row.command,
+                           "every_minutes": _row.every_minutes,
+                           "hour_of_day": _row.hour_of_day, "active": _row.active},
+                "agent_report": (
+                    f"یادآوری شمارهٔ {_view_id.group(1)}: «{_row.command}»"
+                    + (f" — {_fire}" if _fire else "")
+                    + (" — فعال" if _row.active else " — غیرفعال")
+                ),
+                "_registry": registry or ToolRegistry(),
+            }
+
         # R61-S4 — «یادآوری ۶۳ را حذف کن»: deletion BY ID, the operator's most
         # literal form (the list shows rows; the row's number is what they hold).
         _del_id = _re.search(r"یادآور[^۰-۹0-9]*([۰-۹0-9]+)\s*را حذف", _body)
