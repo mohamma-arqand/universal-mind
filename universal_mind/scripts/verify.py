@@ -194,6 +194,7 @@ PROBES = [
     "probe_r72_perf.py",
     "probe_r73_visual.py",
     "probe_r74_files.py",
+    "probe_r75_clipboard.py",
 ]
 
 

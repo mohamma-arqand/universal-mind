@@ -144,7 +144,12 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
         return _say(c, "خدانگهدار! منتظر بازگشتت هستم — هر وقت فرمان داشتی، من اینجام.")
     # Smalltalk prefixes — answer briefly rather than routing to nothing.
     if c.startswith("سلام ") or "خوبی؟" in c:
-        return _say(c, "سلام! فرمانت را بگو.")
+        # R75 P1 — A BUILD VERB IS NOT SMALL TALK: «سلام به همه را کپی کن»
+        # starts with «سلام» but ASKS for a clipboard write. Any operation
+        # verb means the sentence is work, never a greeting.
+        if not any(v in c for v in ("کپی", "بساز", "بفرست", "بگذار", "بنویس",
+                                    "بخوان", "حذف", "جابجا", "تبدیل")):
+            return _say(c, "سلام! فرمانت را بگو.")
     return None
 
 

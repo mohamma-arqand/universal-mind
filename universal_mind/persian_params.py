@@ -753,25 +753,53 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
     # goal report as its text, filled by the flow layer)
 
     if capability == "clipboard":
-        # «بگذار/کپی کن» = write (the flow layer fills the text with what was
-        # made); «بخوان/کپی چی توشه» = read. Default stays read (honest no-op
-        # unless the sentence says otherwise).
-        if "بخوان" in command or "چه چیزی" in command or "چیه" in command:
+        # «بخوان/نشان بده/چه چیزی» = read; «بگذار/کپی/قرار بده/بنویس» = write.
+        # R75 P2 — THE TEXT RIDES FROM THE SENTENCE: «متن «X» را در کلیپبورد
+        # کپی کن» / «بگذار: Y» / «X را کپی کن» — the quoted or trailing text
+        # is the payload, never an empty write.
+        import re as _re_cb
+
+        if any(w in command for w in ("بخوان", "چه چیزی", "چیه", "توی کلیپبورد")):
             return {"operation": "read"}
+        if "نشان" in command and "کپی" not in command:
+            return {"operation": "read"}
+        _payload = ""
+        # «متن «X» را ... کپی/بگذار» — the guillemet-quoted text
+        _m_q = _re_cb.search(r"«([^»]+)»", command)
+        if _m_q:
+            _payload = _m_q.group(1).strip()
+        # «بگذار: X» / «بنویس: X» — the colon payload
+        if not _payload:
+            _m_colon = _re_cb.search(r"(?:بگذار|بنویس)\s*:\s*(.+)$", command)
+            if _m_colon:
+                _payload = _m_colon.group(1).strip()
+        # «X را کپی کن» — the leading segment before را کپی
+        if not _payload:
+            _m_lead = _re_cb.search(r"^(?:متن\s+)?(.+?)\s+را?\s+(?:در کلیپبورد\s+)?(?:رو\s+)?(?:کپی|بگذار|قرار بده)\s+کن", command)
+            if _m_lead and _m_lead.group(1).strip() and "فایل" not in _m_lead.group(1):
+                _payload = _m_lead.group(1).strip()
+        # R75 P2b — «آدرس/مسیر فایل X را کپی کن»: the PATH is the payload,
+        # never the file's content.
+        _m_addr = _re_cb.search(r"(?:آدرس|مسیر)\s+فایل\s+([A-Za-z]:[^\s«»]+)", command)
+        if _m_addr:
+            return {"operation": "write", "text": _m_addr.group(1).strip()}
         if "بگذار" in command or "کپی" in command or "قرار بده" in command:
+            if _payload:
+                return {"operation": "write", "text": _payload}
             return {"operation": "write"}  # text comes from the flow
         # R66 P7 — «یادداشت X را بنویس»: a note-taking sentence is a
         # clipboard WRITE (the spoken text rides in the params; the
         # note really lands on the clipboard, never a silent read).
         if ("بنویس" in command or "بنویسم" in command) and (
                 "یادداشت" in command or "نوت" in command):
-            import re as _re_p7
-
-            _m_note = _re_p7.search(
+            _m_note = _re_cb.search(
                 r"یادداشت\s+(?:امروز\s+)?(.+?)\s*(?:را|رو)?\s*بنویس", command)
             if _m_note and _m_note.group(1).strip():
                 return {"operation": "write",
                         "text": _m_note.group(1).strip()}
+            return {"operation": "write"}
+        if "بنویس" in command and _payload:
+            return {"operation": "write", "text": _payload}
         return {"operation": "read"}
 
     if capability == "sysstatus":

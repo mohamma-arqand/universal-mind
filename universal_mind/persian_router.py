@@ -562,8 +562,32 @@ def route(command: str) -> PersianRoute:
     # «کپی» word pulls clipboard into the chain, but with a REAL file path
     # the copy is a FILE operation (the clipboard's «empty text» refusal
     # turned the run red while textfile had the answer).
-    if "textfile" in matched and "کپی" in lowered:
-        matched.pop("clipboard", None)
+    # R75 P1 — THE COPY FAMILY, DECIDED BY WHAT IS IN THE SENTENCE:
+    #   a REAL path + «به»   -> FILE COPY (textfile owns it; R67 P3)
+    #   آدرس/مسیر, or a path with no «به» -> CLIPBOARD write of the PATH
+    #   quoted text / «متن»  -> CLIPBOARD write of the TEXT
+    # The CLASS of copy follows the sentence's object, never the bare verb.
+    import re as _re_path75
+
+    _has_path75 = _re_path75.search(r"[A-Za-z]:[\\/]", command) is not None
+    if "کپی" in lowered and _has_path75 and "به" in lowered \
+            and "آدرس" not in lowered and "مسیر" not in lowered:
+        matched.pop("clipboard", None)  # the FILE COPY owns it (R67 P3)
+    elif "کپی" in lowered and _has_path75:
+        # a path with no «به» destination, or آدرس/مسیر: the PATH rides to
+        # the clipboard; textfile only ever read the file.
+        matched.pop("textfile", None)
+    elif "کپی" in lowered and ("«" in lowered or "متن" in lowered):
+        # quoted TEXT: the clipboard write owns the ask; textfile (pulled
+        # in by «متن») and conversational step aside.
+        matched.pop("textfile", None)
+        for steal in ("conversational",):
+            matched.pop(steal, None)
+    elif "کپی" in lowered and "clipboard" in matched:
+        # R75 P1 — «X را کپی کن» (no path, no quote): still a CLIPBOARD
+        # write of the leading text — textfile has nothing to read here and
+        # only buries the ask with a move-to-empty error.
+        matched.pop("textfile", None)
 
     # R67 P6 — A FOLDER VIEW IS filesearch ALONE: «پوشه دانلودها را نشان
     # بده» — the new bare «پوشه» word pulls textfile into the chain and its
