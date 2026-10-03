@@ -36,8 +36,15 @@ class TestOperatorFromTheSentence:
 
 class TestTheQuestionRoutes:
     def test_arithmetic_questions_reach_compute(self) -> None:
-        for cmd in ("جمع ۲ و ۵ چنده؟", "۵ منهای ۳ چنده؟", "۲ به توان ۱۰ چنده؟"):
+        for cmd in ("جمع ۲ و ۵ چنده؟", "۵ منهای ۳ چنده؟"):
             assert "compute" in route(cmd).capabilities, cmd
+
+    def test_the_scalar_intents_own_their_questions(self) -> None:
+        # R65 P7 — توان/جذر/ضرب/تقسیم belong to the data suite's scalar_op
+        # ALONE (compute's question-word never enters their chain).
+        for cmd in ("۲ به توان ۱۰ چنده؟", "جذر ۱۶ چنده؟", "ضرب ۳ در ۴ چنده؟"):
+            caps = route(cmd).capabilities
+            assert "data" in caps and "compute" not in caps, cmd
 
 
 class TestLiveAnswers:
