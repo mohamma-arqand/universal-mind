@@ -33,7 +33,7 @@ def main() -> int:
     os.environ["UM_MUTE"] = "1"
     from universal_mind.database_suite import DatabaseSuite
     from universal_mind.persian_router import route_and_run
-    from universal_mind.scheduler import list_schedules, register_one_shot, delete_schedule
+    from universal_mind.scheduler import list_schedules, delete_schedule
     from universal_mind.system_status_tool import SystemStatusTool
 
     db = DatabaseSuite(persistent=True)

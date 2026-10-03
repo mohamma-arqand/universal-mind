@@ -37,6 +37,10 @@ class SystemStatusTool:
     name = "sysstatus"
     capability = "system_status"
 
+    # R63-P6 — secret-looking names are masked (the honesty law).
+    _SECRET_MARKERS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD",
+                       "CREDENTIAL", "API", "PRIVATE")
+
     # R72 — VITALS CACHE: the machine's vitals change on the order of
     # seconds; a short TTL makes a re-ask cheap (the sweep profiled 16
     # subprocesses per status - a global lock). Any LISTENING question
