@@ -182,6 +182,7 @@ PROBES = [
     "probe_r60_sweep.py",
     "probe_r61_review.py",
     "probe_r62_sweep.py",
+    "probe_r63_sweep.py",
 ]
 
 
