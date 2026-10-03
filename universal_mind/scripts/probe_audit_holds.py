@@ -67,8 +67,8 @@ def check_honest_zero_excellence() -> bool:
     from universal_mind.run_history import ChainAdvisor, RunHistory
 
     history = RunHistory(DatabaseSuite())
-    history.record("نمودار بساز", ["chart"], True, excellence=0.9)
-    history.record("نمودار بساز و گزارشش کن", ["chart", "pdf"], True, excellence=0.0)
+    history.record("نمودار از ۲ و ۵ و ۹ بساز", ["chart"], True, excellence=0.9)
+    history.record("نمودار از ۲ و ۵ و ۹ بساز و گزارشش کن", ["chart", "pdf"], True, excellence=0.0)
     hint = ChainAdvisor(history).completion_hint("نمودار خطی بساز")
     ok = hint is not None and "۱۰۰٪" not in hint and "بدون داوری" in hint
     print(f"  hint: {hint[:70] if hint else None}")
@@ -87,14 +87,14 @@ def check_repair_binds_its_own_command() -> bool:
     ctx: AbstractContextManager[object] = mock_patch.object(agent_mod, "_store", lambda: suite)
     with ctx:
         started = agent_mod.start_goal(
-            "هدف: اتصال گامها", ("میانگین 4 و 6 را حساب کن", "نمودارش کن")
+            "هدف: اتصال گامها", ("میانگین 4 و 6 را حساب کن", "نمودار از ۲ و ۵ و ۹ کن")
         )
         result = agent_mod.run_goal(started["goal_id"])
     commands = [s.command for s in result.steps]
     ok = (
         result.finished
         and "میانگین 4 و 6 را حساب کن" in commands
-        and "نمودارش کن" in commands
+        and "نمودار از ۲ و ۵ و ۹ کن" in commands
     )
     print(f"  finished: {result.finished} | commands: {len(commands)} distinct")
     return bool(ok)

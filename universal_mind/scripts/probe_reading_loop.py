@@ -63,8 +63,8 @@ def check_chain_reads_its_own_chart() -> bool:
     syn = orchestrate(
         real_tool_registry(), ["chart", "ocr"],
         connector_factory=real_connector_factory, flow=True,
-        command="نمودار بساز و متنش را بخوان",
-        capability_params={"chart": {"operation": "line", "title": "SALES REPORT"}},
+        command="نمودار از ۲ و ۵ و ۹ بساز و متنش را بخوان",
+        capability_params={"chart": {"series": {"داده": [2, 5, 9]}, "operation": "line", "title": "SALES REPORT"}},
     )
     ok = syn.ok is True
     flows = syn.output.get("flows", [])
@@ -96,7 +96,7 @@ def check_full_cycle_narrates_in_persian() -> bool:
     from universal_mind.persian_report import persian_report
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و ساختارش را بخوان و متنش را بخوان")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و ساختارش را بخوان و متنش را بخوان")
     report = persian_report(payload)
     ok = payload["ok"] is True
     ok = ok and "ساختار تصویر خوانده شد" in report       # understand

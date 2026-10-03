@@ -37,7 +37,7 @@ def main() -> int:
         from universal_mind.persian_router import route_and_run
 
         # H1 — the real contest: ambiguous kind → the ruling in the report.
-        p = route_and_run("نمودارش کن")
+        p = route_and_run("نمودار از ۲ و ۵ و ۹ کن")
         _ok("the contest ran in the real chain", p.get("ok") is True and "مسابقهی A/B" in str(p.get("ab_ruling")),
             str(p.get("ab_ruling"))[:50])
         _ok("the report announces the ruling", "مسابقهی A/B" in str(p.get("agent_report") or ""))

@@ -27,7 +27,7 @@ def check_make_then_look() -> bool:
     """chart → vision: real OpenCV stats on the chart the chain itself made."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و تحلیل تصویرش کن")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و تحلیل تصویرش کن")
     ok = payload["ok"] is True
     ok = ok and payload["route"] == ["chart", "vision"]
     ok = ok and any("→ بینایی" in f for f in payload["flows"])
@@ -41,7 +41,7 @@ def check_understand_structure() -> bool:
     """chart_structure on the chain's own chart — real understanding."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و ساختارش را بخوان")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و ساختارش را بخوان")
     ok = payload["ok"] is True
     vision_out = payload["result"].get("vision", {})
     ok = ok and isinstance(vision_out, dict) and "dominant_colors" in vision_out
@@ -57,7 +57,7 @@ def check_report_fuses_everything() -> bool:
     """chart → vision → pdf: the report carries BOTH the table and the image."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و تحلیل تصویرش کن و گزارشش کن")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و تحلیل تصویرش کن و گزارشش کن")
     ok = payload["ok"] is True
     ok = ok and payload["route"] == ["chart", "vision", "pdf"]
     ok = ok and any("جدول آمار + نمودار درون گزارش" in f for f in payload["flows"])
@@ -72,7 +72,7 @@ def check_narration_is_fluent_persian() -> bool:
     from universal_mind.persian_report import persian_report
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و ساختارش را بخوان")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و ساختارش را بخوان")
     report = persian_report(payload)
     ok = "ساختار تصویر خوانده شد" in report
     ok = ok and "خطِ بلند" in report

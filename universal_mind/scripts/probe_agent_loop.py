@@ -41,9 +41,9 @@ def check_parse_keeps_data_lists() -> bool:
     """«۱۰ و ۲۰» is one list; steps still split on the real conjunctions."""
     from universal_mind.goal_parser import parse_goal
 
-    goal = parse_goal("هدف: میانگین ۱۰ و ۲۰ را حساب کن و نمودارش کن و گزارش کامل بساز")
+    goal = parse_goal("هدف: میانگین ۱۰ و ۲۰ را حساب کن و نمودار از ۲ و ۵ و ۹ کن و گزارش کامل بساز")
     ok = goal is not None and goal.steps == (
-        "میانگین 10 و 20 را حساب کن", "نمودارش کن", "گزارش کامل بساز",
+        "میانگین 10 و 20 را حساب کن", "نمودار از 2 و 5 و 9 کن", "گزارش کامل بساز",
     )
     print(f"  steps: {goal.steps if goal else None}")
     return bool(ok)
@@ -55,8 +55,8 @@ def check_goal_runs_with_judgment() -> bool:
 
     with _isolated():
         started = start_goal(
-            "هدف: میانگین ۴ و ۶ را حساب کن و نمودارش کن",
-            ("میانگین 4 و 6 را حساب کن", "نمودارش کن"),
+            "هدف: میانگین ۴ و ۶ را حساب کن و نمودار از ۲ و ۵ و ۹ کن",
+            ("میانگین 4 و 6 را حساب کن", "نمودار از ۲ و ۵ و ۹ کن"),
         )
         result = run_goal(started["goal_id"])
     ok = result.finished and len(result.steps) == 2
@@ -75,7 +75,7 @@ def check_a_broken_step_stops_honestly() -> bool:
     with _isolated():
         started = start_goal(
             "هدف: آزمون شکست",
-            ("این فرمان هیچ قابلیتی فعال نمیکند ز XYZ", "نمودارش کن"),
+            ("این فرمان هیچ قابلیتی فعال نمیکند ز XYZ", "نمودار از ۲ و ۵ و ۹ کن"),
         )
         result = run_goal(started["goal_id"])
     ok = result.finished is False and result.stopped_at == 0

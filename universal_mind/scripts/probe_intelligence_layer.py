@@ -31,7 +31,7 @@ def check_lens_ranks_proven_over_unseen() -> bool:
 
     ranked = rank_routes(
         [("data", "chart", "pdf"), ("pdf", "chart", "data")],
-        "نمودار خطی بساز و گزارشش کن",
+        "نمودار خطی از ۲ و ۵ و ۹ بساز و گزارشش کن",
     )
     ok = ranked[0].route == ("data", "chart", "pdf") and ranked[0].score > ranked[1].score
     print(f"  winner: {ranked[0].route} ({ranked[0].score}) vs {ranked[1].route} ({ranked[1].score})")
@@ -79,7 +79,7 @@ def check_gate_dedupes_real_runs() -> bool:
 def check_advice_carries_seeds() -> bool:
     from universal_mind.run_history import ChainAdvisor, RunHistory
 
-    advice, seeds = ChainAdvisor(RunHistory()).advise_with_seeds("نمودار بساز")
+    advice, seeds = ChainAdvisor(RunHistory()).advise_with_seeds("نمودار از ۲ و ۵ و ۹ بساز")
     ok = advice is not None and advice.route and (seeds is None or all(
         isinstance(p, dict) and p for p in seeds.values()
     ))

@@ -59,7 +59,7 @@ def check_the_tick_completes_the_goal() -> bool:
     from universal_mind.scheduler import register, run_due
 
     with _isolated():
-        register("هر ۱۵ دقیقه هدف: میانگین ۴ و ۶ را حساب کن و نمودارش کن")
+        register("هر ۱۵ دقیقه هدف: میانگین ۴ و ۶ را حساب کن و نمودار از ۲ و ۵ و ۹ کن")
         with mock_patch("universal_mind.real_notify.NotifyTool.notify"):
             fired = run_due(max_runs=2)
     entry = fired["fired"][0] if fired["fired"] else {}

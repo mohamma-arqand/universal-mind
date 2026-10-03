@@ -135,7 +135,7 @@ def main() -> int:
         "DELETE FROM schedules WHERE command LIKE '%زنگ بزنم%' AND kind='once'")
 
     # S6 — the report a stranger can use
-    r16 = report("نمودار بکش")
+    r16 = report("نمودار از ۲ و ۵ و ۹ بکش")
     check(16, "the chart report states the file's path and keeps digits Persian",
           "در «" in r16 and ".png" in r16 and " با 1 " not in r16)
 

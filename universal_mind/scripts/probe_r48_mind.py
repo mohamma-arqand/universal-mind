@@ -60,12 +60,12 @@ def main() -> int:
     # ---- the strict judge -------------------------------------------------
     from universal_mind.arete.run_judgment import run_virtue_scores
 
-    bare = run_virtue_scores({"route": ["chart"], "result": {"chart": {"ok": True}}})
+    bare = run_virtue_scores({"route": ["chart"], "result": {"chart": {"series": {"داده": [2, 5, 9]}, "ok": True}}})
     check(1, "COURAGE rejects a bare ok-dict (0.5, not 1.0)",
           abs(bare["courage"] - 0.5) < 1e-9)
 
     real = run_virtue_scores({"route": ["chart"],
-                               "result": {"chart": {"path": "p.png", "bytes": 900}}})
+                               "result": {"chart": {"series": {"داده": [2, 5, 9]}, "path": "p.png", "bytes": 900}}})
     check(2, "COURAGE full virtue for real inspectable work",
           real["courage"] >= 0.999)
 
@@ -83,10 +83,10 @@ def main() -> int:
     with patch.object(DatabaseSuite, "shared_persistent",
                       classmethod(lambda cls: db)):
         slow = run_virtue_scores({"route": ["chart"],
-                                   "result": {"chart": {"path": "p.png", "bytes": 5}},
+                                   "result": {"chart": {"series": {"داده": [2, 5, 9]}, "path": "p.png", "bytes": 5}},
                                    "durations_ms": {"chart": 300_000.0}})
         normal = run_virtue_scores({"route": ["chart"],
-                                    "result": {"chart": {"path": "p.png", "bytes": 5}},
+                                    "result": {"chart": {"series": {"داده": [2, 5, 9]}, "path": "p.png", "bytes": 5}},
                                     "durations_ms": {"chart": 1_000.0}})
     check(3, f"TEMPERANCE learned per-route (slow={slow['temperance']:.2f}, "
              f"normal={normal['temperance']:.2f})",
@@ -105,7 +105,7 @@ def main() -> int:
           bool(q["rows"]))
 
     deep = run_virtue_scores({"route": ["chart", "data"],
-                              "result": {"chart": {"path": "p.png", "bytes": 5},
+                              "result": {"chart": {"series": {"داده": [2, 5, 9]}, "path": "p.png", "bytes": 5},
                                          "data": {"rows": 2}}})
     shallow = run_virtue_scores({"route": ["a", "b", "c", "d", "e"],
                                  "result": {k: {"ok": True} for k in "abcde"}})

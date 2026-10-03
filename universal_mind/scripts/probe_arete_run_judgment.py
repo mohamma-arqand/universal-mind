@@ -27,7 +27,7 @@ def check_dataflow_chart_feeds_pdf() -> bool:
     """One program's real output becomes the next program's input."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و گزارشش کن")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و گزارشش کن")
     ok = payload["ok"] is True
     ok = ok and payload["flows"] == ["chart → pdf (گزارش فارسی با نمودار درونش)"]
     pdf = payload["result"].get("pdf", {})
@@ -40,7 +40,7 @@ def check_arete_judges_the_real_run() -> bool:
     """The four virtues are computed from the run's own data."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("میانگین ۲ و ۴ و ۶ را حساب کن و نمودارش کن")
+    payload = route_and_run("میانگین ۲ و ۴ و ۶ را حساب کن و نمودار از ۲ و ۵ و ۹ کن")
     judgment = payload.get("judgment") or {}
     scores = judgment.get("scores", {})
     print(f"  excellence: {judgment.get('excellence')} | scores: {scores}")
@@ -58,7 +58,7 @@ def check_report_narrates_judgment() -> bool:
     from universal_mind.persian_report import persian_report
     from universal_mind.persian_router import route_and_run
 
-    report = persian_report(route_and_run("نمودار خطی بساز و گزارشش کن"))
+    report = persian_report(route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و گزارشش کن"))
     ok = "🏛" in report and "داوری ARETĒ" in report and "🔗" in report
     first_lines = " / ".join(report.splitlines()[:3])
     print(f"  report: {first_lines[:100]}")

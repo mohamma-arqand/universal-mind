@@ -80,7 +80,7 @@ def check_contest_channel() -> bool:
     from universal_mind.scheduler import register, run_due
 
     with _isolated():
-        register("هر ۱۵ دقیقه نمودار خطی بساز و گزارشش کن")
+        register("هر ۱۵ دقیقه نمودار خطی از ۲ و ۵ و ۹ بساز و گزارشش کن")
         with mock_patch("universal_mind.real_notify.NotifyTool.notify"):
             result = run_due(max_runs=1)
     fired = result.get("fired", [])

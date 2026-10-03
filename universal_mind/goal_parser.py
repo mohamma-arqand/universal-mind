@@ -57,14 +57,22 @@ def parse_goal(sentence: str) -> Goal | None:
         return None
 
     MARK = chr(0)
-    guarded = re.sub(r"(\d)\s+و\s+(\d)", r"\1" + MARK + r"و" + MARK + r"\2", body)
-    raw_parts = re.split(r"\s+(?:سپس|بعد(?:ش)?|آن(?:گاه)?)\s+|،|\s+و\s+", guarded)
+    # R63 (probe-caught): protecting «۲ و ۵» pairwise leaves the NEXT «و»
+    # in «۲ و ۵ و ۹» unguarded (re.sub resumes AFTER the consumed digits,
+    # so «5 و 9» never matches) and the goal splits mid-list. Guard ALL
+    # digit-و-digit chains in ONE pass by marking every «و» that sits
+    # between digits, then unmarking after the split.
+    guarded = re.sub(
+        r"(?<=[\d.,])\s*و\s*(?=[\d])", MARK, body)
+    raw_parts = re.split(
+        r"\s+و\s+(?:سپس|بعد(?:ش)?|آن(?:گاه)?)\s+|\s+(?:سپس|بعد(?:ش)?|آن(?:گاه)?)\s+|،|\s+و\s+",
+        guarded)
 
     steps: list[str] = []
     guarded_steps: list[bool] = []
     pending_guard = False
     for part in raw_parts:
-        step = part.replace(MARK, " ").strip()
+        step = part.replace(MARK, " و ").strip()
         if not step:
             continue
         m = re.match(r"^اگر.*?(?:موفق بود|درست بود|خوب بود)[،,]?\s*(.*)$", step)

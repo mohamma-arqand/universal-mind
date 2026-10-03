@@ -5,7 +5,7 @@ The operator's whole journey in one live pass — the exact sentences they
 would type, run through the REAL engine in sequence, each narrated:
 
   1. MAKE      «گزارش کامل فروش با ۴ و ۹ بساز» (4 programs, 2 flows)
-  2. READ      «نمودار خطی بساز و ساختارش را بخوان» (see + understand)
+  2. READ      «نمودار خطی از ۲ و ۵ و ۹ بساز و ساختارش را بخوان» (see + understand)
   3. STORE     «میانگین ۱۲ و ۲۴ را حساب کن و در سیاسوی بریز» (the 19th)
   4. STATUS    «وضعیت» (the agent's board)
   5. RESUME    «ادامه بده» (the recovery word — honest when nothing stopped)
@@ -40,7 +40,7 @@ def check_read_and_understand() -> bool:
     """«ساختارش را بخوان» — perception still closes after all growth."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("نمودار خطی بساز و ساختارش را بخوان")
+    payload = route_and_run("نمودار خطی از ۲ و ۵ و ۹ بساز و ساختارش را بخوان")
     ok = payload["ok"] is True
     # the vision result carries the structure dict
     vision = payload.get("result", {}).get("vision", {})

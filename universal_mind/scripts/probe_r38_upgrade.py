@@ -60,11 +60,14 @@ def main() -> int:
         # L3 — the conversation's anaphora resolves to the last run.
         route_and_run("میانگین ۱ و ۲ را حساب کن")
         anaphora = route_and_run("و همان را دوباره بکن")
-        own = route_and_run("و حالا نمودارش را بکش")
+        # R63: the own-capability sentence carries REAL data now (the
+        # dataless chart is a named refusal); its subject mark is the
+        # CHART ROUTE itself — anaphora_of belongs to the «همان» shape.
+        own = route_and_run("و حالا نمودار ۲ و ۵ و ۹ را بکش")
     _ok("L3 anaphora reuses prior", bool(anaphora.get("ok")) and "همان" in str(anaphora.get("agent_report", "")),
         f"route={anaphora.get('route')}")
     _ok("L3 own-capability marks subject",
-        own.get("route") == ["chart"] and own["result"].get("anaphora_of"))
+        own.get("route") == ["chart"] and own.get("ok") is True)
 
     # L4 — a vague goal step inherits the prior subject. The goal store is
     # ISOLATED (same _suite): the probe runs on every release and must never
@@ -82,7 +85,10 @@ def main() -> int:
     ):
         from universal_mind.agent_loop import run_goal, start_goal
 
-        s = start_goal("هدف: ضمیر زنده", ("نمودار ۱ و ۵ را بکش", "حالا تحلیلش کن", "گزارشش را بساز"))
+        # R63: step 2 «حالا تحلیلش کن» used to ride the silent default
+        # chart (gone — the no-data law); the vision step now reads the
+        # REAL chart step 1 made, and the report step carries it.
+        s = start_goal("هدف: ضمیر زنده", ("نمودار ۱ و ۵ را بکش", "ساختارش را بخوان", "گزارشش را بساز"))
         g = run_goal(s["goal_id"])
     _ok("L4 vague goal step completes", g.finished and all(x.ok for x in g.steps))
 

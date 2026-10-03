@@ -33,7 +33,7 @@ def check_planner_beats_word_order() -> bool:
     """Backwards words → correct order → real synthesis."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("گزارشش کن و نمودار خطی بساز")
+    payload = route_and_run("گزارشش کن و نمودار خطی از ۲ و ۵ و ۹ بساز")
     ok = payload["ok"] is True
     ok = ok and payload["route"] == ["chart", "pdf"]
     ok = ok and any("نمودار درونش" in f for f in payload.get("flows", []))
@@ -61,7 +61,7 @@ def check_op_words_name_real_documents() -> bool:
     """فاکتور really produces an invoice, نامه a letterhead — explicit wins."""
     from universal_mind.persian_router import route_and_run
 
-    payload = route_and_run("فاکتور بساز و نمودار خطی بساز")
+    payload = route_and_run("فاکتور بساز و نمودار خطی از ۲ و ۵ و ۹ بساز")
     op = payload.get("extracted_params", {}).get("pdf", {}).get("operation")
     ok = payload["ok"] is True and op == "invoice"
     print(f"  invoice op: {op} | ok: {payload['ok']}")
@@ -80,7 +80,7 @@ def check_quality_gate_self_repairs() -> bool:
         if good:
             return {
                 "ok": True, "command": "x", "route": list(route),
-                "result": {"chart": {"path": "c.png", "bytes": 25000},
+                "result": {"chart": {"series": {"داده": [2, 5, 9]}, "path": "c.png", "bytes": 25000},
                            "pdf": {"path": "r.pdf", "bytes": 61847}},
                 "errors": {}, "durations_ms": {"chart": 10.0, "pdf": 12.0},
             }
