@@ -327,8 +327,11 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
 
     # R62 T1 — «قرار» is the everyday word for the agenda (the review's
     # daily-user persona says «قرارهایم», not «برنامه‌ام»).
+    # R63 P8 — «برنامه هفتهٔ آینده من چیست؟» also asks the agenda (the
+    # sweep measured it falling to llm — the appointments are OUR data).
     _AGENDA_WORDS = ("برنامه‌ام", "برنامهام", "برنامهٔ من", "برنامه من",
-                     "برنامه‌ی من", "هفتهٔ بعد", "هفته بعد",
+                     "برنامه‌ی من", "برنامه هفته", "برنامهٔ هفته", "هفتهٔ بعد",
+                     "هفته بعد", "هفتهٔ آینده", "هفته آینده",
                      "قرارهایم", "قرارهای من", "قرار‌هایم", "قرارام")
     if any(w in c for w in _AGENDA_WORDS) and any(
         q in c for q in ("نشان بده", "بگو", "چی", "چه", "دارم", "است", "لیست")
