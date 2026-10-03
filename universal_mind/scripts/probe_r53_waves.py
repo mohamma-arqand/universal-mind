@@ -84,7 +84,13 @@ def main() -> int:
          mock.patch("universal_mind.speech_tool.SpeechTool.speak",
                     lambda self, text, **kw: {"ok": True, "spoken": True}):
         out = sched.run_due(contest=False)
-    once = [f for f in out.get("fired", []) if f.get("once")]
+    # R70 lesson (a probe counts ITS OWN seed): run_due fires EVERY due
+    # row in the shared store — a leftover due once-row from an earlier
+    # probe/test in the same verify run made len(once) == 2 and the proof
+    # failed while the seeded row behaved correctly. The assertion is
+    # scoped to THIS probe's seed: it fired, and IT self-deleted.
+    once = [f for f in out.get("fired", [])
+            if f.get("once") and "پروب: دارو" in str(f.get("command", ""))]
     leftover = [s for s in sched.list_schedules()
                  if s.kind == "once" and s.command == "پروب: دارو"]
     check(4, "a due once-reminder fires once and self-deletes",
