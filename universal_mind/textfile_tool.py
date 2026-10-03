@@ -161,6 +161,31 @@ class TextFileTool:
             return {"ok": False, "error": f"نوشتن نشد: {exc}", "kind": "io"}
         return {"ok": True, "path": str(src), "replaced": count, "error": ""}
 
+    def move(self, src: str, dst: str, *, overwrite_ok: bool = False) -> dict[str, Any]:
+        """R65 P6 — «فایل X را به Y جابجا کن»: a REAL move, delete-law safe.
+
+        A move DELETES the source, so it needs the operator's explicit
+        continue when the destination exists («روی همان فایل بنویس»
+        shape); the source must exist; both paths are named in the answer.
+        """
+        s, d = Path(src), Path(dst)
+        if self._WRITE_FORBIDDEN.search(str(d)) or self._WRITE_FORBIDDEN.search(str(s)):
+            return {"ok": False, "error": self._write_refusal(str(d)), "kind": "protected"}
+        if not s.exists():
+            return {"ok": False, "kind": "missing",
+                    "error": f"فایلی در «{src}» پیدا نکردم — مسیر را دقیق بده."}
+        if d.exists() and not overwrite_ok:
+            return {"ok": False, "kind": "exists",
+                    "error": ("مقصد «{dst}» از قبل هست — جابجایی روی آن بنویس؟ "
+                              "بگو «روی همان فایل X را به Y جابجا کن» تا انجام شود.").format(dst=dst)}
+        try:
+            d.parent.mkdir(parents=True, exist_ok=True)
+            s.replace(d)
+        except OSError as exc:
+            return {"ok": False, "error": f"جابجایی نشد: {exc}", "kind": "io"}
+        return {"ok": True, "src": str(s), "dst": str(d),
+                "bytes": d.stat().st_size, "error": ""}
+
     def list_texts(self, folder: str) -> dict[str, Any]:
         src = Path(folder)
         if not src.exists() or not src.is_dir():
@@ -223,6 +248,15 @@ class TextFileToolConnector:
             new = str(params.get("new", "")).strip()
             overwrite_ok = bool(params.get("overwrite_ok", False))
             out = self._tool.replace(path, old, new, overwrite_ok=overwrite_ok)
+            if not out.get("ok"):
+                return ConnectorResult(ok=False, output=None, error=str(out["error"]))
+            return ConnectorResult(ok=True, output={
+                k: v for k, v in out.items() if k not in ("ok", "error")})
+        if operation == "move":
+            src = str(params.get("path", "")).strip()
+            dst = str(params.get("dst", "")).strip()
+            out = self._tool.move(src, dst,
+                                   overwrite_ok=bool(params.get("overwrite_ok", False)))
             if not out.get("ok"):
                 return ConnectorResult(ok=False, output=None, error=str(out["error"]))
             return ConnectorResult(ok=True, output={

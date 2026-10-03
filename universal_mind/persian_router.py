@@ -315,6 +315,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("را با عوض کن", "textfile"),
     ("را با جایگزین کن", "textfile"),
     ("عوض کن", "textfile"),
+    ("جابجا کن", "textfile"),  # R65 P6
+    ("جابجایی کن", "textfile"),
     ("جایگزین کن", "textfile"),
     # R59 P2 — UNIT CONVERSION: «۱۰ کیلومتر چند مایل است؟». The unit words
     # name the capability; the value and the unit pair come from the params

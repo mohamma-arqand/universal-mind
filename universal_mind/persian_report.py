@@ -205,6 +205,10 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
             if count > 10:
                 lines.append(f"  … و {_fa_num(count - 10)} مورد دیگر")
             return "\n".join(lines)
+        # R65 P6 — «فایل X را به Y جابجا کن»: both paths named.
+        if "dst" in result and "src" in result:
+            return (f"جابجا شد: «{result.get('src', '')}» → «{result.get('dst', '')}» "
+                    f"({_fa_num(result.get('bytes', 0))} بایت).")
         # R64 P7 — «کلمه A را با B عوض کن»: the real count.
         if "replaced" in result:
             n_rep = int(result.get("replaced", 0))

@@ -275,6 +275,14 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
             needle = (m_needle.group(1).strip() if m_needle else "").strip("،.\"'«»")
             if needle:
                 return {"operation": "search", "path": path, "needle": needle}
+        # R65 P6 — MOVE: «فایل X را به Y جابجا کن» — both paths ride from
+        # the sentence; the destination-after-«به» is the SECOND path.
+        if "جابجا" in command and path:
+            m_move = _re.search(r"به\s+([A-Za-z]:[\\/][^،!?؟\"\s]+)", command)
+            if m_move:
+                return {"operation": "move", "path": path,
+                        "dst": m_move.group(1),
+                        "overwrite_ok": "روی همان فایل" in command}
         if "عوض" in command and "با" in command and path:
             m_pair = _re.search(r"(?:کلمه|واژه|عبارت)\s+(.+?)\s+را\s+با\s+(.+?)\s+(?:عوض|جایگزین)", command)
             if m_pair:
