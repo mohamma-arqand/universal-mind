@@ -329,3 +329,7 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-04 02:01] run started (lock acquired)
 - [2026-10-04 02:01] run started (lock acquired)
 - [2026-10-04 02:02] run started (lock acquired)
+- [2026-10-04 02:25] run started (lock acquired)
+- [2026-10-04 02:25] run started (lock acquired)
+- [2026-10-04 02:26] run started (lock acquired)
+- [2026-10-04 18:20] ★ R74 SEALED — verify: 6/6 GREEN، exit=0. مهر چهار‌ران: ران-۱ دو پینِ قدیمی که خودِ باگ را پین میکردند (زیپ=archive، مسیر+ببین=pack) به قانون جدید مهاجرت شدند (00051b4)؛ ران-۲ probe_r72 فقط زیر لودِ suite کامل شکست خورد — گیتِ تایمینگ حالا میانهٔ ۳-ران گرم را میسنجد (a1644a2)؛ ران-۳ یک setup.cfg بیگانه در /d/workspaces (ساختهٔ فرآیند دیگر، سکشن قدیمی [pytest] که pytest 8 سخت-شکستش میدهد) جستجوی کانفیگ را ربود — انکرِ rootdir در pyproject خودمان (f8318f6)؛ ران-۴ READY. قابلیت ۳۰م: convert. probe_r74: ۱۲/۱۲.
