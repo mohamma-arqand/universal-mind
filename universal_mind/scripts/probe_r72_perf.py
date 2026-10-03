@@ -46,10 +46,16 @@ def main() -> int:
     cold_ms = (time.perf_counter() - t0) * 1000
     check(1, f"cold status works and pays the real gather ({cold_ms:.0f}ms)",
           cold.get("ok") is True and cold_ms > 300)
-    t0 = time.perf_counter()
-    warm = route_and_run("وضعیت سیستم را بگو")
-    warm_ms = (time.perf_counter() - t0) * 1000
-    check(2, f"warm status is served from the cache ({warm_ms:.0f}ms < 300ms)",
+    _warm_ms = []
+    for _ in range(3):  # R74 seal lesson: a timing gate measures a MEDIAN,
+        t0 = time.perf_counter()  # never one loaded run
+        w = route_and_run("وضعیت سیستم را بگو")
+        _warm_ms.append((time.perf_counter() - t0) * 1000)
+        if w.get("ok") is not True:
+            break
+    _warm_ms.sort()
+    warm_ms = _warm_ms[len(_warm_ms) // 2]
+    check(2, f"warm status is served from the cache (median {warm_ms:.0f}ms < 300ms)",
           warm.get("ok") is True and warm_ms < 300)
     check(3, f"the speedup is real ({cold_ms / max(warm_ms, 0.01):.0f}x >= 4x)",
           cold_ms / max(warm_ms, 0.01) >= 4)
