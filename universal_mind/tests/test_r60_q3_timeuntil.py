@@ -37,7 +37,12 @@ class TestTimeUntil:
         ans = answer_reflexive("چند دقیقه تا نیمه‌شب مانده؟")
         assert ans is not None
         rep = ans["agent_report"]
-        assert "۰ دقیقه" not in rep  # midnight is at least a minute away
+        # midnight is at least a minute away — but «۱۶ ساعت و ۰ دقیقه»
+        # (a whole-hour boundary) is honest; only the WHOLE answer being
+        # zero minutes is the bug (the R63 flake: minute==00 honest form).
+        assert "تا نیمه‌شب ۰" not in rep
+        assert "برابر ۰" not in rep
+        assert "-" not in rep and "منفی" not in rep
 
 
 class TestWeekdayDistance:
