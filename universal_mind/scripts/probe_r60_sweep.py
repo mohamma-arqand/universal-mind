@@ -97,9 +97,13 @@ def main() -> int:
             print(f"       ✗ {name}: expected {exp}, got: {rep[:60]}")
     check(6, "all seven weekday distances match independent math", all_days)
     r7 = report("یکشنبه چند روز دیگه است؟")
-    exp7 = str((6 - datetime.now().weekday()) % 7).translate(fa)
+    _d7 = (6 - datetime.now().weekday()) % 7
+    exp7 = str(_d7).translate(fa)
+    # ON SUNDAYS (weekday 6) the distance is 0 and the honest answer is
+    # «یکشنبه امروز است» — the probe must accept BOTH real shapes, or
+    # the probe itself breaks once a week (a date-dependent gate).
     check(7, "یکشنبه answers یکشنبه (not the substring شنبه)",
-          "یکشنبه" in r7 and exp7 in r7)
+          "یکشنبه" in r7 and (exp7 in r7 or (_d7 == 0 and "امروز است" in r7)))
 
     # 8-9 — drive space
     r8 = report("فضای درایو C را نشان بده")

@@ -311,3 +311,6 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-04 07:00] R73 گشوده شد — جاروی خروجیِ بصری: «گزارش HTML بساز» به PDF می‌رود (HTML خواسته!). داشبورد/جدول/تایم‌لاین نشناخته.
 - [2026-10-04 09:10] R73 صف کامل شد — قابلیت ۲۹م html-report: قانون «فرمت = واژهٔ کاربر» (HTML-خواهی هرگز PDF نمیسازد)؛ ۵ نمای واقعی RTL (report/dashboard/timeline/table/card) هر یک از دیتای اندازهگیریشده (run_history/schedules/vitals)؛ فعلِ ساخت گیتِ reflexive/فهرست را میبندد؛ هر نما مسیر+حجم را نام میبرد. probe ۱۲/۱۲ + ۷ تست.
 - [2026-10-03 23:48] run started (lock acquired)
+- [2026-10-04 00:10] run started (lock acquired)
+- [2026-10-04 00:10] run started (lock acquired)
+- [2026-10-04 00:10] run started (lock acquired)
