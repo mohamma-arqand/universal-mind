@@ -207,12 +207,12 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         from pathlib import Path as _P
 
         _p = _P(str(result["path"]))
-        _kb = _p.stat().st_size / 1024 if _p.exists() else 0.0
+        _size_kb = _p.stat().st_size / 1024 if _p.exists() else 0.0
         _VIEW_FA = {"dashboard": "داشبورد HTML", "timeline": "تایم‌لاین HTML",
                     "table": "جدول HTML", "card": "کارت وضعیت HTML",
                     "report": "گزارش HTML"}
         _fa = _VIEW_FA.get(str(result.get("mode", "report")), "گزارش HTML")
-        return f"{_fa} ساخته شد ({_fa_num(round(_kb, 1))} کیلوبایت) — در «{_p}»"
+        return f"{_fa} ساخته شد ({_fa_num(round(_size_kb, 1))} کیلوبایت) — در «{_p}»"
     if cap == "compute" and isinstance(result, (int, float)):
         return f"محاسبه انجام شد: نتیجه {_fa_num(result)}."
     # R59 P2 — the conversion's own Persian sentence is already built by the
