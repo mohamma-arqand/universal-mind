@@ -81,13 +81,19 @@ class TestTheLazyHeavyImports:
         ms = statistics.median(samples)
         # R79 — the gate measures the LAZY-IMPORT law, not stopwatch luck.
         # 700ms was the pre-fix sklearn leak; with sklearn lazy the import is
-        # ~0.5-1.4s on a loaded Windows machine (GPU, AV, terminal capture all
-        # count). The LAW this test guards: sklearn must NEVER be IN the
-        # modules after a bare ai_suite import. The stopwatch is canary, not
-        # proof — a jitter flap fails the suite while the law holds.
-        assert not any(m.startswith("sklearn") or m.startswith("scipy")
-                       for m in __import__("sys").modules), \
-            "sklearn/scipy leaked into module import (the R72 law broke)"
+        # ~0.5-1.4s on a loaded Windows machine. THE LAW: a bare ai_suite
+        # import must never pull sklearn in. This is checked INSIDE the child
+        # (this pytest process already holds every module the suite imported).
+        code_law = (
+            "import sys; sys.path.insert(0, r'D:/workspaces/baddanKhoda'); "
+            "import universal_mind.ai_suite; "
+            "print(any(m.startswith(('sklearn','scipy')) for m in sys.modules))"
+        )
+        r_law = subprocess.run([sys.executable, "-c", code_law],
+                               capture_output=True, text=True, timeout=120,
+                               env=base_env)
+        assert r_law.stdout.strip() == "False", \
+            "sklearn/scipy leaked into a bare ai_suite import (the law broke)"
         # the canary: if routinely > the fold-back line, the law is worth a look
         if ms > 1400:
             import warnings
