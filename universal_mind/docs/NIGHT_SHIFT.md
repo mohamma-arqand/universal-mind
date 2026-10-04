@@ -1,4 +1,4 @@
-# شیفت شب — NIGHT SHIFT (R78)
+# شیفت شب — NIGHT SHIFT (R78) — ✅ مهر شد
 
 > **وضعیت R77**: ✅ مهر شد (3398865؛ verify READY ۶/۶ یک‌ران، overall=pass، ۲۶۷۳ تست/۰ شکست، pin 3b85722؛ opener قابلیت ۳۱م).
 
