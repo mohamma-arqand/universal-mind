@@ -1,4 +1,4 @@
-# شیفت شب — NIGHT SHIFT (R76)
+# شیفت شب — NIGHT SHIFT (R76) — ✅ مهر شد
 
 > **وضعیت R75**: ✅ مهر شد (0280040؛ verify READY ۶/۶، overall=pass، ۲۶۵۷ تست/۰ شکست، pin 49d5b55).
 
