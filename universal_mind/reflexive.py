@@ -97,6 +97,26 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     ):
         return None
 
+    # R78 P1 — «یادداشت X را فراموش کن»: FORGETTING a stored note is a
+    # named_memory DELETE, never a clipboard read (the old word collision
+    # read the locked clipboard instead). The needle rides the sentence;
+    # what was forgotten is NAMED.
+    if "فراموش" in c and ("یادداشت" in c or "یادت" in c):
+        import re as _re_fg
+
+        _m_fg = _re_fg.search(r"یادداشت\s+(.+?)\s+را?\s+فراموش", c) \
+            or _re_fg.search(r"فراموش\s+کن\s+(?:یادداشت\s+)?(.+)$", c)
+        if _m_fg:
+            from universal_mind.named_memory import forget_matching
+
+            _gone = forget_matching(_m_fg.group(1).strip())
+            if _gone:
+                _g_lines = "\n".join(f"• «{g}»" for g in _gone[:8])
+                return _reflex_answer(
+                    c, f"فراموش شد — {len(_gone)} یادداشت:\n{_g_lines}")
+            return _reflex_answer(
+                c, "چنین یادداشتی ندارم — «چه چیزهایی یادت هست؟» فهرستشان را نشان میدهد.")
+
     # R76 — QUESTIONS ABOUT THE REMINDERS THEMSELVES: counting, extremes
     # (longest/oldest/newest/last), search-in-reminders, and sorting. All
     # answered from the REAL schedules table — never a chain run, never a
@@ -285,7 +305,9 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     # named_memory already had recall_facts(). A LIST is not a recall-by-
     # question (M3): no question marks needed, just the real rows, numbered.
     if ("چه چیزهایی یادت" in c or "چی یادته" in c or "یادت هست" in c
-            or "یادداشتهایت" in c or "یادداشت‌هایت" in c) and "یادت باشد" not in c:
+            or "یادداشتهایم" in c or "یادداشتهای من" in c
+            or "یادداشتهایت" in c or "یادداشت‌هایت" in c) and "یادت باشد" not in c \
+            and "فراموش" not in c:
         from universal_mind.named_memory import recall_facts
 
         rows = []
@@ -396,6 +418,46 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
 
     # R65 P4 — THE CONTACT BOOK VIEW: «مخاطبهام را نشان بده» — the real
     # names the operator taught, never a fabrication.
+    # R78 P3 — «ایمیل علی را نشان بده»: the CONTACT'S ADDRESS is the ask.
+    if "ایمیل" in c and "مخاطب" not in c and any(
+            w in c for w in ("نشان", "چنده", "چیست", "آدرس")) and "بفرست" not in c:
+        import re as _re_em
+
+        _m_em = _re_em.search(r"ایمیل\s+(.+?)\s+(?:را|رو)", c)
+        if _m_em:
+            from universal_mind.contacts import list_contacts as _lc78
+
+            _needle78 = _m_em.group(1).strip()
+            _hits78 = [ct for ct in _lc78() if _needle78 in ct["name"]
+                       or _needle78 in ct["address"]]
+            if len(_hits78) == 1:
+                return _reflex_answer(
+                    c, f"ایمیل «{_hits78[0]['name']}»: {_hits78[0]['address']}")
+            if len(_hits78) > 1:
+                _l78 = "\n".join(f"• {h['name']} — {h['address']}" for h in _hits78[:6])
+                return _reflex_answer(
+                    c, f"{len(_hits78)} مخاطب با «{_needle78}»:\n{_l78}")
+            return _reflex_answer(
+                c, f"مخاطبی با نام «{_needle78}» ندارم — «مخاطبهام را نشان بده» را ببین.")
+
+    # R78 P2 — «مخاطبهایی که اسمشان X است»: a FILTERED contact view.
+    if "مخاطب" in c and any(w in c for w in ("پیدا کن", "که اسم", "اسمشون", "اسمشان")):
+        import re as _re_cf
+
+        _m_cf = _re_cf.search(r"(?:اسمشان|اسمشون|نامشان)\s+(.+?)\s+(?:است|هست|را|رو|باشد)", c)
+        if _m_cf:
+            from universal_mind.contacts import list_contacts as _lcf
+
+            _needle_cf = _m_cf.group(1).strip()
+            _hits_cf = [ct for ct in _lcf() if _needle_cf in ct["name"]]
+            if not _hits_cf:
+                return _reflex_answer(
+                    c, f"مخاطبی با نام «{_needle_cf}» ندارم — «مخاطبهام را نشان بده» را ببین.")
+            _lines_cf = [f"{_fa_num(len(_hits_cf))} مخاطب با نام «{_needle_cf}»:"]
+            for _i78, _ct78 in enumerate(_hits_cf[:10], 1):
+                _lines_cf.append(f"  {_fa_num(_i78)}. {_ct78['name']} — {_ct78['address']}")
+            return _reflex_answer(c, "\n".join(_lines_cf))
+
     if "مخاطب" in c and any(w in c for w in ("نشان", "لیست", "فهرست", "چی", "چه", "کیه", "ها")):
         from universal_mind.contacts import list_contacts
 

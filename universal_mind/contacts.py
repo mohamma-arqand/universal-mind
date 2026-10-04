@@ -138,6 +138,10 @@ def parse_contact_request(command: str) -> dict[str, str] | None:
         if m2:
             name = m2.group(1).strip()
     name = re.sub(_ADDR_FIND, "", name).strip(" :：،,")
+    # R78 P4 — «مخاطب علی با ایمیل ali@x.com»: the «با ایمیل/با آدرس»
+    # connector glued itself into the stored NAME («علی با ایمیل» was a
+    # live bug). The connector words are stripped from the name.
+    name = re.sub(r"\s*(?:با\s+(?:ایمیل|آدرس)|با ایمیل|با آدرس)\s*$", "", name).strip(" :：،,")
     if not name or "@" in name:
         return None
     return {"name": name, "address": addr.group(0)}

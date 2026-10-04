@@ -197,6 +197,7 @@ PROBES = [
     "probe_r75_clipboard.py",
     "probe_r76_search.py",
     "probe_r77_opener.py",
+    "probe_r78_pim.py",
 ]
 
 
