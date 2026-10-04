@@ -1006,7 +1006,16 @@ def route_and_run(
     # a SCHEDULE, not an instant toast. Any «یادآور» carrying a recurring
     # time pattern registers in the scheduler and answers with the real
     # next-due — a reminder without a registered time is only hope.
-    if forced_route is None and (
+    # R76 P5 — A QUESTION ABOUT REMINDERS IS NOT A REGISTRATION. The bare
+    # «یادآور» keyword swallowed counting/extremes/search/sort asks and
+    # REGISTERED a new reminder (a live sweep caught «چند تا یادآور برای
+    # فردا داری؟» creating one!). Question words close the gate first.
+    _R76_Q = ("چند", "کدام", "چی بود", "چیست", "بگرد", "پیدا کن", "مرتب",
+              "بزرگترین", "قدیمیترین", "جدیدترین", "آخرین", "اولین",
+              "بر اساس", "حرف به حرف", "از قدیم", "به جدید")
+    _is_reminder_question = any(q in command for q in _R76_Q) and any(
+        r in command for r in ("یادآور", "یادآوری"))
+    if forced_route is None and not _is_reminder_question and (
         "یادآور" in command or "یادآوری" in command or "یادم بنداز" in command
         or "یادم بیار" in command or "یادم بیاور" in command  # R69 P1
         # R69 P2 — a time-delta + a bell/alarm verb is a one-shot reminder

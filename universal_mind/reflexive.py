@@ -97,6 +97,125 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     ):
         return None
 
+    # R76 — QUESTIONS ABOUT THE REMINDERS THEMSELVES: counting, extremes
+    # (longest/oldest/newest/last), search-in-reminders, and sorting. All
+    # answered from the REAL schedules table — never a chain run, never a
+    # new registration (the sweep caught a COUNT ask creating one).
+    if ("یادآور" in c or "یادآوری" in c) and not any(
+        reg in c for reg in ("یادم بنداز", "یادآوری کن", "یادم بیار", "یادم بیاور",
+                             "یادم باشه", "یادم باشی", "زنگ بزن")
+    ):
+        from universal_mind.scheduler import list_schedules as _ls76
+
+        _rows76 = [s for s in _ls76() if s.active]
+        _fa76 = _fa_num
+        # P5 — the COUNT for a day window
+        if "چند" in c and ("تا یادآور" in c or "یادآور برای" in c):
+            from datetime import datetime, timedelta
+
+            _win = "همه"
+            _n = len(_rows76)
+            if "فردا" in c and "پس" not in c:
+                _win = "فردا"
+                _t = datetime.now().date() + timedelta(days=1)
+                _n = sum(
+                    1 for s in _rows76
+                    if s.kind == "once" and s.run_at.startswith(_t.isoformat())
+                ) + sum(1 for s in _rows76 if s.kind != "once")
+            elif "امروز" in c:
+                _win = "امروز"
+                _t = datetime.now().date()
+                _n = sum(
+                    1 for s in _rows76
+                    if s.kind == "once" and s.run_at.startswith(_t.isoformat())
+                ) + sum(1 for s in _rows76 if s.kind != "once")
+            if _win == "همه":
+                return _reflex_answer(
+                    c, f"{_fa76(_n)} یادآور داری — «یادآورهای من» فهرستشان را نشان میدهد.")
+            return _reflex_answer(
+                c, f"{_fa76(_n)} یادآور برای {_win} داری"
+                   + ("." if _n else " — «یادم بنداز که فردا ساعت ۸ ...» بگو."))
+
+        # P2 — the EXTREMES on the reminders themselves
+        if ("بزرگترین" in c or "قدیمیترین" in c or "قدیمی ترین" in c
+                or "جدیدترین" in c or "آخرین" in c or "اولین" in c) \
+                and "یادآور" in c:
+            if not _rows76:
+                return _reflex_answer(
+                    c, "هیچ یادآوری ثبت نشده — «یادم بنداز که فردا ساعت ۸ ...» بگو.")
+            _by_time = sorted(
+                _rows76,
+                key=lambda s: (s.run_at or "9999") if s.kind == "once"
+                else (s.command or ""))
+            if "بزرگترین" in c:
+                _big = max(_rows76, key=lambda s: len(s.command or ""))
+                return _reflex_answer(
+                    c, f"بلندترین یادآورت ({_fa76(len(_big.command))} حرف): "
+                       f"«{_big.command}».")
+            if "قدیمیترین" in c or "قدیمی ترین" in c:
+                _old = _by_time[0]
+                return _reflex_answer(
+                    c, f"قدیمیترین یادآورت: «{_old.command}»"
+                       + (f" — زمان: {_old.run_at[:16]}" if _old.run_at else "") + ".")
+            if "جدیدترین" in c or "آخرین" in c:
+                _new = _by_time[-1]
+                return _reflex_answer(
+                    c, f"جدیدترین یادآورت: «{_new.command}»"
+                       + (f" — زمان: {_new.run_at[:16]}" if _new.run_at else "") + ".")
+            if "اولین" in c:
+                _first = _by_time[0]
+                return _reflex_answer(
+                    c, f"اولین یادآورت: «{_first.command}».")
+
+        # P3 — SEARCH inside the reminders
+        if ("بگرد" in c or "پیدا کن" in c or "که کلمه" in c or "دنبال" in c) \
+                and "یادآور" in c:
+            import re as _re76
+
+            _m76 = _re76.search(
+                r"(?:دنبال|کلمه)\s+(.+?)\s+(?:را|رو|در|بگرد|پیدا)", c) \
+                or _re76.search(r"که کلمه\s+(.+?)\s+در", c) \
+                or _re76.search(r"دنبال\s+(.+)$", c)
+            if _m76:
+                _needle76 = _m76.group(1).strip(" ،.؛")
+                _hits76 = [s for s in _rows76 if _needle76 in (s.command or "")]
+                if not _hits76:
+                    return _reflex_answer(
+                        c, f"در یادآورهایت «{_needle76}» پیدا نکردم — "
+                           "«یادآورهای من» را ببین.")
+                _lines76 = [f"• ({_fa76(s.schedule_id)}) «{s.command}»"
+                            for s in _hits76[:10]]
+                return _reflex_answer(
+                    c, f"{_fa76(len(_hits76))} یادآور با «{_needle76}»:\n"
+                       + "\n".join(_lines76))
+
+        # P1 — SORTING the reminders («مرتب کن» or the از قدیم/به جدید shape)
+        _sort_ask76 = ("مرتب" in c or "از قدیم" in c or "از جدید" in c
+                       or "حرف به حرف" in c)
+        if _sort_ask76 and ("یادآور" in c or "یادآوری" in c):
+            _alpha76 = "حرف به حرف" in c or "نام" in c
+            _desc = ("نزولی" in c or "از جدید" in c or "به قدیم" in c
+                     or "برعکس" in c)
+            if _alpha76:
+                _by_time = sorted(
+                    _rows76, key=lambda s: (s.command or ""), reverse=_desc)
+            _by_time = sorted(
+                _rows76,
+                key=lambda s: (s.run_at or "9999") if s.kind == "once"
+                else "0000" + (s.command or ""),
+                reverse=_desc)
+            if not _by_time:
+                return _reflex_answer(
+                    c, "هیچ یادآوری ثبت نشده — «یادم بنداز که فردا ساعت ۸ ...» بگو.")
+            _lines76 = [f"• ({_fa76(s.schedule_id)}) «{s.command}»"
+                        + (f" — {_s.run_at[:16]}" if (_s := s).run_at else "")
+                        for s in _by_time[:12]]
+            _axis76 = ("الفبایی" if _alpha76 else "زمان")
+            return _reflex_answer(
+                c, f"یادآورهایت به ترتیب {_axis76} "
+                   f"({'از جدید' if _desc else 'از قدیم'}):\n"
+                   + "\n".join(_lines76))
+
     # R58 M3 — RECALL THE NAMED MEMORY BY ASKING: «جلسه شنبه چه ساعتی است؟»
     # The sweep measured that «یادت باشد جلسه شنبه ساعت ۱۰ است» SAVES a
     # named_memory row, but asking the question back got «نشناختم». A
