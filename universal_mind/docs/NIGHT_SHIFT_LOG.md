@@ -382,3 +382,12 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-04 16:52] run started (lock acquired)
 - [2026-10-04 16:53] run started (lock acquired)
 - [2026-10-04 16:47] R79 SEAL — verify READY: interpreter/lint/mypy/tests(**2699 pass 0 fail**) /receipt/probes آماده. رفعِ نهایی: تست R72 به قانونِ lazy (sklearn هرگز در import نیاید) داخلِ پروسهٔ فرزند برگشت (والد همه را شارژ کرده) — ۵/۵ سبز. probes r79 ۲۰/۲۰.
+- [2026-10-04 17:04] run started (lock acquired)
+- [2026-10-04 17:07] run started (lock acquired)
+- [2026-10-04 17:07] run started (lock acquired)
+- [2026-10-04 17:15] run started (lock acquired)
+- [2026-10-04 17:15] run started (lock acquired)
+- [2026-10-04 17:38] run started (lock acquired)
+- [2026-10-04 17:38] run started (lock acquired)
+- [2026-10-04 17:39] run started (lock acquired)
+- [2026-10-04 17:47] R79 VERIFY RESEAL — زامبیِ R70 («یادآور تست-درب» از تستِ دستی در) با یک DELETE واقعی پاک شد؛ probe_r70 ۱۲/۱۲. verify کامل: **tests 2699/0, probes RED→GREEN بعد از پاکسازی**, receipt GREEN. HEAD 44f1f6a. محصول قابل‌نصب است: build/universal_mind-bundle.zip.
