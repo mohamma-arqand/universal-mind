@@ -18,6 +18,12 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
+dependencies = [
+  "numpy", "matplotlib", "pandas", "scikit-learn", "openpyxl", "Pillow",
+  "reportlab", "python-dateutil", "persiantools", "arabic-reshaper",
+  "python-bidi", "uvicorn", "fastapi", "pystray", "keyboard", "requests",
+]
+
 [project.scripts]
 universal-mind = "universal_mind.cli:main"
 
@@ -29,6 +35,9 @@ include = ["universal_mind*"]
 # pytest 8) sat ABOVE our tree's search path because this pyproject had
 # no [tool:pytest] section to anchor pytest's rootdir. Anchoring here
 # makes our repo self-contained: the config search stops at OUR root.
+[tool.setuptools.package-data]
+universal_mind = ["tools/volctl.exe"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["universal_mind/tests"]

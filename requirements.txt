@@ -1,0 +1,16 @@
+numpy==2.4.3
+matplotlib==3.11.1
+pandas==
+scikit-learn==1.9.0
+openpyxl==3.1.5
+pillow==12.3.0
+reportlab==5.0.1
+python-dateutil==2.9.0.post0
+persiantools
+arabic-reshaper
+python-bidi==0.6.11
+uvicorn==0.41.0
+fastapi==0.133.1
+pystray
+keyboard
+requests==2.33.0
