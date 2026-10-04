@@ -369,3 +369,16 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-05 17:30] R79 موج ۱ (موفقیتهای کاذب) بسته شد — A1: ولومِ واقعی از طریقِ volctl.exe کامپایلشده با csc.exe (WASAPI/IAudioEndpointVolume؛ vtable order درس گرفتم؛ قبل/بعد اندازهگیریشده؛ mute واقعی برداشته میشود)؛ A2/A3/A5: ردِ نامدار برای پخش/اسکنِ امنیتی/خلاقیت (هرگز موفقیتِ جعلی)؛ A4: آزادسازیِ واقعیِ رم (working-set trim) با گزارشِ before/after و صداقتِ «تغییر نکرد». probe_r79: ۱۰/۱۰ + ۹ تست.
 - [2026-10-05 18:30] R79 موج ۲ بسته شد — B1: «قرار بگذار …» + شکلِ «جلسه … دارم» هر دو ثبتِ واقعیِ قرار (شنبه=۱۰-۱۰ درست؛ بیزمان=ردِ نامدار)؛ B2: «لیست پنجرههای باز» با عناوینِ سالمِ UTF-8 (دیوارِ کدگذاریِ PS — عنوانهای فارسی «؟؟؟» نمیشوند) + شکلِ پرسشی. probe_r79-2: ۱۰/۱۰ + ۶ تست.
 - [2026-10-05 19:45] R79 موج ۳ (نصب) بسته شد — setup.cmd ساخت: باندلِ تکفایلی (build/universal_mind-bundle.zip ~1.7MB) با درِ مکالمه (__main__.py: «ساعت چنده؟» کار میکند)، install.cmd (autostart + شورتکات دسکتاپ، admin یک‌بار)، requirements.txt پین‌شده، شروع.md فارسی، و volctl.exe داخل باندل (از خروجیِ zip اجرا و ولوم خواند: ۵۷:۰). pyproject: dependencies + package-data. test_install: ۴ تست سبز.
+- [2026-10-04 15:19] run started (lock acquired)
+- [2026-10-04 15:19] run started (lock acquired)
+- [2026-10-04 15:20] run started (lock acquired)
+- [2026-10-04 15:38] run started (lock acquired)
+- [2026-10-04 15:39] run started (lock acquired)
+- [2026-10-04 15:39] run started (lock acquired)
+- [2026-10-04 16:34] run started (lock acquired)
+- [2026-10-04 16:34] run started (lock acquired)
+- [2026-10-04 16:34] run started (lock acquired)
+- [2026-10-04 16:52] run started (lock acquired)
+- [2026-10-04 16:52] run started (lock acquired)
+- [2026-10-04 16:53] run started (lock acquired)
+- [2026-10-04 16:47] R79 SEAL — verify READY: interpreter/lint/mypy/tests(**2699 pass 0 fail**) /receipt/probes آماده. رفعِ نهایی: تست R72 به قانونِ lazy (sklearn هرگز در import نیاید) داخلِ پروسهٔ فرزند برگشت (والد همه را شارژ کرده) — ۵/۵ سبز. probes r79 ۲۰/۲۰.
