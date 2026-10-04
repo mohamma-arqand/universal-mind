@@ -65,10 +65,20 @@ class TestTheLazyHeavyImports:
             "import universal_mind.ai_suite; "
             "print(round((time.perf_counter()-t0)*1000))"
         )
-        r = subprocess.run([sys.executable, "-c", code], capture_output=True,
-                          text=True, timeout=120,
-                          env={"PYTHONPATH": "D:/workspaces/baddanKhoda"})
-        ms = float(r.stdout.strip())
+        # R75 seal — the child must inherit a REAL Windows environment
+        # (PATH/SYSTEMROOT), or subprocess spawns are slow and the ms gate
+        # measures environment starvation, not sklearn; and a timing gate
+        # measures a MEDIAN of 3, never one loaded run (the R74 lesson).
+        import os
+        import statistics
+
+        base_env = {**os.environ, "PYTHONPATH": "D:/workspaces/baddanKhoda"}
+        samples = []
+        for _ in range(3):
+            r = subprocess.run([sys.executable, "-c", code], capture_output=True,
+                              text=True, timeout=120, env=base_env)
+            samples.append(float(r.stdout.strip()))
+        ms = statistics.median(samples)
         assert ms < 700, f"ai_suite import took {ms:.0f}ms (sklearn leaked in)"
 
     def test_ml_methods_still_train_for_real(self) -> None:
