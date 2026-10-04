@@ -1,4 +1,4 @@
-# شیفت شب — NIGHT SHIFT (R75)
+# شیفت شب — NIGHT SHIFT (R75) — ✅ مهر شد
 
 > **وضعیت R74**: ✅ مهر شد (224b714؛ verify READY ۶/۶، overall=pass، ۲۶۴۸ تست/۰ شکست، pin f8318f6؛ convert قابلیت ۳۰م).
 
