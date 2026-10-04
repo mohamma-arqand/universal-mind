@@ -219,6 +219,26 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
         _KIND_FA = {"url": "سایت", "پوشه": "پوشه", "فایل": "فایل", "برنامه": "برنامه"}
         _k = _KIND_FA.get(str(result.get("kind", "")), "")
         return f"{_k} «{result.get('opened')}» باز شد."
+    if cap == "sysstatus" and isinstance(result, dict) \
+            and result.get("operation") == "free_ram":
+        _b79, _a79 = float(result.get("before_pct", 0)), float(result.get("after_pct", 0))
+        _d79 = _b79 - _a79
+        if _d79 >= 0.5:
+            return (f"رم واقعاً آزاد شد: مصرف از {_fa_num(round(_b79, 1))}٪ به "
+                    f"{_fa_num(round(_a79, 1))}٪ رفت ({_fa_num(round(_d79, 1))}٪ آزاد).")
+        return (f"رم آزاد شد اما مصرفِ قابلِملاحهای تغییر نکرد "
+                f"({_fa_num(round(_a79, 1))}٪ — ویندوز خودش کش را مدیریت میکند).")
+    if cap == "sysstatus" and isinstance(result, dict) \
+            and result.get("operation") == "volume":
+        # R79 A1 — the volume answer reports the MEASURED change.
+        if "after" in result:
+            _b, _a = int(result.get("before", 0)), int(result.get("after", 0))
+            _fa_vol = "بلندتر" if _a > _b else ("آرومتر" if _a < _b else "بدون تغییر")
+            _mute_note = (" — بیصدا بود؛ روشن شد" if result.get("unmuted") else "")
+            return (f"ولوم واقعی از {_fa_num(_b)} به {_fa_num(_a)} رفت ({_fa_vol})"
+                    f"{_mute_note}.")
+        return f"ولوم الان {_fa_num(result.get('volume', 0))} است" + (
+            " — بیصدا" if result.get("muted") else "")
     if cap == "convert" and isinstance(result, dict) and result.get("path"):
         _c_kb = result.get("bytes", 0) / 1024
         return (f"تبدیل انجام شد: «{result.get('src', '')}» → «{result.get('path', '')}» "

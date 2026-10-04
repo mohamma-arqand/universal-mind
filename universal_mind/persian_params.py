@@ -830,6 +830,26 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         return {"operation": "read"}
 
     if capability == "sysstatus":
+        # R79 A4 — «رم را آزاد کن»: the REAL act, not a report.
+        if "آزاد کن" in command and "رم" in command:
+            return {"operation": "free_ram"}
+        # R79 A1 — the volume act: direction or level from the sentence.
+        if "بلندتر" in command or "زیادتر" in command or "بالا" in command:
+            return {"operation": "volume", "direction": "up", "sentence": command}
+        if "آرومتر" in command or "کمتر" in command or "پایین" in command or "خاموش" in command:
+            if "خاموش" in command:
+                return {"operation": "volume", "direction": "down", "sentence": command}
+            return {"operation": "volume", "direction": "down", "sentence": command}
+        _m_vol = None
+        import re as _re_v2
+
+        _m_vol = _re_v2.search(r"(?:روی|رو به|به)\s+(\d+)", command) \
+            or _re_v2.search(r"(\d+)\s*(?:درصد|%)", command)
+        if _m_vol:
+            return {"operation": "volume", "level": int(_m_vol.group(1)) / 100.0,
+                    "sentence": command}
+        if "چند" in command and ("ولوم" in command or "صدا" in command):
+            return {"operation": "volume", "sentence": command}
         # R53 wave-6 — the machine's vitals. R60 Q4: «فضای درایو C» names a
         # SPECIFIC drive — the report highlights that drive (drive_letter),
         # so the operator asking about C: does not get a five-drive wall.

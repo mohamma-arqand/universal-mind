@@ -182,6 +182,58 @@ class SystemStatusToolConnector:
         from universal_mind.connectors import ConnectorResult
 
         operation = params.get("operation", "status") or "status"
+        if operation == "free_ram":
+            # R79 A4 — «رم را آزاد کن» only REPORTED; now the REAL act:
+            # the working-set trim of big user processes + the before:after
+            # MEASURED from the vitals. Nothing fabricated.
+            result: dict[str, Any] = self._tool.status(refresh=True)  # bypass cache
+            _before_pct = float(result.get("ram_used_pct", 0) or 0)
+            _before_free = float(result.get("ram_free_gb", 0) or 0)
+            import subprocess as _sp79
+
+            _sp79.run(
+                ["powershell.exe", "-NoProfile", "-Command",
+                 "Get-Process | Where-Object {(($_.WorkingSet64/1MB) -gt 200)"
+                 " -and ($_.ProcessName -notin 'System','Registry','Idle')"
+                 "} | ForEach-Object { $_.MinWorkingSet = 1024KB; "
+                 "$_.MaxWorkingSet = 20480KB } 2>$null"],
+                capture_output=True, timeout=60, check=False,
+            )
+            result2: dict[str, Any] = self._tool.status(refresh=True)
+            _after_pct = float(result2.get("ram_used_pct", 0) or 0)
+            _after_free = float(result2.get("ram_free_gb", 0) or 0)
+            return ConnectorResult(ok=True, output={
+                "operation": "free_ram",
+                "before_pct": _before_pct, "after_pct": _after_pct,
+                "before_free_gb": _before_free, "after_free_gb": _after_free,
+            })
+        if operation == "volume":
+            # R79 A1 — the REAL volume act: delta/level from the params, the
+            # MEASURED before:after in the result (never a claimed success).
+            import re as _re_vol
+
+            _m_pct = _re_vol.search(r"(\d+)", str(params.get("sentence", "")))
+            out: dict[str, Any]
+            if params.get("delta") is not None or params.get("level") is not None:
+                from universal_mind.volume_tool import set_volume as _sv
+
+                out = _sv(delta=params.get("delta"), level=params.get("level"))
+            elif str(params.get("direction", "")) in ("up", "down"):
+                from universal_mind.volume_tool import set_volume as _sv2
+
+                out = _sv2(delta=0.05 if params["direction"] == "up" else -0.05)
+            elif _m_pct is not None:
+                from universal_mind.volume_tool import set_volume as _sv3
+
+                out = _sv3(level=int(_m_pct.group(1)) / 100.0)
+            else:
+                from universal_mind.volume_tool import get_volume as _gv
+
+                out = _gv()
+            if out.get("ok") is not True:
+                return ConnectorResult(ok=False, output=None,
+                                       error=str(out.get("error", "failed")))
+            return ConnectorResult(ok=True, output={**out, "operation": "volume"})
         if operation == "env_var":
             result = self._tool.env_var(str(params.get("name", "")))
             if result.get("ok") is not True:

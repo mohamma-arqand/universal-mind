@@ -1569,6 +1569,74 @@ def route_and_run(
                 "_registry": registry or ToolRegistry(),
             }
 
+    # R79 A1 — VOLUME IS AN ACT, NOT SPEECH: «صدا را بلندتر کن» / «ولوم
+    # روی ۵۰» fell to speech, which TALKED and moved nothing (a false
+    # success). The volume sentences route to sysstatus's volume op,
+    # which moves the REAL master volume and reports before:after.
+    # R79 A2/A3/A5 — REFUSE WHAT THE TOOLS CANNOT REALLY DO: «پخش کن»
+    # produced a 147-byte PNG (media only generates/inspects/transcodes —
+    # it has no player); «ویروس اسکن کن» went to image processing; a
+    # poem/joke ask is NOT speech content. Each is a NAMED refusal with
+    # what IS possible — never a false success.
+    _REFUSE_MEDIA = (
+        ("پخش کن" in command or "پخشش کن" in command) and "رسانه" not in command
+        and "برنامه" not in command,
+        "ویروس" in command or "بدافزار" in command or "فایروال" in command,
+        "شعر" in command and "بگو" in command,
+        "شوخی" in command and ("کن" in command or "بگو" in command),
+    )
+    if any(_REFUSE_MEDIA) and forced_route is None:
+        if "ویروس" in command or "بدافزار" in command or "فایروال" in command:
+            return {
+                "ok": False, "command": command, "route": ["security"],
+                "result": {},
+                "agent_report": (
+                    "اسکنِ امنیتیِ واقعی (Windows Defender) دستورِ من نیست — "
+                    "«ویندوز سکیوریتی را باز کن» بازش میکند؛ خود اسکن را آنجا اجرا کن."),
+                "_registry": registry or ToolRegistry(),
+            }
+        if "شعر" in command or "شوخی" in command:
+            return {
+                "ok": False, "command": command, "route": ["llm"],
+                "result": {},
+                "agent_report": (
+                    "شعر/شوخی واقعی خلاقیتِ زنده میخواهد — مدلِ زبانی وصل نیست و "
+                    "جملهٔ ثابت تکراری نمیگویم (دروغِ خلاقیت است). برای وصل: "
+                    "UM_LLM_BASE_URL."),
+                "_registry": registry or ToolRegistry(),
+            }
+        return {
+            "ok": False, "command": command, "route": ["media"],
+            "result": {},
+            "agent_report": (
+                "پخشکنندهٔ واقعی ندارم — رسانه فقط فایل میسازد/بررسی میکند/تبدیل "
+                "میکند. برای پخش: «فایل X را باز کن» (پلیرِ پیشفرض ویندوز باز میشود)."),
+            "_registry": registry or ToolRegistry(),
+        }
+
+    # R79 A4 — «رم را آزاد کن» is the free_ram ACT (it only ever reported).
+    if forced_route is None and "آزاد کن" in command and "رم" in command:
+        return route_and_run(command, forced_route=["sysstatus"],
+                             params={"sysstatus": {"operation": "free_ram"}})
+    _vol_low79 = command.lower()
+    _VOL_SHAPE = (
+        ("بلندتر" in _vol_low79 and ("صدا" in _vol_low79 or "ولوم" in _vol_low79
+                                     or "حجم صدا" in _vol_low79)),
+        ("آرومتر" in _vol_low79 or "کمتر" in _vol_low79)
+        and ("صدا" in _vol_low79 or "ولوم" in _vol_low79),
+        ("روی" in _vol_low79 or "رو به" in _vol_low79)
+        and ("صدا" in _vol_low79 or "ولوم" in _vol_low79)
+        and any(ch.isdigit() for ch in command),
+        ("چند" in _vol_low79 and ("ولوم" in _vol_low79 or "صدا" in _vol_low79)),
+    )
+    if any(_VOL_SHAPE) and "میکروفون" not in _vol_low79 and forced_route is None:
+        # the direction/level ride from the sentence through the extractor
+        from universal_mind.persian_params import extract_params as _ep79
+
+        return route_and_run(
+            command, forced_route=["sysstatus"],
+            params={"sysstatus": _ep79(command, "sysstatus")},
+        )
     # R73 P4 — THE BUILD-A-VIEW GATE: a sentence that names a VISUAL VIEW
     # (تایم‌لاین/جدول/کارت/نمای کلی) AND a build verb (بساز/بکش) is a BUILD
     # ask, not a reflexive/list question. It must run BEFORE the reflexive
