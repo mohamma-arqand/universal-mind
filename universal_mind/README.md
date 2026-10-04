@@ -221,7 +221,7 @@ numbers-in-sentence as parameters, Jalali dates, folder resolution, saved chains
 by name, fluent Persian reports, and a chain advisor that learns from the
 operator's own run history).
 
-- **۲۶۶۵ tests** green, **۱۰۶ probes** green, **mypy 0**, **ruff clean**.
+- **۲۶۷۳ tests** green, **۱۰۶ probes** green, **mypy 0**, **ruff clean**.
 - The live architecture map for the whole super-platform (engine, 27 capabilities,
   9 synthesis flows, self-scheduling, 5 delivery faces, 3 learning layers,
   the honesty laws) is `ARCHITECTURE_SUPERPLATFORM.md` — kept current with
