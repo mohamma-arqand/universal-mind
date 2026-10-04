@@ -52,6 +52,7 @@ _CAP_FA: dict[str, str] = {
     "textsummarize": "خلاصه‌سازی متن",
     "html-report": "گزارش HTML",
     "convert": "تبدیل قالب",
+    "opener": "باز کردن",
 }
 
 _CHART_KIND_FA: dict[str, str] = {
@@ -214,6 +215,10 @@ def _render_capability(cap: str, result: Any, params: dict[str, Any] | None) -> 
                     "report": "گزارش HTML"}
         _fa = _VIEW_FA.get(str(result.get("mode", "report")), "گزارش HTML")
         return f"{_fa} ساخته شد ({_fa_num(round(_size_kb, 1))} کیلوبایت) — در «{_p}»"
+    if cap == "opener" and isinstance(result, dict) and result.get("opened"):
+        _KIND_FA = {"url": "سایت", "پوشه": "پوشه", "فایل": "فایل", "برنامه": "برنامه"}
+        _k = _KIND_FA.get(str(result.get("kind", "")), "")
+        return f"{_k} «{result.get('opened')}» باز شد."
     if cap == "convert" and isinstance(result, dict) and result.get("path"):
         _c_kb = result.get("bytes", 0) / 1024
         return (f"تبدیل انجام شد: «{result.get('src', '')}» → «{result.get('path', '')}» "

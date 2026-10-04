@@ -185,7 +185,11 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     ("سایت", "webfetch"),
     ("آدرسش را بگیر", "webfetch"),
     ("لینک", "webfetch"),
-    ("باز کن", "webfetch"),
+    # R77 — «باز کن» OPENS the real thing (file/folder/program/URL via
+    # ShellExecute); the old mapping to webfetch asked «کدام سایت؟» for a
+    # file. Reading a page stays «سایت X را بخوان» (webfetch).
+    ("باز کن", "opener"),
+    ("بازکن", "opener"),
     # screenshot (ImageGrab) — the platform captures the screen
     ("اسکرینشات", "screenshot"),
     ("از صفحه عکس بگیر", "screenshot"),
@@ -2156,6 +2160,10 @@ def route_and_run(
     # steps aside - .zip is the world's format; gzip keeps its own sentences.
     if "zip" in caps and "archive" in caps:
         caps.remove("archive")
+    # R77 — an OPEN sentence belongs to the opener; textfile (pulled by
+    # «پوشه/فایل») only errors on the folder read and buries the real open.
+    if "opener" in caps and "textfile" in caps:
+        caps.remove("textfile")
     # R74 P3 — «پوشه X را زیپ کن» matched textfile too (the path word); the
     # textfile read of a FOLDER fails first and buries the real zip. The zip
     # suite owns a zip sentence; textfile steps aside.

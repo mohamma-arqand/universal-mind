@@ -301,6 +301,33 @@ def extract_params(command: str, capability: str) -> dict[str, Any]:
         if text:
             params["title"] = with_resolved_date(text, command)
         return params
+    if capability == "opener":
+        # R77 — the target rides from the sentence: a path, a URL, or a
+        # program name; «با X» names the opening verb (the program).
+        _tgt = path or ""
+        if not _tgt:
+            import re as _re_op
+
+            _m_url = _re_op.search(r"https?://\S+", command) \
+                or _re_op.search(r"باز کن\s+(?:سایت\s+)?(www\.[^\s،]+)", command) \
+                or _re_op.search(r"(?:باز کن|بازکن)\s+([^\s،]+\.[a-z]{2,5})(?:\s|$| را)", command.lower())
+            if _m_url:
+                _tgt = _m_url.group(1)
+            else:
+                # «X را باز کن» (را before the verb) / «X باز کن» / «X را با Y باز کن»
+                _m_prog = _re_op.search(
+                    r"^(.+?)\s+را\s+(?:با\s+\S+\s+)?(?:باز کن|بازکن)", command) \
+                    or _re_op.search(r"^(.+?)\s+(?:باز کن|بازکن)", command) \
+                    or _re_op.search(r"باز کن\s+(.+)$", command)
+                if _m_prog:
+                    _tgt = _m_prog.group(1).strip().rstrip("،")
+        _verb = ""
+        import re as _re_v
+        _m_v = _re_v.search(r"با\s+([a-zA-Z]+)\s+باز", command)
+        if _m_v:
+            _verb = _m_v.group(1)
+        return {"operation": "open", "target": _tgt, "verb": _verb}
+
     if capability == "convert":
         # R74 P2 — the FORMAT target rides from the sentence: csv/اکسل/json.
         _tgt = ""

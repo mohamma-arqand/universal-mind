@@ -23,6 +23,7 @@ from universal_mind.image_suite import ImageSuiteConnector
 from universal_mind.llm_connector import LLMToolConnector
 from universal_mind.html_report_connector import HtmlReportConnector
 from universal_mind.format_converter_connector import FormatConvertConnector
+from universal_mind.opener_tool import OpenerConnector
 from universal_mind.media_adapter import MediaToolConnector
 from universal_mind.notify_adapter import NotifyToolConnector
 from universal_mind.csv_suite import CsvSuiteConnector
@@ -80,6 +81,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "llm": LLMToolConnector,           # real OpenAI-compatible chat (R45-15, env-wired)
     "html-report": HtmlReportConnector,  # R73 P1 — real self-contained HTML (report/dashboard)
     "convert": FormatConvertConnector,  # R74 P2 — real format conversion (txt/csv/json/xlsx)
+    "opener": OpenerConnector,  # R77 — really opens files/folders/programs/URLs on Windows
 }
 
 
