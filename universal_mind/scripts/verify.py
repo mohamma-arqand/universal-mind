@@ -199,6 +199,7 @@ PROBES = [
     "probe_r77_opener.py",
     "probe_r78_pim.py",
     "probe_r79_false_success.py",
+    "probe_r79_gaps.py",
 ]
 
 

@@ -97,6 +97,37 @@ def answer_reflexive(command: str) -> dict[str, Any] | None:
     ):
         return None
 
+    # R79 B2 — «لیست پنجرههای باز» / «پنجرههای باز را نشان بده»: the REAL
+    # windows with titles (the same PowerShell source the close action
+    # uses). The audit caught both shapes dying in «نشناختم».
+    if ("پنجرههای باز" in c or "پنجره های باز" in c or "پنجرهها را نشان" in c
+            or "چه پنجره" in c or "پنجرههای الان" in c or "پنجرههای باز نیست" in c
+            or "پنجرهای باز" in c) \
+            and "ببند" not in c and "باز کن" not in c:
+        import subprocess as _sp79b
+
+        # UTF-8 forced on BOTH ends (PS writes UTF-8, we decode UTF-8) or
+        # Persian titles come back as '?? ?? ???' (a live encoding wall).
+        _r79b = _sp79b.run(
+            ["powershell.exe", "-NoProfile", "-Command",
+             "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+             "$OutputEncoding = [System.Text.Encoding]::UTF8; "
+             "Get-Process | Where-Object {$_.MainWindowTitle} | Select-Object "
+             "ProcessName,MainWindowTitle | ConvertTo-Csv -NoTypeInformation"],
+            capture_output=True, timeout=20, check=False)
+        _out79b = (_r79b.stdout or b"").decode("utf-8", errors="replace") \
+            if isinstance(_r79b.stdout, bytes) else (_r79b.stdout or "")
+        _lines79b: list[str] = []
+        if _r79b.returncode == 0 and _out79b:
+            for _row79b in _out79b.splitlines()[1:]:
+                _parts79b = _row79b.strip('"').split('","')
+                if len(_parts79b) >= 2 and _parts79b[1].strip():
+                    _lines79b.append(f"• {_parts79b[0]} — {_parts79b[1][:50]}")
+        if _lines79b:
+            return _reflex_answer(
+                c, f"{_fa_num(len(_lines79b))} پنجره باز:\n" + "\n".join(_lines79b[:12]))
+        return _reflex_answer(c, "هیچ پنجرهٔ بازِ عنوانداری نیست.")
+
     # R78 P1 — «یادداشت X را فراموش کن»: FORGETTING a stored note is a
     # named_memory DELETE, never a clipboard read (the old word collision
     # read the locked clipboard instead). The needle rides the sentence;

@@ -1014,6 +1014,55 @@ def route_and_run(
     # «یادآور» keyword swallowed counting/extremes/search/sort asks and
     # REGISTERED a new reminder (a live sweep caught «چند تا یادآور برای
     # فردا داری؟» creating one!). Question words close the gate first.
+    # R79 B1 — MEETING PLACEMENT: «قرار بگذار شنبه ساعت ۱۰ جلسه» is a
+    # REGISTRATION (a real meeting at a real moment). «قرار بگذار» is the
+    # verb of placement; the audit caught all three shapes dying in
+    # «نشناختم». «جلسه X ساعت H دارم» is the same intent stated as a fact.
+    _PLACE_VERBS79 = ("قرار بگذار", "قرار بذار", "جلسه بگذار", "قرار بزار")
+    _FACT_SHAPE79 = ("دارم" in command or "داره" in command) and (
+        "جلسه" in command or "قرار" in command) and any(
+        w in command for w in ("ساعت", "صبح", "ظهر", "عصر", "شب", "شنبه", "یکشنبه",
+                               "دوشنبه", "سه", "چهارشنبه", "پنج", "جمعه", "فردا",
+                               "امروز", "پس"))
+    if forced_route is None and (any(v in command for v in _PLACE_VERBS79)
+                                 or _FACT_SHAPE79) \
+            and "چند" not in command:
+        _body79 = command
+        for _w79 in _PLACE_VERBS79:
+            _body79 = _body79.replace(_w79, "یادآور")
+        # «جلسه شنبه ساعت ۱۰ دارم» → «یادآور جلسه شنبه ساعت ۱۰»
+        if _FACT_SHAPE79 and not any(v in command for v in _PLACE_VERBS79):
+            _body79 = "یادآور " + command
+        from universal_mind.scheduler import parse_one_shot as _pos79
+
+        _spec79 = _pos79(_body79)
+        if _spec79 is not None:
+            from universal_mind.scheduler import register_one_shot as _reg79
+
+            _cmd79 = command.replace("قرار بگذار", "").replace("قرار بذار", "").strip()
+            if not _cmd79:
+                _cmd79 = command
+            _reg79(_cmd79)
+            from datetime import datetime as _dt79
+
+            _fire79 = _dt79.fromisoformat(_spec79["run_at"])
+            return {
+                "ok": True, "command": command, "route": ["scheduler"],
+                "result": {"registered": _cmd79},
+                "agent_report": (
+                    f"قرار ثبت شد: «{_cmd79}» — {_fire79.strftime('%H:%M')} "
+                    f"روز {_fire79.strftime('%Y-%m-%d')}. «یادآورهای من» فهرستشان را نشان میدهد."),
+                "_registry": registry or ToolRegistry(),
+            }
+        return {
+            "ok": False, "command": command, "route": ["scheduler"],
+            "result": {},
+            "agent_report": (
+                "زمانِ قرار را نفهمیدم — مثل: «قرار بگذار شنبه ساعت ۱۰ جلسه» یا "
+                "«فردا ساعت ۹ جلسه دارم»."),
+            "_registry": registry or ToolRegistry(),
+        }
+
     _R76_Q = ("چند", "کدام", "چی بود", "چیست", "بگرد", "پیدا کن", "مرتب",
               "بزرگترین", "قدیمیترین", "جدیدترین", "آخرین", "اولین",
               "بر اساس", "حرف به حرف", "از قدیم", "به جدید")
