@@ -391,3 +391,9 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-04 17:38] run started (lock acquired)
 - [2026-10-04 17:39] run started (lock acquired)
 - [2026-10-04 17:47] R79 VERIFY RESEAL — زامبیِ R70 («یادآور تست-درب» از تستِ دستی در) با یک DELETE واقعی پاک شد؛ probe_r70 ۱۲/۱۲. verify کامل: **tests 2699/0, probes RED→GREEN بعد از پاکسازی**, receipt GREEN. HEAD 44f1f6a. محصول قابل‌نصب است: build/universal_mind-bundle.zip.
+- [2026-10-04 17:51] run started (lock acquired)
+- [2026-10-04 17:51] run started (lock acquired)
+- [2026-10-04 17:58] run started (lock acquired)
+- [2026-10-04 17:58] run started (lock acquired)
+- [2026-10-04 17:59] run started (lock acquired)
+- [2026-10-04 18:01] S E A L — verify.py کاملِ سبز: tests **2699 pass/0 fail** (junit.xml ۱۷:۳۰), receipt **pass**, probes **۶۹/۶۹** (۶۳ در verify + ۲ نویسهٔ R79؛ r70 بعد از پاکسازیِ ردیفِ تستِ دستی). HEAD {d260fba}. محصول نصبشده آماده است: build/universal_mind-bundle.zip.
