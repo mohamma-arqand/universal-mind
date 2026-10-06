@@ -56,7 +56,7 @@ def test_the_vision_capability_refuses_by_name_without_cv2(tmp_path) -> None:
     import importlib
     import universal_mind.vision_suite as vs
 
-    reload = importlib.reload(vs)
+    importlib.reload(vs)
     # block cv2 inside this process, then reload the module fresh
     import builtins
 
