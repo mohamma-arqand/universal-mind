@@ -17,8 +17,25 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import cv2
+# R79 — LAZY HEAVY IMPORTS (the Lite-build lesson): cv2 is 112MB. A bare
+# module import must never pull it in — the door stays open on machines
+# where cv2 is absent, and the capability refuses BY NAME when used.
 import numpy as np
+
+
+def _cv2():
+    import cv2
+
+    return cv2
+
+
+def _have_cv2() -> bool:
+    try:
+        import cv2  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 from universal_mind.connectors import ConnectorResult
 
@@ -39,18 +56,18 @@ class VisionSuite:
         src = Path(path)
         if not src.exists():
             return None
-        # cv2.imdecode over the raw bytes: unicode-safe on Windows paths.
+        # _cv2().imdecode over the raw bytes: unicode-safe on Windows paths.
         data = np.fromfile(str(src), dtype=np.uint8)
-        return cv2.imdecode(data, cv2.IMREAD_COLOR)
+        return _cv2().imdecode(data, _cv2().IMREAD_COLOR)
 
     @staticmethod
     def _save(image: np.ndarray, name: str, out_dir: str | None = None) -> dict[str, Any]:
         target = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="um-vision-"))
         target.mkdir(parents=True, exist_ok=True)
         out_path = target / name
-        ok, encoded = cv2.imencode(".png", image)
+        ok, encoded = _cv2().imencode(".png", image)
         if not ok:
-            return {"ok": False, "error": "cv2.imencode failed"}
+            return {"ok": False, "error": "_cv2().imencode failed"}
         encoded.tofile(str(out_path))
         if not out_path.exists():
             return {"ok": False, "error": "image was not written"}
@@ -61,8 +78,8 @@ class VisionSuite:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, low, high)
+        gray = _cv2().cvtColor(image, _cv2().COLOR_BGR2GRAY)
+        edges = _cv2().Canny(gray, low, high)
         saved = self._save(edges, "edges.png")
         if not saved["ok"]:
             return saved
@@ -76,7 +93,7 @@ class VisionSuite:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = _cv2().cvtColor(image, _cv2().COLOR_BGR2GRAY)
         saved = self._save(gray, "gray.png")
         if not saved["ok"]:
             return saved
@@ -86,15 +103,15 @@ class VisionSuite:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        blurred = cv2.GaussianBlur(image, (kernel, kernel), 0)
+        blurred = _cv2().GaussianBlur(image, (kernel, kernel), 0)
         return self._save(blurred, "blurred.png")
 
     def threshold(self, path: str, value: int = 50) -> dict[str, Any]:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        _, binary = cv2.threshold(gray, value, 255, cv2.THRESH_BINARY)
+        gray = _cv2().cvtColor(image, _cv2().COLOR_BGR2GRAY)
+        _, binary = _cv2().threshold(gray, value, 255, _cv2().THRESH_BINARY)
         saved = self._save(binary, "binary.png")
         if not saved["ok"]:
             return saved
@@ -111,10 +128,10 @@ class VisionSuite:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        _, binary = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
-        found, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        areas = sorted((round(cv2.contourArea(c), 1) for c in found), reverse=True)[:5]
+        gray = _cv2().cvtColor(image, _cv2().COLOR_BGR2GRAY)
+        _, binary = _cv2().threshold(gray, 50, 255, _cv2().THRESH_BINARY)
+        found, _ = _cv2().findContours(binary, _cv2().RETR_EXTERNAL, _cv2().CHAIN_APPROX_SIMPLE)
+        areas = sorted((round(_cv2().contourArea(c), 1) for c in found), reverse=True)[:5]
         saved = self._save(binary, "contours.png")
         if not saved["ok"]:
             return saved
@@ -130,9 +147,9 @@ class VisionSuite:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        ycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
-        ycrcb[:, :, 0] = cv2.equalizeHist(ycrcb[:, :, 0])
-        equalized = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2BGR)
+        ycrcb = _cv2().cvtColor(image, _cv2().COLOR_BGR2YCrCb)
+        ycrcb[:, :, 0] = _cv2().equalizeHist(ycrcb[:, :, 0])
+        equalized = _cv2().cvtColor(ycrcb, _cv2().COLOR_YCrCb2BGR)
         return self._save(equalized, "equalized.png")
 
     def flip(self, path: str, direction: str = "horizontal") -> dict[str, Any]:
@@ -142,7 +159,7 @@ class VisionSuite:
         code = {"horizontal": 1, "vertical": 0, "both": -1}.get(direction)
         if code is None:
             return {"ok": False, "error": f"unknown direction: {direction!r}"}
-        return self._save(cv2.flip(image, code), f"flip_{direction}.png")
+        return self._save(_cv2().flip(image, code), f"flip_{direction}.png")
 
     def rotate(self, path: str, degrees: int = 90) -> dict[str, Any]:
         image = self._load(path)
@@ -150,15 +167,15 @@ class VisionSuite:
             return {"ok": False, "error": f"file not found: {path}"}
         (h, w) = image.shape[:2]
         center = (w // 2, h // 2)
-        matrix = cv2.getRotationMatrix2D(center, float(degrees), 1.0)
-        rotated = cv2.warpAffine(image, matrix, (w, h))
+        matrix = _cv2().getRotationMatrix2D(center, float(degrees), 1.0)
+        rotated = _cv2().warpAffine(image, matrix, (w, h))
         return self._save(rotated, f"rotated_{degrees}.png")
 
     def resize(self, path: str, width: int, height: int) -> dict[str, Any]:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        resized = cv2.resize(image, (int(width), int(height)))
+        resized = _cv2().resize(image, (int(width), int(height)))
         return self._save(resized, "resized.png")
 
     def stats(self, path: str) -> dict[str, Any]:
@@ -195,14 +212,14 @@ class VisionSuite:
         image = self._load(path)
         if image is None:
             return {"ok": False, "error": f"file not found: {path}"}
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = _cv2().cvtColor(image, _cv2().COLOR_BGR2GRAY)
 
         # Dominant colors: k-means over a pixel sample — real palette readout.
-        small = cv2.resize(image, (120, 90))
+        small = _cv2().resize(image, (120, 90))
         pixels = small.reshape(-1, 3).astype(np.float32)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        _, labels, centers = cv2.kmeans(
-            pixels, 3, None, criteria, 3, cv2.KMEANS_PP_CENTERS
+        criteria = (_cv2().TERM_CRITERIA_EPS + _cv2().TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        _, labels, centers = _cv2().kmeans(
+            pixels, 3, None, criteria, 3, _cv2().KMEANS_PP_CENTERS
         )
         counts = np.bincount(labels.flatten(), minlength=3)
         order = np.argsort(-counts)
@@ -217,8 +234,8 @@ class VisionSuite:
         ]
 
         # Long straight segments: Hough on edges — axes and series lines.
-        edges = cv2.Canny(gray, 50, 150)
-        lines = cv2.HoughLinesP(
+        edges = _cv2().Canny(gray, 50, 150)
+        lines = _cv2().HoughLinesP(
             edges, 1, np.pi / 180, threshold=60,
             minLineLength=60, maxLineGap=8,
         )
@@ -248,6 +265,15 @@ class VisionSuiteConnector:
         self._suite = suite if suite is not None else VisionSuite()
 
     def connect(self, spec: Any, params: dict[str, Any]) -> ConnectorResult:
+        # R79 Lite — a missing cv2 is NAMED, never a crash and never a fake
+        # image: the capability honestly says the OpenCV engine is absent on
+        # this install and how to get it.
+        if not _have_cv2():
+            return ConnectorResult(
+                ok=False, output=None,
+                error=("موتورِ بینایی (OpenCV) در این نصب نیست — نسخهٔ Full را "
+                       "نصب کن یا opencv-python-headless را اضافه کن."),
+            )
         operation = params.get("operation", "stats") or "stats"
         # A missing path defaults to a real self-generated sample (a rectangle on
         # a dark field), so a no-params call (as orchestrate issues) still runs
@@ -286,7 +312,7 @@ class VisionSuiteConnector:
         target = Path(tempfile.mkdtemp(prefix="um-vision-"))
         image = np.zeros((120, 160, 3), dtype=np.uint8)
         image[30:90, 40:120] = (200, 120, 40)
-        _ok, encoded = cv2.imencode(".png", image)
+        _ok, encoded = _cv2().imencode(".png", image)
         sample = target / "sample.png"
         encoded.tofile(str(sample))
         return str(sample)
