@@ -1,0 +1,40 @@
+name: release
+
+on:
+  push:
+    tags: [ "v*" ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Reproduce the build (bundle + exe installer)
+        run: |
+          # bundle
+          bash setup.cmd
+          # installer (Inno Setup must be on the runner)
+          choco install innosetup -y
+          iscc installer\universal_mind.iss
+      - name: Ship the Windows installer (.exe + .zip)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/universal_mind-bundle.zip
+            build/installer/UniversalMind-Setup-${{ github.ref_name }}.exe
+
+  # the manifest artefacts (receipt, junit, probes) come along as proof
+  attest:
+    runs-on: windows-latest
+    needs: build-windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - run: python -m pip install pytest
+      - run: python -m pytest universal_mind/tests --junitxml=artifacts/junit.xml -q -p no:cacheprovider
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verification-proof
+          path: artifacts/

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Universal Mind — a seed-core, local-first orchestration system (Core / Pantheon / Memory / Feedback / ARETE / Gateway)."
 readme = "universal_mind/README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Universal Mind" }]
 keywords = ["orchestration", "capabilities", "memory", "seed-core"]
 classifiers = [
@@ -25,7 +25,8 @@ dependencies = [
 ]
 
 [project.scripts]
-universal-mind = "universal_mind.cli:main"
+universal-mind = "universal_mind.__main__:main"
+universal_mind = "universal_mind.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["universal_mind*"]

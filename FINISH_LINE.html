@@ -1,0 +1,47 @@
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><style>
+:root{color-scheme:dark}
+body{font-family:Tahoma,"Segoe UI",sans-serif;line-height:1.9;margin:0}
+.wrap{max-width:860px}
+h2{font-size:19px;border-bottom:1px solid var(--border);padding-bottom:8px}
+h3{font-size:14px;margin:18px 0 6px;color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{border:1px solid var(--border);padding:6px 10px;text-align:right}
+th{background:var(--card)}
+.done td:first-child::before{content:"✅ ";color:#22c55e}
+.todo td:first-child::before{content:"⬜ ";color:#f59e0b}
+.k{color:var(--muted-foreground);font-size:12px}
+.eff{font-size:11px;color:var(--muted-foreground)}
+.big{font-size:15px;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;padding:10px 14px;border-radius:10px;margin:10px 0}
+.stat{display:inline-block;border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin:3px;font-size:12px}
+code{background:var(--card);padding:1px 6px;border-radius:5px;font-size:12px}
+</style></head><body>
+<div class="wrap">
+<h2>🧭 نقشهٔ رسیدن به پایان — وضعیتِ امروز (۴ مهر/oktober)</h2>
+<div class="big">وضعیت: READY — ۲۶۹۹ تست بدون شکست · ۶۹ پروب · رسید pass · باندل ۱.۶۷MB ساخته شد</div>
+<p class="k">محصولِ نصب‌پذیر (zip + install.cmd + درِ فارسی) ساخته و گواه شد. این چک‌لیستِ واقعیِ مانده است — نه آرزو.</p>
+
+<h3>A — برای «کامل شدن محصول» (قبل از نصب)</h3>
+<table>
+<tr class="done"><td>موتور و پایداری (R71–R79 — ۲۶۹۹ تست سبز، ۶۹ پروب، mypy پاک)</td><td class="eff">— مهر شد</td></tr>
+<tr class="done"><td>بسته‌بندی قابل نصب (zip ۱.۶۷MB + install.cmd + درِ فارسی)</td><td class="eff">گواه: volctl از داخل zip اجرا و ولوم خواند</td></tr>
+<tr class="todo"><td><b>تستِ نصبِ واقعی روی همین ماشین</b>: unzip → راست‌کلیک install.cmd (admin) → یک جلسه با ۵ فرمان</td><td class="eff">۵ دقیقه — تنها گواهِ انسانی</td></tr>
+<tr class="todo"><td><b>سرویسِ autostart + trayی خاموش</b>: app در tray نشست بدون پنجره؛ hotkey (مثلاً Ctrl+Alt+M) پنجرهٔ گفت‌وگو را می‌آورد؛ tick دیگر popup نمی‌دهد</td><td class="eff">نیمه‌روز</td></tr>
+<tr class="todo"><td><b>onboarding ۵ قدم</b> (اسمم را بگو، صدا روشن/خاموش، راهنما، نمونهٔ جلسه، دانلود/اينترنت نیست؟)</td><td class="eff">نیمه‌روز</td></tr>
+</table>
+
+<h3>B — برای «در مرزِ نیازهایِ کاربرِ معمول» بودن</h3>
+<table>
+<tr class="todo"><td>دانش/ترجمه/هوا بدون فرستادن به LLM: دیکشنری و قاعده بومی + ویکی دانلودی (صدها هزار ورودی) — وگرنه «نمیدانم» صادقانه</td><td class="eff">B3 — بزرگترین</td></tr>
+<tr class="todo"><td>قرارداد/نامهٔ الگویی + پرکردن جزئیات (فاکتور/رزومه/درخواست رسمی)</td><td class="eff">B5 — یک موج</td></tr>
+<tr class="todo"><td>undo («آن پوشهٔ تازه‌ها را برگردان») + توضیحِ mute («صدا ندارم چون TTS خاموش است»)</td><td class="eff">C2/C4 — کوچک</td></tr>
+</table>
+
+<h3>C — برای «پایان» واقعی (نه شعار — با گواه)</h3>
+<table>
+<tr class="done"><td>کد/تست/پروب/ruff/mypy: سبز</td><td class="eff">HEAD 4b53d87 · junit failures=0 · receipt=pass</td></tr>
+<tr class="todo"><td><b>مستندِ کاربر</b> (شروع.md + راهنمای فرمانات + «چه چیزی واقعی است، چه چیزی نه»)</td><td class="eff">نیمه‌روز — از روی جواب‌های واقعی</td></tr>
+<tr class="todo"><td><b>یک هفته استفادهٔ روزمره</b>: هر روز ۱۰ فرمان واقعی + گزارش سیستم به من (چیزی که شکست خورد لیست کنم، فیکس کنم، دوباره مهر)</td><td class="eff">هفته — بدون رانِ مصنوعی</td></tr>
+</table>
+
+<p class="k"><b>جمع‌بندی صادق:</b> محصول در این ته به پایان است؛ برای «هیچ ایرادی» در استفادهٔ واقعی، کیس‌های B و تست نصب+هفتهٔ استفادهٔ روزمره لازم است. نصب همین‌جا انجام میدهم؟ (unzip + install.cmd با تو)</p>
+</div></body></html>
