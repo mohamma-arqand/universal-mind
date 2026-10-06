@@ -233,3 +233,15 @@ operator's own run history).
 See [ARCHITECTURE.md](../ARCHITECTURE.md) for the layering model, the intent
 pipeline, ledger schema, and the recovery guide; [ROADMAP.md](ROADMAP.md) for the
 full 18-item beyond-world-class plan.
+
+
+## Install (end users)
+
+No Python, no pip, no internet needed at install time. Grab the release:
+
+- `UniversalMind-Setup-1.0.0.exe` (Full, 88MB) — every capability incl. vision (OpenCV) + signal (scipy) + ML (sklearn)
+- `UniversalMind-Lite-Setup-1.0.0.exe` (Lite, 44MB) — the full conversational door; the heavy engines refuse BY NAME if used
+
+Double-click → Next → Install → the Persian door opens. Persian manual: `docs/README-FA.md`.
+
+Verify the download against `SHA256SUMS.txt` shipped beside the installers.
