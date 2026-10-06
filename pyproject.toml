@@ -19,9 +19,20 @@ classifiers = [
 ]
 
 dependencies = [
-  "numpy", "matplotlib", "pandas", "scikit-learn", "openpyxl", "Pillow",
-  "reportlab", "python-dateutil", "persiantools", "arabic-reshaper",
-  "python-bidi", "uvicorn", "fastapi", "pystray", "keyboard", "requests",
+  "numpy==2.4.3",
+  "scipy==1.17.1",
+  "scikit-learn==1.9.0",
+  "opencv-python-headless==5.0.0.93",
+  "matplotlib==3.11.1",
+  "openpyxl==3.1.5",
+  "reportlab==5.0.1",
+  "pypdf==6.18.1",
+  "Pillow==12.3.0",
+  "jdatetime==6.1.0",
+  "arabic-reshaper==3.0.1",
+  "python-bidi==0.6.11",
+  "python-dateutil==2.9.0.post0",
+  "requests==2.33.0",
 ]
 
 [project.scripts]

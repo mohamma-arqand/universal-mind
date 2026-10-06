@@ -397,3 +397,4 @@ N7 پاس پوشش، N8 قفل اتمیک + N8-2 قفل verify، N9 نگهبان
 - [2026-10-04 17:58] run started (lock acquired)
 - [2026-10-04 17:59] run started (lock acquired)
 - [2026-10-04 18:01] S E A L — verify.py کاملِ سبز: tests **2699 pass/0 fail** (junit.xml ۱۷:۳۰), receipt **pass**, probes **۶۹/۶۹** (۶۳ در verify + ۲ نویسهٔ R79؛ r70 بعد از پاکسازیِ ردیفِ تستِ دستی). HEAD {d260fba}. محصول نصبشده آماده است: build/universal_mind-bundle.zip.
+- [2026-10-05 21:10] R79 FINAL — نصبکنندهٔ EXE واقعی ساخته شد: UniversalMind-Setup-1.0.0.exe (88MB, Inno/LZMA) — تک-دابل-کلیک، شاملِ ران‌تایمِ Python 3.11.16 (خودکفا، بدون پیش‌نیاز)، 346 ماژول، 31 قابلیت، volctl.exe، درِ فارسی. گواهِ زنده: EXE به‌صورتِ SILENT نصب شد (6703 فایل) و از درونِ نصب: ساعت/ولومِ واقعی/ثبتِ قرار/لیستِ پنجرهها همه جواب دادند. requirements/pyproject به ۱۴ پینِ واقعیِ استفادهشده تصحیح شد (cv2/scipy/sklearn/...).
