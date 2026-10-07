@@ -71,9 +71,15 @@ class TestKnowledgeFallback:
         os.environ.pop("UM_LLM_BASE_URL", None)
         res = route_and_run("پایتخت فرانسه چیه؟")
         rep = str(res.get("agent_report", ""))
-        # The honest answer names the missing piece and the wiring recipe
-        assert "مدل زبانی" in rep or "UM_LLM_BASE_URL" in rep
-        assert res.get("ok") is not True
+        # R79 B5 — the offline FACTBOOK now answers this everyday core:
+        # the honest path is EITHER the sourced fact (knowledge) OR the
+        # named refusal with the wiring recipe. Both are honest; a crash
+        # or a fabricated string is the only failure.
+        sourced_fact = ("پاریس" in rep and "منبع" in rep
+                        and res.get("route") == ["knowledge"])
+        honest_refusal = ("مدل زبانی" in rep or "UM_LLM_BASE_URL" in rep) \
+            and res.get("ok") is not True
+        assert sourced_fact or honest_refusal, rep
 
     def test_question_is_harvested_for_the_future(self) -> None:
         import os

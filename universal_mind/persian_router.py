@@ -1664,6 +1664,29 @@ def route_and_run(
             "_registry": registry or ToolRegistry(),
         }
 
+    # R79 B5 — KNOWLEDGE BEFORE THE REFUSAL: «پایتخت فرانسه چیست؟» was an
+    # honest refusal while a shipped factbook can answer the everyday
+    # core. The knowledge gate runs BEFORE the llm refusal; a hit answers
+    # with the fact AND its source; a miss keeps the honest refusal —
+    # never a guess dressed as knowledge.
+    if forced_route is None and any(
+            w in command for w in ("چیست", "چیست؟", "کیست", "کیست؟", "چیه؟",
+                                    "چیه", "تعریف", "یعنی چی", "چند استان",
+                                    "چند قاره", "چند تا استان",
+                                    "چند است", "سرعت نور", "نور چند")):
+        from universal_mind.knowledge_tool import lookup as _kb
+
+        out_kb = _kb(command)
+        if out_kb.get("ok"):
+            return {
+                "ok": True, "command": command, "route": ["knowledge"],
+                "result": {"knowledge": out_kb},
+                "agent_report": (
+                    f"{out_kb['fact']}\n(منبع: {out_kb['source']})"),
+                "_registry": registry or ToolRegistry(),
+            }
+        # fall through: the llm refusal below still owns the miss
+
     # R79 B4 — WEATHER IS A REAL QUESTION WITH A REAL SOURCE: the old
     # answer refused «هوا چطوره؟» while the machine was online. The
     # weather gate now owns the ask (live open-meteo, cached with an
