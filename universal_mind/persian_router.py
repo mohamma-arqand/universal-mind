@@ -1664,6 +1664,49 @@ def route_and_run(
             "_registry": registry or ToolRegistry(),
         }
 
+    # R79 B4 — WEATHER IS A REAL QUESTION WITH A REAL SOURCE: the old
+    # answer refused «هوا چطوره؟» while the machine was online. The
+    # weather gate now owns the ask (live open-meteo, cached with an
+    # honest age label, named refusal when neither exists).
+    _c_w = command.strip()
+    if forced_route is None and (("هوا" in _c_w and any(
+            w in _c_w for w in ("چطوره", "چطوره؟", "چیست", "چنده", "بگو",
+                                   "نشان", "آبوهوا", "هواشناسی")))
+            or "آبوهوا" in _c_w or "هواشناسی" in _c_w
+            or _c_w in ("هوا؟", "هوا", "هواشناسی؟")):
+        import re as _re_w
+
+        _city_w = None
+        _m_w = _re_w.search(
+            r"هوای?\s+([^ ]+?)(?:\s+(?:چطوره|چیست|چنده|سره|میشه))?[؟?\s]*$",
+            command) or _re_w.search(r"([^ ]+)\s+هوا", command)
+        _NOT_CITY = ("الان", "امروز", "همین", "بیرون", "برای", "الان؟", "خودش")
+        if _m_w and _m_w.group(1).strip("؟?،.") not in _NOT_CITY:
+            _city_w = _m_w.group(1).strip("؟?،.")
+        from universal_mind.weather_tool import weather as _wx
+
+        out_w = _wx(_city_w or "تهران")
+        if out_w.get("ok"):
+            _age = out_w.get("age_min")
+            _src = (" (از کشِ " + str(_age).translate(
+                str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")) + " دقیقه پیش)"
+                if out_w.get("source") == "cache" else " (زنده)")
+            return {
+                "ok": True, "command": command, "route": ["weather"],
+                "result": {"weather": out_w},
+                "agent_report": (
+                    f"هوای {out_w.get('city')}: {out_w.get('desc')}، "
+                    f"{str(out_w.get('temp_c')).translate(str.maketrans('0123456789','۰۱۲۳۴۵۶۷۸۹'))} درجه، "
+                    f"باد تا {str(out_w.get('wind_kmh')).translate(str.maketrans('0123456789','۰۱۲۳۴۵۶۷۸۹'))} کیلومتر بر ساعت{_src}."),
+                "_registry": registry or ToolRegistry(),
+            }
+        return {
+            "ok": False, "command": command, "route": ["weather"],
+            "result": {},
+            "agent_report": str(out_w.get("error", "هوا را نگرفتم")),
+            "_registry": registry or ToolRegistry(),
+        }
+
     # R79 A4 — «رم را آزاد کن» is the free_ram ACT (it only ever reported).
     if forced_route is None and "آزاد کن" in command and "رم" in command:
         return route_and_run(command, forced_route=["sysstatus"],

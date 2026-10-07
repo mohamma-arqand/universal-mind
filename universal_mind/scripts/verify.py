@@ -201,6 +201,7 @@ PROBES = [
     "probe_r79_false_success.py",
     "probe_r79_gaps.py",
     "probe_r79_translate.py",
+    "probe_r79_weather.py",
 ]
 
 
