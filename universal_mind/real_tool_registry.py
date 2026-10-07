@@ -34,6 +34,7 @@ from universal_mind.file_dedupe_tool import FileDedupeToolConnector
 from universal_mind.system_status_tool import SystemStatusToolConnector
 from universal_mind.pdfreader_tool import PdfReaderToolConnector
 from universal_mind.screenshot_tool import ScreenshotToolConnector
+from universal_mind.translate_tool import TranslateToolConnector
 from universal_mind.webfetch_tool import WebFetchToolConnector
 from universal_mind.unit_convert_tool import UnitConvertToolConnector
 from universal_mind.textfile_tool import TextFileToolConnector
@@ -61,6 +62,7 @@ _REAL_CONNECTORS: dict[str, type[Connector]] = {
     "ocr": OcrToolConnector,              # real Windows.Media.Ocr — the platform READS images
     "excel": ExcelSuiteConnector,         # real openpyxl workbooks (the 15th program)
     "webfetch": WebFetchToolConnector,
+    "translate": TranslateToolConnector,  # R79 B3 — the offline pocket dictionary
     "unitconvert": UnitConvertToolConnector,
     "textfile": TextFileToolConnector,
     "textsummarize": TextSummaryConnector,    # real urllib fetch — the 16th program

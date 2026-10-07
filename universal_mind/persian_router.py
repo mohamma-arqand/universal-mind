@@ -203,7 +203,8 @@ _VOCAB: tuple[tuple[str, str], ...] = (
     # تقویم/زمان → داده؛ یادداشت → کلیپبورد؛ دانلود/اسکن/آپلود → وب؛ هشدار → اعلان
     ("چاپ کن", "pdf"),
     ("پرینت", "pdf"),
-    ("ترجمه", "webfetch"),
+    ("ترجمه", "translate"),
+    ("انگلیسی", "translate"),
     ("جستجو", "webfetch"),
     ("سرچ", "webfetch"),
     ("تقویم", "data"),
@@ -1832,6 +1833,59 @@ def route_and_run(
             "🔁 دوباره امتحان کردم:\n" + str(payload.get("agent_report", ""))
         )
         return payload
+
+    # R79 B3 — TRANSLATE IS A CAPABILITY, NOT A SITE FETCH: «ترجمه» went
+    # to webfetch (read a site!) and greeting swallowed the sentence. The
+    # translate verb now owns the ask; the pocket dictionary answers what it
+    # really holds and NAMES what it does not (never a guess).
+    if forced_route is None and ("ترجمه" in command or "translate" in command.lower()):
+
+        _text_b3 = None
+        import re as _re_b3
+
+        _q_b3 = _re_b3.search("«([^»]+)»", command) \
+            or _re_b3.search('"([^"]+)"', command)
+        if _q_b3:
+            _text_b3 = _q_b3.group(1)
+        else:
+            _m_b3 = _re_b3.search(
+                r"(?:^|\s)(?:واژه|کلمه|متن|عبارت)?\s*(.+?)\s*(?:را|رو)?\s*"
+                r"(?:به|to)\s*(?:انگلیسی|فارسی|english|persian)?\s*ترجمه",
+                command)
+            if _m_b3:
+                _text_b3 = _m_b3.group(1).strip()
+        if not _text_b3:
+            _strip = command
+            for _w in ("را", "رو", "به انگلیسی", "به فارسی", "به", "ترجمه کن",
+                       "ترجمه بده", "ترجمه", "کن", "لطفا", "please"):
+                _strip = _strip.replace(_w, " ")
+            _text_b3 = " ".join(_strip.split())
+        # R79 B3 — the SCRIPT decides the direction: Persian text is
+        # translated TO English; Latin text follows «به فارسی» when asked.
+        _has_fa_b3 = any("\u0600" <= ch <= "\u06FF" for ch in (_text_b3 or ""))
+        _to_en = not (not _has_fa_b3 and "به فارسی" in command)
+        from universal_mind.translate_tool import translate as _tl
+
+        out_b3 = _tl(_text_b3 or "", to_english=_to_en)
+        if out_b3.get("ok"):
+            _miss = out_b3.get("missing") or []
+            _note = (f" (واژههای ناموجود رد شدند: {'، '.join(_miss[:4])})"
+                     if _miss else "")
+            return {
+                "ok": True, "command": command, "route": ["translate"],
+                "result": {"translate": out_b3},
+                "agent_report": (
+                    f"ترجمه: «{out_b3['translation']}»{_note} — از "
+                    "واژهنامهٔ آفلاین؛ برای ترجمهٔ کاملِ مدلِ زبانی، "
+                    "UM_LLM_BASE_URL را وصل کن."),
+                "_registry": registry or ToolRegistry(),
+            }
+        return {
+            "ok": False, "command": command, "route": ["translate"],
+            "result": {},
+            "agent_report": str(out_b3.get("error", "ترجمه نشد")),
+            "_registry": registry or ToolRegistry(),
+        }
 
     # THE CONVERSATIONAL CLASS — small talk gets a warm SHORT answer, never
     # silence. «سلام» answering with a hole is a broken first impression.

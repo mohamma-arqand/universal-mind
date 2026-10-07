@@ -148,7 +148,11 @@ def answer_conversational(command: str) -> dict[str, Any] | None:
         # starts with «سلام» but ASKS for a clipboard write. Any operation
         # verb means the sentence is work, never a greeting.
         if not any(v in c for v in ("کپی", "بساز", "بفرست", "بگذار", "بنویس",
-                                    "بخوان", "حذف", "جابجا", "تبدیل")):
+                                    "بخوان", "حذف", "جابجا", "تبدیل",
+                                    # R79 B3 — TRANSLATE IS WORK: «سلام رو به
+                                    # انگلیسی ترجمه کن» starts with «سلام» but
+                                    # asks for a translation, not a greeting.
+                                    "ترجمه", "translate", "یادآور")):
             return _say(c, "سلام! فرمانت را بگو.")
     return None
 

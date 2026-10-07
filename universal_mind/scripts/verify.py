@@ -200,6 +200,7 @@ PROBES = [
     "probe_r78_pim.py",
     "probe_r79_false_success.py",
     "probe_r79_gaps.py",
+    "probe_r79_translate.py",
 ]
 
 
