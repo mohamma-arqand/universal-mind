@@ -4,7 +4,7 @@
 ; full uninstall. ONE double-click on a target desktop.
 
 #define MyAppName "Universal Mind"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Universal Mind"
 #define MyAppExe "UniversalMind.cmd"
 
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\UniversalMind
 DefaultGroupName=Universal Mind
 DisableProgramGroupPage=yes
 OutputDir=D:\workspaces\baddanKhoda\build\installer
-OutputBaseFilename=UniversalMind-Setup-1.0.0
+OutputBaseFilename=UniversalMind-Setup-1.0.1
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

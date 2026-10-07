@@ -3,7 +3,7 @@
 ; refuse BY NAME with the remedy.
 
 #define MyAppName "Universal Mind Lite"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Universal Mind"
 #define MyAppExe "UniversalMind.cmd"
 
@@ -16,7 +16,7 @@ DefaultDirName={autopf}\UniversalMindLite
 DefaultGroupName=Universal Mind Lite
 DisableProgramGroupPage=yes
 OutputDir=D:\workspaces\baddanKhoda\build\installer
-OutputBaseFilename=UniversalMind-Lite-Setup-1.0.0
+OutputBaseFilename=UniversalMind-Lite-Setup-1.0.1
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
